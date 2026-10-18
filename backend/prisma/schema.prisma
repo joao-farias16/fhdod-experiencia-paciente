@@ -1,0 +1,614 @@
+// Modelo de dados do FHDOD — ET02 (Seção 8 e Tabela 17 da especificação).
+//
+// Convenções: tabelas e colunas em snake_case no banco (@@map/@map) e camelCase no TypeScript;
+// UUID v4 por gen_random_uuid() (exceto audit_logs, bigint identidade); instantes em timestamptz (UTC).
+// FKs com ON DELETE RESTRICT e ON UPDATE CASCADE; CASCADE só nas dependências subordinadas
+// (profile_sectors, response_answers, manifestation_contacts e manifestation_notes).
+//
+// O Prisma não representa CHECK, EXCLUDE, gatilhos, sequência do protocolo, índices de expressão,
+// RLS e privilégios: esses itens estão nas migrations SQL customizadas (ver
+// docs/padroes-banco-de-dados.md). Nunca edite uma migration já aplicada; crie outra.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+  previewFeatures     = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------------------------
+// Domínios (Tabela 16)
+// ---------------------------------------------------------------------------------------------
+
+/// Perfis da Seção 6 (SA, AS, GE, OU e VI).
+enum UserRole {
+  superadmin
+  sector_admin
+  management
+  ombudsman
+  viewer
+
+  @@map("user_role")
+}
+
+/// nps = pergunta geral 0–10 (RN01); scale_1_5 = pergunta específica (RN02).
+enum QuestionType {
+  nps
+  scale_1_5
+
+  @@map("question_type")
+}
+
+/// Origem do acesso à pesquisa pública (RF30, E02).
+enum ResponseOrigin {
+  qr_code
+  link
+
+  @@map("response_origin")
+}
+
+/// Resultado da atribuição a turno e equipe (RN07, RF24).
+enum AttributionStatus {
+  attributed
+  not_qr_origin
+  no_shift
+  ambiguous
+
+  @@map("attribution_status")
+}
+
+/// Período do turno: manhã, tarde e noite (RF19; filtro period).
+enum ShiftPeriod {
+  morning
+  afternoon
+  night
+
+  @@map("shift_period")
+}
+
+/// Origem do turno: cadastro manual (RF19) ou importação de escala CSV (RF22–RF23).
+enum ShiftSource {
+  manual
+  import
+
+  @@map("shift_source")
+}
+
+/// Situação da importação de escala (RF22, RF23, E20, E21). A expiração é dada por expires_at.
+enum ImportStatus {
+  validated
+  rejected
+  committed
+
+  @@map("import_status")
+}
+
+/// Elogio, reclamação ou sugestão (RF41).
+enum ManifestationType {
+  compliment
+  complaint
+  suggestion
+
+  @@map("manifestation_type")
+}
+
+/// Status da RN23: recebida, em análise, encaminhada, concluída e arquivada.
+enum ManifestationStatus {
+  received
+  in_review
+  forwarded
+  resolved
+  archived
+
+  @@map("manifestation_status")
+}
+
+/// Prioridade definida pela Ouvidoria (RF46).
+enum ManifestationPriority {
+  low
+  medium
+  high
+
+  @@map("manifestation_priority")
+}
+
+/// Eventos da linha do tempo da manifestação (RF45–RF49, E03, E37, E38 e E40).
+enum ManifestationEventKind {
+  created
+  status_changed
+  priority_changed
+  actions_updated
+  note
+  contact_deleted
+
+  @@map("manifestation_event_kind")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Estrutura institucional, usuários e escopo
+// ---------------------------------------------------------------------------------------------
+
+model Hospital {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(160)
+  shortName String   @unique(map: "hospitals_short_name_key") @map("short_name") @db.VarChar(30)
+  timezone  String   @default("America/Sao_Paulo") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  profiles      Profile[]
+  sectors       Sector[]
+  journeyStages JourneyStage[]
+
+  @@map("hospitals")
+}
+
+model Profile {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hospitalId         String    @map("hospital_id") @db.Uuid
+  /// Identificador do usuário no Supabase Auth (auth.users.id); sem FK entre esquemas.
+  authUserId         String    @unique(map: "profiles_auth_user_id_key") @map("auth_user_id") @db.Uuid
+  fullName           String    @map("full_name") @db.VarChar(120)
+  /// Sempre em minúsculas (CHECK profiles_email_lowercase).
+  email              String    @unique(map: "profiles_email_key") @db.VarChar(254)
+  role               UserRole
+  allSectors         Boolean   @default(false) @map("all_sectors")
+  isActive           Boolean   @default(true) @map("is_active")
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  deactivatedAt      DateTime? @map("deactivated_at") @db.Timestamptz(3)
+  deactivatedById    String?   @map("deactivated_by") @db.Uuid
+  createdById        String?   @map("created_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital      Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deactivatedBy Profile?  @relation("ProfileDeactivatedBy", fields: [deactivatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy     Profile?  @relation("ProfileCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deactivated   Profile[] @relation("ProfileDeactivatedBy")
+  created       Profile[] @relation("ProfileCreatedBy")
+
+  sectorLinks           ProfileSector[]     @relation("ProfileSectorProfile")
+  sectorLinksCreated    ProfileSector[]     @relation("ProfileSectorCreatedBy")
+  shiftsCreated         Shift[]             @relation("ShiftCreatedBy")
+  shiftsCancelled       Shift[]             @relation("ShiftCancelledBy")
+  importsUploaded       ShiftImport[]       @relation("ShiftImportUploadedBy")
+  importsCommitted      ShiftImport[]       @relation("ShiftImportCommittedBy")
+  surveysCreated        SurveyConfig[]      @relation("SurveyConfigCreatedBy")
+  surveysUpdated        SurveyConfig[]      @relation("SurveyConfigUpdatedBy")
+  versionsPublished     SurveyVersion[]
+  manifestationsUpdated Manifestation[]
+  manifestationNotes    ManifestationNote[]
+  auditLogs             AuditLog[]
+
+  @@index([hospitalId])
+  @@map("profiles")
+}
+
+model Sector {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hospitalId    String    @map("hospital_id") @db.Uuid
+  /// Padrão ^[A-Z0-9_-]{2,20}$ (RF12); imutável pela aplicação (RF14).
+  code          String    @db.VarChar(20)
+  name          String    @db.VarChar(120)
+  description   String?   @db.VarChar(500)
+  isActive      Boolean   @default(true) @map("is_active")
+  deactivatedAt DateTime? @map("deactivated_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital       Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  profileLinks   ProfileSector[]
+  teams          Team[]
+  shifts         Shift[]
+  surveyConfigs  SurveyConfig[]
+  responses      Response[]
+  manifestations Manifestation[]
+  auditLogs      AuditLog[]
+
+  // A unicidade de lower(name) por hospital é um índice de expressão (migration SQL).
+  @@unique([hospitalId, code], map: "sectors_hospital_id_code_key")
+  @@map("sectors")
+}
+
+model ProfileSector {
+  profileId   String   @map("profile_id") @db.Uuid
+  sectorId    String   @map("sector_id") @db.Uuid
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  profile   Profile  @relation("ProfileSectorProfile", fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sector    Sector   @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy Profile? @relation("ProfileSectorCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([profileId, sectorId])
+  @@index([sectorId])
+  @@map("profile_sectors")
+}
+
+model Team {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectorId      String    @map("sector_id") @db.Uuid
+  code          String    @db.VarChar(20)
+  name          String    @db.VarChar(120)
+  isActive      Boolean   @default(true) @map("is_active")
+  deactivatedAt DateTime? @map("deactivated_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sector    Sector     @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shifts    Shift[]
+  responses Response[]
+
+  @@unique([sectorId, code], map: "teams_sector_id_code_key")
+  /// Alvo da FK composta (team_id, sector_id) de shifts e responses.
+  @@unique([id, sectorId], map: "teams_id_sector_id_key")
+  @@map("teams")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Escalas
+// ---------------------------------------------------------------------------------------------
+
+model Shift {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectorId      String      @map("sector_id") @db.Uuid
+  teamId        String      @map("team_id") @db.Uuid
+  period        ShiftPeriod
+  startsAt      DateTime    @map("starts_at") @db.Timestamptz(3)
+  endsAt        DateTime    @map("ends_at") @db.Timestamptz(3)
+  source        ShiftSource
+  importId      String?     @map("import_id") @db.Uuid
+  createdById   String      @map("created_by") @db.Uuid
+  cancelledAt   DateTime?   @map("cancelled_at") @db.Timestamptz(3)
+  cancelledById String?     @map("cancelled_by") @db.Uuid
+  cancelReason  String?     @map("cancel_reason") @db.VarChar(300)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sector      Sector       @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  /// FK composta: a equipe pertence ao mesmo setor do turno (RN20).
+  team        Team         @relation(fields: [teamId, sectorId], references: [id, sectorId], onDelete: Restrict, onUpdate: Cascade, map: "shifts_team_id_sector_id_fkey")
+  import      ShiftImport? @relation(fields: [importId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy   Profile      @relation("ShiftCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cancelledBy Profile?     @relation("ShiftCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  responses   Response[]
+
+  // Sem sobreposição por equipe entre turnos não cancelados: EXCLUDE USING gist (migration SQL).
+  @@index([sectorId, startsAt, endsAt], map: "shifts_sector_id_starts_at_ends_at_idx")
+  @@index([importId])
+  @@map("shifts")
+}
+
+model ShiftImport {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploadedById  String       @map("uploaded_by") @db.Uuid
+  fileName      String       @map("file_name") @db.VarChar(255)
+  fileSha256    String       @map("file_sha256") @db.Char(64)
+  status        ImportStatus
+  totalRows     Int          @map("total_rows")
+  acceptedRows  Int          @map("accepted_rows")
+  rejectedRows  Int          @map("rejected_rows")
+  /// Erros por linha e coluna (RF22); lista JSON.
+  errors        Json         @default("[]")
+  /// Linhas validadas aguardando confirmação (RF23); lista JSON.
+  stagedRows    Json         @default("[]") @map("staged_rows")
+  expiresAt     DateTime     @map("expires_at") @db.Timestamptz(3)
+  committedAt   DateTime?    @map("committed_at") @db.Timestamptz(3)
+  committedById String?      @map("committed_by") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  uploadedBy  Profile  @relation("ShiftImportUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  committedBy Profile? @relation("ShiftImportCommittedBy", fields: [committedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shifts      Shift[]
+
+  @@index([uploadedById, createdAt])
+  @@map("shift_imports")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Pesquisas, perguntas e versões
+// ---------------------------------------------------------------------------------------------
+
+model SurveyConfig {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectorId              String    @map("sector_id") @db.Uuid
+  title                 String    @db.VarChar(120)
+  /// kebab-case (CHECK); setor e slug imutáveis após a primeira publicação (RN27, gatilho).
+  slug                  String    @unique(map: "survey_configs_slug_key") @db.VarChar(80)
+  introText             String?   @map("intro_text") @db.VarChar(500)
+  thankYouMessage       String    @map("thank_you_message") @db.VarChar(500)
+  isActive              Boolean   @default(true) @map("is_active")
+  deactivatedAt         DateTime? @map("deactivated_at") @db.Timestamptz(3)
+  /// Versão vigente; o gatilho exige que seja uma versão desta pesquisa.
+  currentVersionId      String?   @unique(map: "survey_configs_current_version_id_key") @map("current_version_id") @db.Uuid
+  hasUnpublishedChanges Boolean   @default(true) @map("has_unpublished_changes")
+  createdById           String    @map("created_by") @db.Uuid
+  updatedById           String?   @map("updated_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sector         Sector          @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  currentVersion SurveyVersion?  @relation("SurveyCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy      Profile         @relation("SurveyConfigCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  updatedBy      Profile?        @relation("SurveyConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  questions      Question[]
+  versions       SurveyVersion[] @relation("SurveyVersions")
+
+  /// Alvo da FK composta (survey_config_id, sector_id) de survey_versions (instantâneo do setor).
+  @@unique([id, sectorId], map: "survey_configs_id_sector_id_key")
+  @@index([sectorId])
+  @@map("survey_configs")
+}
+
+model JourneyStage {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hospitalId String   @map("hospital_id") @db.Uuid
+  code       String   @db.VarChar(30)
+  name       String   @db.VarChar(80)
+  position   Int      @db.SmallInt
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital         Hospital                @relation(fields: [hospitalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  questions        Question[]
+  versionQuestions SurveyVersionQuestion[]
+
+  @@unique([hospitalId, code], map: "journey_stages_hospital_id_code_key")
+  @@unique([hospitalId, position], map: "journey_stages_hospital_id_position_key")
+  @@map("journey_stages")
+}
+
+model Question {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  surveyConfigId   String       @map("survey_config_id") @db.Uuid
+  journeyStageId   String?      @map("journey_stage_id") @db.Uuid
+  type             QuestionType
+  text             String       @db.VarChar(200)
+  isRequired       Boolean      @map("is_required")
+  position         Int          @db.SmallInt
+  isActive         Boolean      @default(true) @map("is_active")
+  /// Preenchido na primeira publicação; depois disso texto, tipo e etapa ficam bloqueados (RN17).
+  firstPublishedAt DateTime?    @map("first_published_at") @db.Timestamptz(3)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  surveyConfig     SurveyConfig            @relation(fields: [surveyConfigId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  journeyStage     JourneyStage?           @relation(fields: [journeyStageId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  versionQuestions SurveyVersionQuestion[]
+
+  /// Uma pergunta geral (nps) por pesquisa (RN01) — índice único parcial.
+  @@unique([surveyConfigId], map: "questions_one_nps_per_survey_key", where: raw("type = 'nps'::question_type"))
+  @@index([surveyConfigId, position])
+  @@index([journeyStageId])
+  @@map("questions")
+}
+
+model SurveyVersion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  surveyConfigId  String    @map("survey_config_id") @db.Uuid
+  /// Instantâneo do setor da pesquisa no momento da publicação.
+  sectorId        String    @map("sector_id") @db.Uuid
+  versionNumber   Int       @map("version_number")
+  title           String    @db.VarChar(120)
+  introText       String?   @map("intro_text") @db.VarChar(500)
+  thankYouMessage String    @map("thank_you_message") @db.VarChar(500)
+  publishedAt     DateTime  @default(now()) @map("published_at") @db.Timestamptz(3)
+  publishedById   String    @map("published_by") @db.Uuid
+  /// Única coluna alterável depois da publicação (gatilho de imutabilidade).
+  supersededAt    DateTime? @map("superseded_at") @db.Timestamptz(3)
+
+  surveyConfig SurveyConfig            @relation("SurveyVersions", fields: [surveyConfigId, sectorId], references: [id, sectorId], onDelete: Restrict, onUpdate: Cascade, map: "survey_versions_survey_config_id_sector_id_fkey")
+  publishedBy  Profile                 @relation(fields: [publishedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  currentOf    SurveyConfig?           @relation("SurveyCurrentVersion")
+  questions    SurveyVersionQuestion[]
+  responses    Response[]
+
+  @@unique([surveyConfigId, versionNumber], map: "survey_versions_survey_config_id_version_number_key")
+  /// Alvo da FK composta (survey_version_id, sector_id) de responses.
+  @@unique([id, sectorId], map: "survey_versions_id_sector_id_key")
+  @@map("survey_versions")
+}
+
+model SurveyVersionQuestion {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  surveyVersionId      String       @map("survey_version_id") @db.Uuid
+  questionId           String       @map("question_id") @db.Uuid
+  type                 QuestionType
+  text                 String       @db.VarChar(200)
+  journeyStageId       String?      @map("journey_stage_id") @db.Uuid
+  journeyStageName     String?      @map("journey_stage_name") @db.VarChar(80)
+  journeyStagePosition Int?         @map("journey_stage_position") @db.SmallInt
+  position             Int          @db.SmallInt
+  isRequired           Boolean      @map("is_required")
+
+  surveyVersion SurveyVersion    @relation(fields: [surveyVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  question      Question         @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  journeyStage  JourneyStage?    @relation(fields: [journeyStageId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  answers       ResponseAnswer[]
+
+  @@unique([surveyVersionId, questionId], map: "survey_version_questions_version_question_key")
+  @@unique([surveyVersionId, position], map: "survey_version_questions_version_position_key")
+  /// Alvo da FK composta de response_answers: a pergunta pertence à versão e tem o tipo informado.
+  @@unique([id, surveyVersionId, type], map: "survey_version_questions_id_version_type_key")
+  /// Uma pergunta geral (nps) por versão (RN01) — índice único parcial.
+  @@unique([surveyVersionId], map: "survey_version_questions_one_nps_per_version_key", where: raw("type = 'nps'::question_type"))
+  @@index([questionId])
+  @@index([journeyStageId])
+  @@map("survey_version_questions")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Respostas
+// ---------------------------------------------------------------------------------------------
+
+model Response {
+  id                          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  surveyVersionId             String            @map("survey_version_id") @db.Uuid
+  /// Instantâneo do setor da versão (FK composta com survey_versions).
+  sectorId                    String            @map("sector_id") @db.Uuid
+  origin                      ResponseOrigin
+  npsScore                    Int               @map("nps_score") @db.SmallInt
+  lowScore                    Boolean           @map("low_score")
+  submittedAt                 DateTime          @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  attributionStatus           AttributionStatus @map("attribution_status")
+  shiftId                     String?           @map("shift_id") @db.Uuid
+  teamId                      String?           @map("team_id") @db.Uuid
+  shiftPeriod                 ShiftPeriod?      @map("shift_period")
+  idempotencyKey              String            @unique(map: "responses_idempotency_key_key") @map("idempotency_key") @db.Uuid
+  requestHash                 String            @map("request_hash") @db.Char(64)
+  manifestationTokenExpiresAt DateTime          @map("manifestation_token_expires_at") @db.Timestamptz(3)
+  /// Única coluna alterável depois do registro (uso único do token, RN22).
+  manifestationTokenUsedAt    DateTime?         @map("manifestation_token_used_at") @db.Timestamptz(3)
+
+  surveyVersion  SurveyVersion    @relation(fields: [surveyVersionId, sectorId], references: [id, sectorId], onDelete: Restrict, onUpdate: Cascade, map: "responses_survey_version_id_sector_id_fkey")
+  sector         Sector           @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shift          Shift?           @relation(fields: [shiftId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  team           Team?            @relation(fields: [teamId, sectorId], references: [id, sectorId], onDelete: Restrict, onUpdate: Cascade, map: "responses_team_id_sector_id_fkey")
+  answers        ResponseAnswer[]
+  /// No máximo uma (UQ manifestations.response_id); lista porque a FK é composta (response_id, sector_id).
+  manifestations Manifestation[]
+
+  /// Alvo da FK composta (response_id, survey_version_id) de response_answers.
+  @@unique([id, surveyVersionId], map: "responses_id_survey_version_id_key")
+  /// Alvo da FK composta (response_id, sector_id) de manifestations.
+  @@unique([id, sectorId], map: "responses_id_sector_id_key")
+  @@index([submittedAt], map: "responses_submitted_at_idx")
+  @@index([sectorId, submittedAt], map: "responses_sector_id_submitted_at_idx")
+  @@index([teamId, submittedAt], map: "responses_team_id_submitted_at_idx", where: raw("team_id IS NOT NULL"))
+  @@index([shiftPeriod, submittedAt], map: "responses_shift_period_submitted_at_idx", where: raw("shift_period IS NOT NULL"))
+  @@index([shiftId], map: "responses_shift_id_idx", where: raw("shift_id IS NOT NULL"))
+  @@index([surveyVersionId], map: "responses_survey_version_id_idx")
+  @@map("responses")
+}
+
+model ResponseAnswer {
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  responseId              String       @map("response_id") @db.Uuid
+  surveyVersionId         String       @map("survey_version_id") @db.Uuid
+  surveyVersionQuestionId String       @map("survey_version_question_id") @db.Uuid
+  /// Sempre scale_1_5: a nota geral fica em responses.nps_score (CHECK).
+  questionType            QuestionType @map("question_type")
+  score                   Int          @db.SmallInt
+
+  /// A resposta pertence à mesma versão informada (CASCADE: dependência subordinada).
+  response              Response              @relation(fields: [responseId, surveyVersionId], references: [id, surveyVersionId], onDelete: Cascade, onUpdate: Cascade, map: "response_answers_response_id_survey_version_id_fkey")
+  /// A pergunta pertence à mesma versão e tem o tipo informado (T32, cenário 1).
+  surveyVersionQuestion SurveyVersionQuestion @relation(fields: [surveyVersionQuestionId, surveyVersionId, questionType], references: [id, surveyVersionId, type], onDelete: Restrict, onUpdate: Cascade, map: "response_answers_svq_version_type_fkey")
+
+  @@unique([responseId, surveyVersionQuestionId], map: "response_answers_response_question_key")
+  @@index([surveyVersionQuestionId])
+  @@map("response_answers")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Manifestações e Ouvidoria
+// ---------------------------------------------------------------------------------------------
+
+model Manifestation {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// FHD-AAAA-NNNNNN, gerado pela sequência manifestation_protocol_seq com o ano local.
+  protocol            String                @unique(map: "manifestations_protocol_key") @default(dbgenerated("next_manifestation_protocol()")) @db.VarChar(15)
+  responseId          String                @unique(map: "manifestations_response_id_key") @map("response_id") @db.Uuid
+  sectorId            String                @map("sector_id") @db.Uuid
+  type                ManifestationType
+  description         String
+  isAnonymous         Boolean               @default(true) @map("is_anonymous")
+  triggeredByLowScore Boolean               @map("triggered_by_low_score")
+  status              ManifestationStatus   @default(received)
+  priority            ManifestationPriority @default(medium)
+  actionsTaken        String?               @map("actions_taken")
+  receivedAt          DateTime              @default(now()) @map("received_at") @db.Timestamptz(3)
+  resolvedAt          DateTime?             @map("resolved_at") @db.Timestamptz(3)
+  updatedById         String?               @map("updated_by") @db.Uuid
+  idempotencyKey      String                @unique(map: "manifestations_idempotency_key_key") @map("idempotency_key") @db.Uuid
+  requestHash         String                @map("request_hash") @db.Char(64)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Controle de concorrência otimista do RF46.
+  updatedAt           DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  response  Response              @relation(fields: [responseId, sectorId], references: [id, sectorId], onDelete: Restrict, onUpdate: Cascade, map: "manifestations_response_id_sector_id_fkey")
+  sector    Sector                @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  updatedBy Profile?              @relation(fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  contact   ManifestationContact?
+  notes     ManifestationNote[]
+
+  @@index([status, receivedAt], map: "manifestations_status_received_at_idx")
+  @@index([sectorId, receivedAt], map: "manifestations_sector_id_received_at_idx")
+  @@index([type], map: "manifestations_type_idx")
+  @@index([priority], map: "manifestations_priority_idx")
+  @@index([receivedAt], map: "manifestations_received_at_idx")
+  @@map("manifestations")
+}
+
+/// Contato voluntário, segregado dos indicadores e relatórios (RN12). Nunca em manifestação anônima.
+model ManifestationContact {
+  manifestationId    String   @id @map("manifestation_id") @db.Uuid
+  fullName           String   @map("full_name") @db.VarChar(120)
+  /// Somente dígitos, com DDD (10 ou 11 dígitos).
+  phone              String?  @db.VarChar(11)
+  email              String?  @db.VarChar(254)
+  consentGivenAt     DateTime @map("consent_given_at") @db.Timestamptz(3)
+  /// Versão do texto de finalidade aceito (Seção 4.3), por exemplo "v1".
+  purposeTextVersion String   @map("purpose_text_version") @db.VarChar(10)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  manifestation Manifestation @relation(fields: [manifestationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("manifestation_contacts")
+}
+
+/// Linha do tempo da manifestação: eventos e notas internas, sem UPDATE (gatilho).
+model ManifestationNote {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  manifestationId String                 @map("manifestation_id") @db.Uuid
+  authorId        String?                @map("author_id") @db.Uuid
+  kind            ManifestationEventKind
+  content         String?
+  fromValue       String?                @map("from_value") @db.VarChar(30)
+  toValue         String?                @map("to_value") @db.VarChar(30)
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  manifestation Manifestation @relation(fields: [manifestationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  author        Profile?      @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([manifestationId, createdAt], map: "manifestation_notes_manifestation_id_created_at_idx")
+  @@index([authorId])
+  @@map("manifestation_notes")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Auditoria
+// ---------------------------------------------------------------------------------------------
+
+/// Somente inserção (gatilhos bloqueiam UPDATE, DELETE e TRUNCATE). Sem dados pessoais.
+model AuditLog {
+  id             BigInt    @id @default(autoincrement())
+  occurredAt     DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  actorProfileId String?   @map("actor_profile_id") @db.Uuid
+  actorRole      UserRole? @map("actor_role")
+  action         String    @db.VarChar(60)
+  entityType     String    @map("entity_type") @db.VarChar(40)
+  entityId       String?   @map("entity_id") @db.VarChar(64)
+  sectorId       String?   @map("sector_id") @db.Uuid
+  details        Json      @default("{}")
+  requestId      String?   @map("request_id") @db.Uuid
+  /// HMAC-SHA256 do IP com AUDIT_IP_SECRET (Seção 10); nunca o IP em claro.
+  ipHash         String?   @map("ip_hash") @db.Char(64)
+
+  actorProfile Profile? @relation(fields: [actorProfileId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sector       Sector?  @relation(fields: [sectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([occurredAt], map: "audit_logs_occurred_at_idx")
+  @@index([actorProfileId, occurredAt], map: "audit_logs_actor_profile_id_occurred_at_idx")
+  @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
+  @@index([action, occurredAt], map: "audit_logs_action_occurred_at_idx")
+  @@index([sectorId])
+  @@map("audit_logs")
+}

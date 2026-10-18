@@ -1,0 +1,103 @@
+{
+  "executedAt": "2026-10-18T00:33:10.146Z",
+  "entries": [
+    {
+      "scenario": "1 — Pergunta de outra versão",
+      "operation": "INSERT em response_answers com a pergunta da v2 numa resposta da v1",
+      "mechanism": "FKs compostas response_answers_svq_version_type_fkey e response_answers_response_id_survey_version_id_fkey",
+      "sqlstate": "23503",
+      "constraint": "response_answers_svq_version_type_fkey; response_answers_response_id_survey_version_id_fkey",
+      "message": "insert or update on table \"response_answers\" violates foreign key constraint \"response_answers_svq_version_type_fkey\"",
+      "before": {
+        "response_answers": 0
+      },
+      "after": {
+        "response_answers": 0
+      },
+      "result": "APROVADO"
+    },
+    {
+      "scenario": "2 — Setor divergente",
+      "operation": "INSERT em responses com a versão do setor A e sector_id do setor B",
+      "mechanism": "FK composta responses_survey_version_id_sector_id_fkey → survey_versions(id, sector_id)",
+      "sqlstate": "23503",
+      "constraint": "responses_survey_version_id_sector_id_fkey",
+      "message": "insert or update on table \"responses\" violates foreign key constraint \"responses_survey_version_id_sector_id_fkey\"",
+      "before": {
+        "responses_da_versao": 1
+      },
+      "after": {
+        "responses_da_versao": 1
+      },
+      "result": "APROVADO"
+    },
+    {
+      "scenario": "3 — Contato em manifestação anônima",
+      "operation": "INSERT em manifestation_contacts para manifestação com is_anonymous = true",
+      "mechanism": "Gatilho manifestation_contacts_not_anonymous (BEFORE INSERT OR UPDATE)",
+      "sqlstate": "23000",
+      "constraint": "manifestation_contacts_not_anonymous",
+      "message": "A manifestação 916105b6-5155-4703-b891-95624fc2f22f é anônima e não pode ter contato",
+      "before": {
+        "contatos_da_manifestacao": 0
+      },
+      "after": {
+        "contatos_da_manifestacao": 0
+      },
+      "result": "APROVADO"
+    },
+    {
+      "scenario": "4 — Sobreposição de turnos",
+      "operation": "INSERT em shifts sobrepondo turno não cancelado da mesma equipe",
+      "mechanism": "EXCLUDE USING gist shifts_no_overlap_per_team (team_id =, tstzrange &&) WHERE cancelled_at IS NULL",
+      "sqlstate": "23P01",
+      "constraint": "shifts_no_overlap_per_team",
+      "message": "conflicting key value violates exclusion constraint \"shifts_no_overlap_per_team\"",
+      "before": {
+        "turnos_ativos_equipe_A1": 1
+      },
+      "after": {
+        "turnos_ativos_equipe_A1": 1
+      },
+      "result": "APROVADO"
+    },
+    {
+      "scenario": "5 — Exclusão física de setor referenciado",
+      "operation": "DELETE FROM sectors de um setor com equipes, turnos, pesquisas e respostas",
+      "mechanism": "FKs ON DELETE RESTRICT que referenciam sectors(id)",
+      "sqlstate": "23503",
+      "constraint": "teams_sector_id_fkey",
+      "message": "update or delete on table \"sectors\" violates foreign key constraint \"teams_sector_id_fkey\" on table \"teams\"",
+      "before": {
+        "setor": 1,
+        "equipes": 2,
+        "turnos": 1,
+        "respostas": 1,
+        "pesquisas": 1
+      },
+      "after": {
+        "setor": 1,
+        "equipes": 2,
+        "turnos": 1,
+        "respostas": 1,
+        "pesquisas": 1
+      },
+      "result": "APROVADO"
+    },
+    {
+      "scenario": "6 — Atualização de versão publicada",
+      "operation": "UPDATE survey_versions SET title (e outros campos) / DELETE da versão",
+      "mechanism": "Gatilhos survey_versions_immutable (BEFORE UPDATE) e survey_versions_no_delete",
+      "sqlstate": "23000",
+      "constraint": "survey_versions_immutable",
+      "message": "A versão da86caa9-4e43-4cb7-8d16-09c736fe2129 é imutável; somente superseded_at pode ser preenchido uma vez",
+      "before": {
+        "title": "Pesquisa de teste"
+      },
+      "after": {
+        "title": "Pesquisa de teste"
+      },
+      "result": "APROVADO"
+    }
+  ]
+}

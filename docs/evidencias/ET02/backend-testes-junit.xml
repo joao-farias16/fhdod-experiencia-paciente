@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="80" failures="0" errors="0" time="4.8482733">
+    <testsuite name="tests/db/health-prisma.test.ts" timestamp="2026-10-18T00:33:12.703Z" hostname="maquina-local" tests="3" failures="0" errors="0" skipped="0" time="0.3228076">
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; responde 200 quando o SELECT 1 do Prisma é atendido" time="0.1970092">
+        </testcase>
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; responde 503 SERVICE_UNAVAILABLE quando o banco está inacessível" time="0.0313488">
+        </testcase>
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; lê os dados pelo Prisma Client gerado do schema (modelos mapeados para snake_case)" time="0.0844501">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/modelo-de-dados.test.ts" timestamp="2026-10-18T00:33:12.708Z" hostname="maquina-local" tests="43" failures="0" errors="0" skipped="0" time="2.1463272">
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; possui exatamente as 18 tabelas da Tabela 17 (além do controle do Prisma)" time="0.012767">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; define os 11 enums da Tabela 16 com os valores do PDF" time="0.0086702">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; usa UUID com gen_random_uuid() e audit_logs.id como bigint de identidade" time="0.0195681">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; armazena todos os instantes como timestamptz" time="0.0075544">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; usa CASCADE somente nas dependências subordinadas e RESTRICT nas demais FKs" time="0.0041254">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="RLS e privilégios (Tabela 16 e Seção 10) &gt; habilita RLS em todas as tabelas, sem nenhuma política" time="0.0072281">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="RLS e privilégios (Tabela 16 e Seção 10) &gt; não concede acesso a anon e authenticated nas tabelas, sequências e funções" time="0.0401509">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="auditoria somente de inserção (RF10) &gt; aceita INSERT e rejeita UPDATE, DELETE e TRUNCATE em audit_logs" time="0.0344972">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; bloqueia texto, tipo e etapa de pergunta publicada, mas permite desativá-la" time="0.0746998">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; impede alterar ou excluir perguntas de versão (instantâneo)" time="0.0529847">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; exige que a pergunta da versão seja da mesma pesquisa e do mesmo tipo" time="0.0406748">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; impede alterar respostas e notas; permite registrar o uso do token uma única vez" time="0.0577893">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="pesquisas: versão vigente e bloqueios após publicação (RN27) &gt; exige versão vigente da própria pesquisa e bloqueia slug e setor publicados" time="0.0536732">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="pesquisas: versão vigente e bloqueios após publicação (RN27) &gt; aceita uma única pergunta geral (nps) por pesquisa e por versão (UNIQUE parcial)" time="0.0641979">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita código de setor fora do padrão" time="0.061117">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita superadministrador sem escopo global" time="0.1028539">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita administrador de setor com escopo global" time="0.089821">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita e-mail com maiúsculas" time="0.0816443">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita perfil inativo sem data de desativação" time="0.0733824">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno com menos de 1 hora" time="0.0702392">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno com mais de 24 horas" time="0.0590883">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno importado sem importação" time="0.0648122">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno cancelado sem motivo" time="0.0599582">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação com totais incoerentes" time="0.0579807">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação acima de 2.000 linhas" time="0.0529012">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação confirmada sem data de confirmação" time="0.0458485">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação com validade acima de 30 minutos" time="0.0471347">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita NPS fora de 0–10" time="0.0562591">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita NPS baixo sem low_score" time="0.0436919">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita origem link com status de QR" time="0.0449821">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita atribuída sem turno" time="0.0410033">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita token de manifestação com validade acima de 60 minutos" time="0.0453993">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nota específica fora de 1–5" time="0.042524">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nota específica registrada para a pergunta geral" time="0.041546">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nome de setor repetido sem distinguir maiúsculas (índice de expressão)" time="0.0403224">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="coerência da atribuição a turno (RN07) &gt; aceita resposta atribuída coerente e rejeita equipe, período, horário ou turno cancelado incoerentes" time="0.0610777">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="coerência da atribuição a turno (RN07) &gt; rejeita resposta anterior à publicação da versão" time="0.0388529">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; gera protocolo FHD-AAAA-NNNNNN pela sequência do banco" time="0.0437713">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; valida contato: telefone ou e-mail, formatos e nome" time="0.055002">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; impede tornar anônima ou alterar o texto de manifestação registrada" time="0.0450463">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; exige providências (10+ caracteres) e data ao concluir; texto de 10 a 2.000 caracteres" time="0.0471256">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; aceita uma manifestação por resposta e exige o mesmo setor da resposta" time="0.0489965">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; valida eventos da linha do tempo e impede alterar ou excluir notas diretamente" time="0.062879">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t32-integridade-referencial.test.ts" timestamp="2026-10-18T00:33:12.730Z" hostname="maquina-local" tests="6" failures="0" errors="0" skipped="0" time="0.4323454">
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 1: rejeita nota de resposta com pergunta de outra versão (FK composta)" time="0.0869258">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 2: rejeita resposta com setor diferente do setor da versão (FK composta)" time="0.0653808">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 3: rejeita contato em manifestação anônima (gatilho)" time="0.0629394">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 4: rejeita turno sobreposto da mesma equipe (restrição de exclusão)" time="0.0521887">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 5: rejeita exclusão física de setor referenciado (ON DELETE RESTRICT)" time="0.0576507">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 6: rejeita UPDATE de campo imutável de versão publicada (gatilho)" time="0.0672316">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/app.test.ts" timestamp="2026-10-18T00:33:12.733Z" hostname="maquina-local" tests="13" failures="0" errors="0" skipped="0" time="1.6096691">
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; responde 200 com o estado da API no envelope { data }" time="0.1008679">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; responde 503 SERVICE_UNAVAILABLE quando o SELECT 1 falha (RNF27)" time="0.021706">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13)" time="0.5543435">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; envia cabeçalhos de segurança e oculta X-Powered-By (Seção 10)" time="0.0089924">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; gera um X-Request-Id UUID para cada requisição" time="0.0083637">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; reaproveita um X-Request-Id válido e ignora um inválido" time="0.0172463">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; libera a origem configurada" time="0.0126448">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; não libera origens não autorizadas" time="0.0146524">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; responde ao preflight com os cabeçalhos previstos" time="0.0174531">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 404 ROUTE_NOT_FOUND para rota inexistente" time="0.0142751">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 400 MALFORMED_JSON para JSON inválido" time="0.8091865">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 413 PAYLOAD_TOO_LARGE para corpo acima de 32 KB (RNF11)" time="0.0117425">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; aceita corpo dentro do limite e segue para o 404 da rota" time="0.0117426">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/env.test.ts" timestamp="2026-10-18T00:33:12.740Z" hostname="maquina-local" tests="11" failures="0" errors="0" skipped="0" time="0.0736159">
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; aplica os valores padrão e separa as origens do CORS" time="0.0238396">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; converte PORT e TRUST_PROXY para número" time="0.0037041">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita a ausência de CORS_ORIGIN" time="0.0056283">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; exige DATABASE_URL com protocolo postgresql (ET02)" time="0.0084979">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; não expõe a senha da DATABASE_URL na mensagem de erro" time="0.009447">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (nao-e-url)" time="0.0024985">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (ftp://exemplo.com)" time="0.0013209">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (http://localhost:5173,)" time="0.0013248">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita porta, nível de log e ambiente inválidos, listando cada variável" time="0.0046736">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; não expõe o valor recebido na mensagem de erro" time="0.0017592">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; exige origens HTTPS em produção (RNF09)" time="0.0024305">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/error-handler.test.ts" timestamp="2026-10-18T00:33:12.746Z" hostname="maquina-local" tests="3" failures="0" errors="0" skipped="0" time="0.1091171">
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; responde 500 INTERNAL_ERROR sem stack trace nem mensagem interna (RNF19)" time="0.0779068">
+        </testcase>
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; preserva status, código e detalhes de um HttpError" time="0.0157448">
+        </testcase>
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; trata valores lançados que não são Error" time="0.0109057">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/health.test.ts" timestamp="2026-10-18T00:33:12.747Z" hostname="maquina-local" tests="1" failures="0" errors="0" skipped="0" time="0.154391">
+        <testcase classname="tests/unit/health.test.ts" name="healthRouter (E43) &gt; responde 503 quando o banco não responde dentro do limite (2 s em produção)" time="0.1486041">
+        </testcase>
+    </testsuite>
+</testsuites>

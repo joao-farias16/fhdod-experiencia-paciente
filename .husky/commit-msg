@@ -1,0 +1,4 @@
+# Chama o shim local (node_modules/.bin, já no PATH pelo Husky 9) em vez de `npx`:
+# o `npx` do Node no Windows é um script bash, e o Git do GitHub Desktop não traz bash
+# (o `bash` encontrado no PATH é o do WSL, que não enxerga caminhos C:/).
+commitlint --edit "$1"

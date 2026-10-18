@@ -1,0 +1,156 @@
+# Integração contínua do FHDOD (Seção 13 da especificação; Tabela 26).
+# ET01: segredos, formatação, lint, typecheck, testes, build, saúde da API e auditoria de dependências.
+# ET02: PostgreSQL 17, validação do schema Prisma, `prisma migrate deploy`, `prisma migrate diff
+# --exit-code`, seed com verificação das contagens e testes de integração com banco real (T32).
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+
+jobs:
+  segredos:
+    name: Segredos (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Instalar gitleaks ${{ env.GITLEAKS_VERSION }} (checksum verificado)
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${base}/${file}"
+          curl -sSfL "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" | grep " ${file}$" | sha256sum -c -
+          tar -xzf "${file}" gitleaks
+
+      - name: Verificar histórico do Git
+        run: ./gitleaks git --redact --verbose --exit-code 1 .
+
+  qualidade:
+    name: Formatação, lint, typecheck, banco, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Banco descartável do serviço da CI (credenciais públicas, sem dados reais).
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/fhdod
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod_test
+      SEED_ALLOW_REMOTE: 'false'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências (gera o Prisma Client no postinstall)
+        run: npm ci
+
+      # Simula os papéis do Supabase e os privilégios padrão que ele concede, para que a migration
+      # de segurança comprove a revogação (verificado nos testes de banco).
+      - name: Preparar bancos e papéis anon/authenticated
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          CREATE DATABASE fhdod;
+          CREATE DATABASE fhdod_test;
+          SQL
+          for db in fhdod fhdod_test; do
+            psql -h localhost -U postgres -d "$db" -v ON_ERROR_STOP=1 -c               "GRANT USAGE ON SCHEMA public TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated;"
+          done
+
+      - name: Validar o schema Prisma
+        run: npm run db:validate -w backend
+
+      - name: Aplicar migrations em banco vazio (prisma migrate deploy)
+        run: npm run db:deploy -w backend
+
+      - name: Conferir migrations × schema.prisma (prisma migrate diff --exit-code)
+        run: npm run db:diff -w backend
+
+      - name: Seed determinístico e verificação das contagens
+        run: |
+          npm run db:seed -w backend
+          npm run db:seed:verify -w backend
+
+      - name: Formatação (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Typecheck (backend e frontend)
+        run: npm run typecheck
+
+      - name: Testes (Vitest; backend com PostgreSQL real em TEST_DATABASE_URL)
+        run: npm run test
+
+      - name: Build (backend e frontend)
+        run: npm run build
+
+      - name: Verificar GET /api/v1/health com o build do backend
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          PORT: '3333'
+          CORS_ORIGIN: https://fhdod.example
+          LOG_LEVEL: warn
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod
+        run: |
+          node dist/server.js &
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3333/api/v1/health -o health.json; then break; fi
+            sleep 1
+          done
+          cat health.json
+          grep -q '"status":"ok"' health.json
+
+  dependencias:
+    name: Auditoria de dependências (npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Política: falha com vulnerabilidades de severidade alta ou crítica.
+      - name: npm audit
+        run: npm audit --audit-level=high
