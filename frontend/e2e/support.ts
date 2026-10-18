@@ -1,0 +1,39 @@
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { expect, type Page, type TestInfo } from '@playwright/test';
+
+export const GENERIC_ERROR = 'E-mail ou senha incorretos. Confira os dados e tente novamente.';
+
+const EVIDENCE_DIR = resolve(import.meta.dirname, '../../docs/evidencias/ET03/telas');
+
+export async function login(page: Page, email: string, password: string): Promise<void> {
+  await page.goto('/login');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+}
+
+export async function logout(page: Page): Promise<void> {
+  const menu = page.getByRole('button', { name: 'Menu' });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+}
+
+/** RNF01: sem rolagem horizontal na página. */
+export async function expectNoHorizontalScroll(page: Page): Promise<void> {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+}
+
+/** Captura de tela para docs/evidencias/ET03/telas (somente dados fictícios). */
+export async function capture(page: Page, testInfo: TestInfo, name: string): Promise<void> {
+  mkdirSync(EVIDENCE_DIR, { recursive: true });
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/${name}-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+}

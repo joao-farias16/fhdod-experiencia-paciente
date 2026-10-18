@@ -13,6 +13,10 @@ export default tseslint.config(
       '**/dist/',
       '**/coverage/',
       '**/*.tsbuildinfo',
+      // Relatórios e artefatos gerados pelo Playwright (E2E).
+      '**/playwright-report/',
+      '**/test-results/',
+      '**/playwright/.cache/',
       // Prisma Client gerado por `prisma generate` (não versionado).
       'backend/src/generated/',
     ],
@@ -53,6 +57,36 @@ export default tseslint.config(
   {
     files: ['backend/**/*.ts'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // RNF21: serviços não dependem do Express.
+    files: ['backend/src/**/*.service.ts', 'backend/src/services/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'express', message: 'Serviços não dependem do Express (RNF21).' }],
+        },
+      ],
+    },
+  },
+  {
+    // RNF21: rotas e controladores não acessam o Prisma (somente tipos para as dependências).
+    files: ['backend/src/**/*.routes.ts', 'backend/src/**/*.controller.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/prisma.js', '**/generated/**', '@prisma/*'],
+              allowTypeImports: true,
+              message: 'Controladores sem Prisma (RNF21): use os serviços.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     // Scripts de linha de comando (seed e utilitários de banco) informam o progresso no terminal.

@@ -1,0 +1,13 @@
+
+> backend@0.1.0 test:supabase
+> vitest run --config vitest.supabase.config.ts
+
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/backend
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  11:21:17
+   Duration  21.29s (tests 68%, import 21%, transform 10%)
+

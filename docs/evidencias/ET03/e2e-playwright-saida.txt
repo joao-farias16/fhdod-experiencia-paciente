@@ -1,0 +1,16 @@
+Dados E2E criados (hospital E2E-4331f3).
+
+Running 9 tests using 1 worker
+
+  ✓  1 [computador-1440] › e2e\administracao.spec.ts:14:1 › cadastro, troca obrigatória, desativação, redefinição e auditoria (32.2s)
+  ✓  2 [computador-1440] › e2e\t12-autenticacao.spec.ts:13:1 › credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login (6.4s)
+  ✓  3 [computador-1440] › e2e\t12-autenticacao.spec.ts:27:1 › sem sessão, a rota administrativa redireciona a /login (3.5s)
+  ✓  4 [computador-1440] › e2e\t12-autenticacao.spec.ts:33:1 › SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados (9.3s)
+  ✓  5 [computador-1440] › e2e\t12-autenticacao.spec.ts:72:1 › VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API (6.0s)
+  ✓  6 [celular-360] › e2e\t12-autenticacao.spec.ts:13:1 › credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login (10.5s)
+  ✓  7 [celular-360] › e2e\t12-autenticacao.spec.ts:27:1 › sem sessão, a rota administrativa redireciona a /login (4.0s)
+  ✓  8 [celular-360] › e2e\t12-autenticacao.spec.ts:33:1 › SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados (11.3s)
+  ✓  9 [celular-360] › e2e\t12-autenticacao.spec.ts:72:1 › VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API (6.2s)
+Contas E2E removidas do Supabase Auth local: 3.
+
+  9 passed (2.6m)

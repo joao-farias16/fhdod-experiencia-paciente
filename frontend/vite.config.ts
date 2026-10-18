@@ -5,11 +5,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5173,
+    port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
-    // Encaminha /api para o backend local, evitando CORS em desenvolvimento.
+    // Encaminha /api para o backend local, evitando CORS em desenvolvimento. Os testes E2E usam
+    // um backend próprio (VITE_PROXY_TARGET) ligado ao banco de teste.
     proxy: {
-      '/api': 'http://localhost:3333',
+      '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:3333',
     },
   },
   preview: {
