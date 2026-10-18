@@ -1,0 +1,109 @@
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/frontend
+      Coverage enabled with v8
+
+ ✓ src/lib/env.test.ts (8 tests) 70ms
+ ✓ src/lib/api-client.test.ts (7 tests) 127ms
+ ✓ src/lib/format.test.ts (7 tests) 113ms
+ ✓ src/features/auth/auth-client.test.ts (9 tests) 66ms
+ ✓ src/components/ui/ui.test.tsx (7 tests) 5239ms
+   ✓ Dialog (RNF07) (1)
+     ✓ foca o primeiro controle, prende o Tab no diálogo e devolve o foco ao fechar 3331ms
+   ✓ Pagination e estados (3)
+     ✓ mostra o intervalo e navega entre páginas 581ms
+   ✓ TemporaryPasswordDialog (RF03) (3)
+     ✓ copia a senha e informa o resultado 401ms
+     ✓ sem permissão de área de transferência, orienta a anotar 454ms
+ ✓ src/app/App.test.tsx (4 tests) 3359ms
+   ✓ página inicial (3)
+     ✓ identifica o sistema FHDOD e o aviso de dados fictícios 2583ms
+     ✓ informa API indisponível e permite tentar novamente 458ms
+ ✓ src/features/audit/AuditPage.test.tsx (4 tests) 7392ms
+   ✓ TL17 — consulta da auditoria (3)
+     ✓ lista eventos em dd/mm/aaaa hh:mm (America/Sao_Paulo), com rótulos e detalhes legíveis 3023ms
+     ✓ usa os últimos 30 dias e 50 itens por padrão; aplica os filtros escolhidos 2623ms
+     ✓ valida o período (data inicial ≤ final, até 366 dias) antes de consultar 1734ms
+ ✓ src/features/auth/ChangePasswordPage.test.tsx (5 tests) 9474ms
+   ✓ TL02 — troca de senha (5)
+     ✓ mostra as regras e marca cada uma como atendida conforme a digitação 3504ms
+     ✓ senha fora da política ou confirmação diferente não chega ao backend 2252ms
+     ✓ senha válida: E05, novo login com a senha nova e tela inicial do perfil 1436ms
+     ✓ 400 do backend mostra mensagem sem repetir a senha 976ms
+     ✓ 429 informa a espera 1296ms
+ ✓ src/features/users/UsersPage.test.tsx (11 tests) 14438ms
+   ✓ TL16 — lista e filtros (4)
+     ✓ mostra perfil, escopo e situação com datas em dd/mm/aaaa 1549ms
+     ✓ a própria linha não oferece desativar nem redefinir senha (RN24) 1857ms
+     ✓ envia os filtros ao E06 2802ms
+     ✓ erro ao carregar mostra o código da requisição e permite tentar de novo 444ms
+   ✓ TL16 — cadastro com senha temporária exibida uma vez (3)
+     ✓ cadastra AS com setores ativos e mostra a senha temporária até Concluir 2552ms
+     ✓ e-mail duplicado (409) aparece no campo de e-mail 2042ms
+     ✓ Esc fecha o diálogo e devolve o foco ao botão 520ms
+   ✓ TL16 — edição, desativação e redefinição (4)
+     ✓ editar a si mesmo envia somente o nome 817ms
+     ✓ desativação exige confirmação e envia isActive: false 699ms
+     ✓ erro 422 da desativação aparece no diálogo 421ms
+     ✓ redefinição gera a senha temporária e a exibe uma vez; inativo não pode ser redefinido 724ms
+ ✓ src/features/auth/auth-flow.test.tsx (17 tests) 14805ms
+   ✓ TL01 — login administrativo (8)
+     ✓ credenciais inválidas: permanece em /login com mensagem genérica 4292ms
+     ✓ e-mail inexistente recebe exatamente a mesma mensagem 1515ms
+     ✓ conta sem perfil (401): mensagem genérica e sessão encerrada 1127ms
+     ✓ conta desativada (403): mensagem genérica e sessão encerrada 911ms
+     ✓ SA vai para a gestão de usuários; o token vai no cabeçalho Authorization 1414ms
+     ✓ perfil sem administração de usuários vai para /painel 1200ms
+     ✓ troca de senha pendente leva à TL02 1018ms
+   ✓ proteção de rotas e logout (RF02) (7)
+     ✓ Sair encerra a sessão, limpa os dados e Voltar não mostra a tela administrativa 480ms
+     ✓ depois de Sair, o próximo usuário vai para a própria tela inicial (sem herdar a anterior) 1102ms
+     ✓ acesso direto sem sessão volta à tela pedida depois do login 890ms
+
+ Test Files  10 passed (10)
+      Tests  79 passed (79)
+   Start at  11:21:46
+   Duration  53.82s (environment 63%, tests 14%, setup 12%, import 7%, transform 2%, worker 1%)
+
+JUNIT report written to C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/docs/evidencias/ET03/frontend-testes-junit.xml
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+
+=============================== Coverage summary ===============================
+Statements   : 88.87% ( 575/647 )
+Branches     : 83.38% ( 532/638 )
+Functions    : 89.79% ( 176/196 )
+Lines        : 90.42% ( 538/595 )
+================================================================================
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   88.87 |    83.38 |   89.79 |   90.42 |                   
+ components/ui     |   98.48 |     92.3 |     100 |     100 |                   
+  Alert.tsx        |     100 |    88.88 |     100 |     100 | 34                
+  Dialog.tsx       |   97.36 |    90.32 |     100 |     100 | 33-36,46          
+  Field.tsx        |     100 |       95 |     100 |     100 | 93                
+  States.tsx       |     100 |    93.33 |     100 |     100 | 48                
+ features/admin    |      92 |       80 |    87.5 |   95.45 |                   
+  AdminLayout.tsx  |    87.5 |    83.33 |   77.77 |    92.3 | 51                
+  PainelPage.tsx   |     100 |       75 |     100 |     100 | 33-42             
+ features/audit    |   90.41 |    84.21 |    90.9 |   89.06 |                   
+  AuditPage.tsx    |   85.71 |       75 |    87.5 |   84.37 | 170-188           
+  audit-labels.ts  |   94.73 |     90.9 |     100 |   93.75 | 57,66             
+ features/auth     |   85.09 |       78 |   84.61 |   86.91 |                   
+  AuthProvider.tsx |   79.51 |    51.21 |   85.71 |   79.74 | ...60-161,169-170 
+  ...swordPage.tsx |   78.12 |    85.71 |      70 |   83.33 | 25-31,151-158     
+  LoginPage.tsx    |   93.54 |     87.8 |   71.42 |   96.29 | 143               
+  auth-client.ts   |   96.15 |    94.44 |     100 |   95.65 | 42                
+  auth-context.ts  |      80 |       50 |     100 |     100 | 41-48             
+  guards.tsx       |    87.5 |    92.85 |      75 |   86.66 | 19-21             
+ features/health   |     100 |       80 |     100 |     100 |                   
+  ...tatusCard.tsx |     100 |       80 |     100 |     100 | 34-47             
+ features/users    |   85.18 |    81.15 |   86.79 |   88.15 |                   
+  ...ordDialog.tsx |    92.3 |    83.33 |     100 |     100 | 31                
+  ...ormDialog.tsx |   71.42 |    76.59 |      75 |   76.08 | ...05-106,112-123 
+  UsersPage.tsx    |   88.31 |    84.14 |   83.33 |   90.27 | ...26,193-194,332 
+ lib               |   92.22 |    88.28 |   93.75 |   92.59 |                   
+  api-client.ts    |   96.96 |    92.85 |     100 |     100 | 83,98             
+  env.ts           |   96.55 |     97.5 |     100 |   96.42 | 70                
+  format.ts        |     100 |    82.35 |     100 |     100 | 52                
+  supabase.ts      |   16.66 |        0 |       0 |   16.66 | 16-30             
+-------------------|---------|----------|---------|---------|-------------------

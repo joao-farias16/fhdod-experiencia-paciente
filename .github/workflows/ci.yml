@@ -2,6 +2,9 @@
 # ET01: segredos, formatação, lint, typecheck, testes, build, saúde da API e auditoria de dependências.
 # ET02: PostgreSQL 17, validação do schema Prisma, `prisma migrate deploy`, `prisma migrate diff
 # --exit-code`, seed com verificação das contagens e testes de integração com banco real (T32).
+# ET03: T12–T17 rodam no passo de testes com PostgreSQL real e verificador de token falso (sem
+# Supabase na CI); a suíte contra o Supabase Auth local (`npm run test:supabase`) é executada
+# localmente pelo responsável.
 name: CI
 
 on:
@@ -130,6 +133,10 @@ jobs:
           CORS_ORIGIN: https://fhdod.example
           LOG_LEVEL: warn
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod
+          # A rota de saúde não usa o Supabase; valores fictícios só para a validação do ambiente.
+          SUPABASE_URL: https://supabase-indisponivel.example
+          SUPABASE_SECRET_KEY: valor-ficticio-da-ci
+          AUDIT_IP_SECRET: valor-ficticio-da-ci-com-mais-de-32-caracteres # gitleaks:allow — valor fictício
         run: |
           node dist/server.js &
           for i in $(seq 1 20); do

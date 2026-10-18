@@ -1,8 +1,12 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
-import { PrismaClient } from '../generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../generated/prisma/client.js';
 
-export { PrismaClient };
+export { Prisma, PrismaClient };
+export type { UserRole } from '../generated/prisma/client.js';
+
+/** Cliente usado dentro de `prisma.$transaction(async (tx) => ...)`. */
+export type TransactionClient = Prisma.TransactionClient;
 
 /**
  * Cria o cliente Prisma com o adaptador do driver `pg` (Prisma 7). Em produção, `databaseUrl` é o

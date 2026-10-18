@@ -1,0 +1,111 @@
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/backend
+      Coverage enabled with v8
+
+ ✓ |unidade-e-integracao| tests/unit/supabase.test.ts (16 tests) 133ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts (14 tests) 174ms
+ ✓ |unidade-e-integracao| tests/unit/auth-regras.test.ts (40 tests) 1867ms
+   ✓ RF03 — senha temporária (CSPRNG) (2)
+     ✓ tem 16 caracteres, cumpre a RN28 e não repete em 2.000 gerações 1623ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts (3 tests) 265ms
+ ✓ |unidade-e-integracao| tests/unit/health.test.ts (1 test) 321ms
+   ✓ healthRouter (E43) (1)
+     ✓ responde 503 quando o banco não responde dentro do limite (2 s em produção) 312ms
+ ✓ |unidade-e-integracao| tests/unit/auth-middlewares.test.ts (10 tests) 497ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts (13 tests) 1448ms
+   ✓ GET /api/v1/health (E43) (3)
+     ✓ aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13) 732ms
+ ✓ |banco| tests/db/t13-senha.test.ts (22 tests) 10490ms
+   ✓ T13 — troca obrigatória pendente (RF04) (5)
+     ✓ E06 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 1236ms
+     ✓ E10 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 676ms
+     ✓ E41 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 488ms
+     ✓ E07 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 402ms
+   ✓ T13 — E05 POST /api/v1/me/password (10)
+     ✓ senha válida → 204; atualiza o Supabase, libera o acesso e audita sem a senha 573ms
+     ✓ troca voluntária é permitida (mandatory: false) 405ms
+     ✓ falha no Supabase Auth desfaz a transação (flag e auditoria preservadas) → 503 327ms
+     ✓ limita E05 a 5 tentativas a cada 15 minutos por perfil (429 com Retry-After) 425ms
+   ✓ T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) (7)
+     ✓ gera senha temporária de 16 caracteres, marca a troca e audita sem a senha 411ms
+     ✓ cada redefinição gera uma senha diferente (CSPRNG) 420ms
+     ✓ fluxo completo: usuário entra com a temporária, só E04/E05 respondem, troca e volta a usar 1472ms
+     ✓ sessão anterior à redefinição não consegue concluir a troca obrigatória (401) 1317ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts (43 tests) 4625ms
+ ✓ |banco| tests/db/t16-bloqueio-conta.test.ts (11 tests) 5735ms
+   ✓ T16 — desativação com token ainda válido (3)
+     ✓ a requisição seguinte do usuário recebe 403 ACCOUNT_DISABLED 1485ms
+     ✓ mesmo sem o bloqueio no Supabase, o perfil inativo é recusado a cada requisição 436ms
+     ✓ o histórico permanece: perfil, vínculos, autoria e auditoria (sem exclusão física) 417ms
+   ✓ T16 — regras de desativação (RN24) (4)
+     ✓ desativar a própria conta → 422 SELF_MODIFICATION_FORBIDDEN (havendo outro SA) 343ms
+     ✓ desativar o último SA ativo → 422 LAST_SUPERADMIN 352ms
+   ✓ T16 — reativação e consistência com o Supabase Auth (4)
+     ✓ reativação libera o acesso na requisição seguinte e remove o bloqueio 344ms
+     ✓ falha ao bloquear no Supabase Auth desfaz a desativação (503, nada gravado) 323ms
+     ✓ repetir a desativação de quem já está inativo não gera novo registro 841ms
+     ✓ o e-mail é imutável (campo desconhecido no PATCH → 400) 531ms
+ ✓ |banco| tests/db/t14-permissoes.test.ts (278 tests) 4971ms
+   ✓ T14 — chamadas diretas à API por perfil (endpoints da ET03) (50)
+     ✓ E04 com sa 569ms
+     ✓ o novo perfil vale na requisição seguinte (RF07) 351ms
+ ✓ |banco| tests/db/t17-auditoria.test.ts (28 tests) 3912ms
+   ✓ T17 — catálogo: exatamente um registro por operação (8)
+     ✓ USER_CREATED (E07) 911ms
+ ✓ |banco| tests/db/t15-escopo-setor.test.ts (24 tests) 2516ms
+   ✓ T15 — E10 GET /admin/sectors (endpoint real) (6)
+     ✓ AS restrito ao setor A vê somente o setor A, com contagens 518ms
+ ✓ |banco| tests/db/usuarios.test.ts (17 tests) 2396ms
+   ✓ E06 — GET /admin/users (3)
+     ✓ lista somente os usuários do hospital, ordenados por nome, com meta 438ms
+   ✓ E07 — POST /admin/users (10)
+     ✓ cria conta e perfil; o usuário autentica com a senha temporária e deve trocá-la 322ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts (6 tests) 1224ms
+ ✓ |banco| tests/db/t12-autenticacao.test.ts (14 tests) 1012ms
+   ✓ T12 — E04 GET /api/v1/me (14)
+     ✓ responde 200 com token válido: perfil, escopo e permissões da Seção 6 (RF05) 319ms
+ ✓ |banco| tests/db/health-prisma.test.ts (3 tests) 640ms
+   ✓ GET /api/v1/health com PostgreSQL real (3)
+     ✓ responde 200 quando o SELECT 1 do Prisma é atendido 445ms
+
+ Test Files  17 passed (17)
+      Tests  543 passed (543)
+   Start at  11:19:35
+   Duration  96.17s (import 48%, tests 44%, transform 6%, worker 1%)
+
+JUNIT report written to C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/docs/evidencias/ET03/backend-testes-junit.xml
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+
+=============================== Coverage summary ===============================
+Statements   : 97.67% ( 587/601 )
+Branches     : 94.07% ( 365/388 )
+Functions    : 98.73% ( 156/158 )
+Lines        : 98.14% ( 530/540 )
+================================================================================
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   97.67 |    94.07 |   98.73 |   98.14 |                   
+ src/config        |     100 |     92.3 |     100 |     100 |                   
+  env.ts           |     100 |     92.3 |     100 |     100 | 59                
+ src/lib           |   96.82 |       92 |     100 |     100 |                   
+  logger.ts        |     100 |       50 |     100 |     100 | 11                
+  supabase.ts      |   96.66 |    93.75 |     100 |     100 | 38-41,99          
+ src/middlewares   |   95.12 |    90.76 |   95.65 |   94.52 |                   
+  authorize.ts     |     100 |    93.33 |     100 |     100 | 67                
+  error-handler.ts |    87.5 |    84.61 |     100 |   85.71 | 36,48-49          
+  rate-limit.ts    |     100 |       50 |     100 |     100 | 38                
+  ...est-logger.ts |    92.3 |      100 |      80 |    90.9 | 27                
+ ...les/audit-logs |     100 |    93.33 |     100 |     100 |                   
+  ...gs.service.ts |     100 |     90.9 |     100 |     100 | 76-80             
+ src/modules/auth  |     100 |    83.33 |     100 |     100 |                   
+  ...st-context.ts |     100 |    66.66 |     100 |     100 | 28-31             
+ src/modules/me    |   94.11 |    83.33 |     100 |   93.75 |                   
+  me.service.ts    |   90.47 |    83.33 |     100 |   89.47 | 17,92             
+ ...odules/sectors |     100 |     87.5 |     100 |     100 |                   
+  ...rs.service.ts |     100 |     87.5 |     100 |     100 | 35                
+ src/modules/users |    96.8 |    97.12 |   97.61 |   97.61 |                   
+  users.service.ts |   95.12 |    96.26 |   96.15 |   96.15 | 94,350-352        
+ src/utils         |     100 |    93.75 |     100 |     100 |                   
+  validation.ts    |     100 |     87.5 |     100 |     100 | 15                
+-------------------|---------|----------|---------|---------|-------------------

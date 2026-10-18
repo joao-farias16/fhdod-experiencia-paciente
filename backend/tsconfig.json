@@ -7,5 +7,13 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tests", "prisma", "scripts", "vitest.config.ts", "prisma.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "prisma",
+    "scripts",
+    "vitest.config.ts",
+    "vitest.supabase.config.ts",
+    "prisma.config.ts"
+  ]
 }

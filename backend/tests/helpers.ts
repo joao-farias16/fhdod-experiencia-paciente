@@ -1,6 +1,11 @@
 import { createApp } from '../src/app.js';
 import { createLogger } from '../src/lib/logger.js';
 import type { PrismaClient } from '../src/lib/prisma.js';
+import {
+  type AuthAdmin,
+  AuthServiceUnavailableError,
+  type TokenVerifier,
+} from '../src/modules/auth/auth.types.js';
 import type { Clock } from '../src/utils/clock.js';
 
 export const FIXED_NOW = new Date('2026-10-10T17:25:03.120Z');
@@ -23,11 +28,32 @@ export function databaseStub(mode: 'up' | 'down' | 'slow' = 'up'): DatabaseStub 
   return { $queryRaw: queryRaw } as unknown as DatabaseStub;
 }
 
-export function buildTestApp(prisma: DatabaseStub = databaseStub()) {
+/** Verificador que recusa qualquer token (testes que não usam autenticação). */
+export const rejectingVerifier: TokenVerifier = {
+  verify: () => Promise.resolve({ status: 'invalid' }),
+};
+
+/** Operações administrativas indisponíveis (testes que não chegam ao Supabase Auth). */
+export const unavailableAuthAdmin: AuthAdmin = {
+  createUser: () => Promise.reject(new AuthServiceUnavailableError('createUser')),
+  deleteUser: () => Promise.reject(new AuthServiceUnavailableError('deleteUser')),
+  updatePassword: () => Promise.reject(new AuthServiceUnavailableError('updatePassword')),
+  setBanned: () => Promise.reject(new AuthServiceUnavailableError('setBanned')),
+};
+
+export function buildTestApp(
+  prisma: DatabaseStub | PrismaClient = databaseStub(),
+  auth: { verifier: TokenVerifier; admin: AuthAdmin } = {
+    verifier: rejectingVerifier,
+    admin: unavailableAuthAdmin,
+  },
+) {
   return createApp({
     env: { CORS_ORIGIN: [ALLOWED_ORIGIN], TRUST_PROXY: 0 },
     logger: createLogger({ LOG_LEVEL: 'silent', NODE_ENV: 'test' }),
-    prisma,
+    // Os testes sem banco injetam um dublê só com $queryRaw (rotas autenticadas não são usadas).
+    prisma: prisma as PrismaClient,
+    auth,
     clock: fixedClock,
   });
 }
