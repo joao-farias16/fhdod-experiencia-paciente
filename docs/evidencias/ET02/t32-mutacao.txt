@@ -1,0 +1,32 @@
+# T32 — teste de mutação (controle negativo)
+# Data: 2026-10-18T00:01:32Z | Banco descartável: postgresql://127.0.0.1:54322/fhdod_mutacao (Supabase CLI local, PostgreSQL 17)
+# Procedimento: migrate deploy; remoção das FKs compostas, do gatilho de anonimato, da restrição EXCLUDE, das FKs que referenciam sectors e dos gatilhos de imutabilidade de survey_versions; execução do T32.
+# Comando: TEST_DATABASE_URL=.../fhdod_mutacao npx vitest run tests/db/t32-integridade-referencial.test.ts
+# Esperado: os 6 cenários falham (o teste detecta a ausência de cada mecanismo).
+
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 1: rejeita nota de resposta com pergunta de outra versão (FK composta) 134ms
+   → O banco aceitou uma operação inválida: INSERT INTO response_answers (response_id, survey_version_id, survey_version_question_id, question_type, score)
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 2: rejeita resposta com setor diferente do setor da versão (FK composta) 76ms
+   → O banco aceitou uma operação inválida: INSERT INTO responses (survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 3: rejeita contato em manifestação anônima (gatilho) 76ms
+   → O banco aceitou uma operação inválida: INSERT INTO manifestation_contacts (manifestation_id, full_name, email, consent_given_at, purpose_text_version)
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 4: rejeita turno sobreposto da mesma equipe (restrição de exclusão) 64ms
+   → O banco aceitou uma operação inválida: INSERT INTO shifts (sector_id, team_id, period, starts_at, ends_at, source, created_by)
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 5: rejeita exclusão física de setor referenciado (ON DELETE RESTRICT) 75ms
+   → O banco aceitou uma operação inválida: DELETE FROM sectors WHERE id = $1
+ × |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 6: rejeita UPDATE de campo imutável de versão publicada (gatilho) 69ms
+   → O banco aceitou uma operação inválida: UPDATE survey_versions SET title = 'Título alterado' WHERE id = $1
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+Error: O banco aceitou uma operação inválida: INSERT INTO response_answers (response_id, survey_version_id, survey_version_question_id, question_type, score)
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+Error: O banco aceitou uma operação inválida: INSERT INTO responses (survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+Error: O banco aceitou uma operação inválida: INSERT INTO manifestation_contacts (manifestation_id, full_name, email, consent_given_at, purpose_text_version)
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+Error: O banco aceitou uma operação inválida: INSERT INTO shifts (sector_id, team_id, period, starts_at, ends_at, source, created_by)
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+Error: O banco aceitou uma operação inválida: DELETE FROM sectors WHERE id = $1
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+Error: O banco aceitou uma operação inválida: UPDATE survey_versions SET title = 'Título alterado' WHERE id = $1
+     61|     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
+      Tests  6 failed (6)

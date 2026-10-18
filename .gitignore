@@ -48,7 +48,10 @@ credentials*.json
 service-account*.json
 secrets/
 
-# Supabase CLI (estado local; config.toml será versionado na ET02)
+# Prisma Client gerado por `prisma generate` (recriado no npm ci pelo postinstall)
+backend/src/generated/
+
+# Supabase CLI (estado local; supabase/config.toml é versionado)
 supabase/.branches/
 supabase/.temp/
 supabase/.env

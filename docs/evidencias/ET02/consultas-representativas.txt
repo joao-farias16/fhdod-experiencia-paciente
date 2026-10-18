@@ -1,0 +1,67 @@
+# Consultas representativas da Seção 8 executadas no banco local semeado — 2026-10-18T00:17:53Z
+# Banco: postgresql://127.0.0.1:54322/postgres (Supabase CLI, PostgreSQL 17.11), seed com SEED_REFERENCE_DATE=2026-10-17.
+# Comando: psql com PREPARE/EXECUTE (consultas parametrizadas, como $queryRaw).
+
+-- E28: NPS do recorte (17/09/2026 a 16/10/2026, todos os setores)
+PREPARE
+ total | promoters | passives | detractors | nps  
+-------+-----------+----------+------------+------
+   587 |       346 |      148 |         93 | 43.1
+(1 row)
+
+-- E28 com recorte vazio (NPS nulo, RF60)
+ total | promoters | passives | detractors | nps 
+-------+-----------+----------+------------+-----
+     0 |         0 |        0 |          0 |    
+(1 row)
+
+-- E35: lista da Ouvidoria (sem ler o contato, apenas a existência)
+PREPARE
+    protocol     |        received_at         |            sector             |    type    |  status   | priority |                           excerpt                            | has_contact 
+-----------------+----------------------------+-------------------------------+------------+-----------+----------+--------------------------------------------------------------+-------------
+ FHD-2026-000178 | 2026-10-15 21:29:26.532+00 | Ambulatório de Especialidades | complaint  | in_review | high     | O banheiro da sala de espera estava sem papel e sem sabonete | t
+ FHD-2026-000176 | 2026-10-15 16:23:57.76+00  | Pronto Atendimento            | complaint  | in_review | medium   | O ar-condicionado do quarto não funcionou durante a noite.   | f
+ FHD-2026-000175 | 2026-10-15 15:45:44.832+00 | Internação Clínica            | suggestion | received  | low      | Seria bom ter um painel mostrando a ordem de chamada na rece | f
+ FHD-2026-000174 | 2026-10-13 20:29:34.127+00 | Pronto Atendimento            | complaint  | in_review | high     | Precisei repetir as mesmas informações para profissionais di | t
+ FHD-2026-000172 | 2026-10-11 18:29:22.962+00 | Ambulatório de Especialidades | complaint  | in_review | medium   | Precisei repetir as mesmas informações para profissionais di | t
+(5 rows)
+
+-- RF24: atribuição no PA (turnos não cancelados contendo o instante, equipe ativa, LIMIT 2)
+PREPARE
+segunda-feira 12/10/2026 08:00 (um turno -> attributed)
+               team_id                | period  |       starts_at        |        ends_at         
+--------------------------------------+---------+------------------------+------------------------
+ 390e4d73-6fcd-4835-bcfb-d9289284eef9 | morning | 2026-10-12 10:00:00+00 | 2026-10-12 16:00:00+00
+(1 row)
+
+segunda-feira 12/10/2026 11:00 (reforço: dois turnos -> ambiguous)
+               team_id                | period  |       starts_at        |        ends_at         
+--------------------------------------+---------+------------------------+------------------------
+ 390e4d73-6fcd-4835-bcfb-d9289284eef9 | morning | 2026-10-12 10:00:00+00 | 2026-10-12 16:00:00+00
+ abf9552e-5027-4688-a7b7-d470676265ed | morning | 2026-10-12 13:00:00+00 | 2026-10-12 19:00:00+00
+(2 rows)
+
+-- Plano da consulta de atribuição
+                                                                                                                       QUERY PLAN                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Nested Loop
+         ->  Seq Scan on shifts sh
+               Filter: ((cancelled_at IS NULL) AND (starts_at <= '2026-10-12 14:00:00+00'::timestamp with time zone) AND ('2026-10-12 14:00:00+00'::timestamp with time zone < ends_at) AND (sector_id = 'cc8e1216-fb5d-42d8-85af-24edbf2241cf'::uuid))
+         ->  Memoize
+               Cache Key: sh.team_id
+               Cache Mode: logical
+               ->  Index Scan using teams_id_sector_id_key on teams t
+                     Index Cond: (id = sh.team_id)
+                     Filter: is_active
+(10 rows)
+
+-- Plano do NPS por período (índice de submitted_at / setor)
+                                                                                                                                  QUERY PLAN                                                                                                                                   
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Index Scan using responses_submitted_at_idx on responses
+         Index Cond: ((submitted_at >= '2026-09-17 03:00:00+00'::timestamp with time zone) AND (submitted_at < '2026-10-17 03:00:00+00'::timestamp with time zone))
+         Filter: (sector_id = ANY ('{cc8e1216-fb5d-42d8-85af-24edbf2241cf,03fad310-f713-4304-9d03-0ed3cd998317,7143eba3-25b8-48b1-b397-8078a93c9955,1f43bbd5-6c6d-49f2-8d50-5867ca69283e,e6397f15-5902-48dd-96e4-ab0abec0dbbb,d92a12a2-59d6-410b-87ca-a6bdae7c0f31}'::uuid[]))
+(4 rows)
+

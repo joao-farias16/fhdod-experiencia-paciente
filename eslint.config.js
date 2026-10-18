@@ -8,7 +8,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/', '**/dist/', '**/coverage/', '**/*.tsbuildinfo'],
+    ignores: [
+      '**/node_modules/',
+      '**/dist/',
+      '**/coverage/',
+      '**/*.tsbuildinfo',
+      // Prisma Client gerado por `prisma generate` (não versionado).
+      'backend/src/generated/',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -46,6 +53,11 @@ export default tseslint.config(
   {
     files: ['backend/**/*.ts'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // Scripts de linha de comando (seed e utilitários de banco) informam o progresso no terminal.
+    files: ['backend/prisma/**/*.ts', 'backend/scripts/**/*.ts'],
+    rules: { 'no-console': 'off' },
   },
   {
     files: ['frontend/**/*.{ts,tsx}'],

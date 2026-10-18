@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import type { Logger } from 'pino';
 
 import type { Env } from './config/env.js';
+import type { PrismaClient } from './lib/prisma.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFoundHandler } from './middlewares/not-found.js';
 import { requestLogger } from './middlewares/request-logger.js';
@@ -14,16 +15,18 @@ import { systemClock, type Clock } from './utils/clock.js';
 export const JSON_BODY_LIMIT = '32kb';
 
 /**
- * Dependências externas da aplicação. Nas próximas etapas, recebe também o cliente do banco
- * e o verificador de token, permitindo testes sem Supabase (Seção 7).
+ * Dependências externas da aplicação: configuração, logger, relógio e cliente Prisma (ET02).
+ * Na ET03 recebe também o verificador de token, permitindo testes sem Supabase (Seção 7).
+ * O cliente é tipado pelo subconjunto usado, para que os testes possam injetar dublês.
  */
 export interface AppDeps {
   env: Pick<Env, 'CORS_ORIGIN' | 'TRUST_PROXY'>;
   logger: Logger;
+  prisma: Pick<PrismaClient, '$queryRaw'>;
   clock?: Clock;
 }
 
-export function createApp({ env, logger, clock = systemClock }: AppDeps): Express {
+export function createApp({ env, logger, prisma, clock = systemClock }: AppDeps): Express {
   const app = express();
 
   app.disable('x-powered-by');
@@ -43,7 +46,7 @@ export function createApp({ env, logger, clock = systemClock }: AppDeps): Expres
   );
   app.use(express.json({ limit: JSON_BODY_LIMIT, strict: true }));
 
-  app.use('/api/v1', v1Router({ clock }));
+  app.use('/api/v1', v1Router({ clock, prisma }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

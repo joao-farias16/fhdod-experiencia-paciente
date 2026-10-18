@@ -1,0 +1,46 @@
+# Simulação local da CI (job qualidade) em PostgreSQL 17 puro — 2026-10-18T00:12:49Z
+# Contêiner postgres:17 em localhost:5433; sem Supabase (papéis anon/authenticated criados como na CI).
+## Preparar bancos e papéis
+CREATE ROLE
+CREATE ROLE
+CREATE DATABASE
+CREATE DATABASE
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+## npm run db:validate -w backend
+> backend@0.1.0 db:validate
+> prisma validate
+The schema at prisma\schema.prisma is valid 🚀
+exit=0
+## npm run db:deploy -w backend
+Datasource "db": PostgreSQL database "fhdod", schema "public" at "localhost:5433"
+Applying migration `20261017230000_extensoes_e_protocolo`
+Applying migration `20261017233719_esquema_inicial`
+Applying migration `20261017233735_restricoes_integridade`
+Applying migration `20261017233800_gatilhos_imutabilidade_coerencia`
+Applying migration `20261017233900_seguranca_rls_privilegios`
+All migrations have been successfully applied.
+exit=0
+## npm run db:diff -w backend
+Loaded Prisma config from prisma.config.ts.
+No difference detected.
+exit=0
+## npm run db:seed -w backend
+SUPABASE_URL/SUPABASE_SECRET_KEY ausentes: perfis criados sem contas no Supabase Auth.
+Gravando seed (referência 2026-10-17) em postgresql://localhost:5433/fhdod...
+Seed concluído: 2400 respostas, 180 manifestações, 72 contatos e 2764 turnos. Confira com `npm run db:seed:verify`.
+exit=0
+## npm run db:seed:verify -w backend
+| Verificação | Esperado | Obtido | Resultado |
+**Resultado: APROVADO**
+exit=0
+## npm run test -w backend
+ Test Files  7 passed (7)
+      Tests  80 passed (80)
+exit=0

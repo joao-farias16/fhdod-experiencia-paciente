@@ -1,0 +1,25 @@
+# Supabase CLI local — verificações da configuração (ET02) — 2026-10-18T00:16:31Z
+# Ambiente: Supabase CLI 2.121.0, Docker 29.8.2, PostgreSQL 17.11 (imagem supabase/postgres:17.11.0.004).
+# Chaves e senhas omitidas. Comandos: curl contra http://127.0.0.1:54321 e psql no contêiner do banco.
+
+Login (POST /auth/v1/token?grant_type=password) com SEED_DEMO_PASSWORD:
+  superadmin@example.com      HTTP 200
+  admin.setor@example.com     HTTP 200
+  gestao@example.com          HTTP 200
+  gestao.setores@example.com  HTTP 200
+  ouvidoria@example.com       HTTP 200
+  visualizador@example.com    HTTP 200
+Login com senha errada        HTTP 400 invalid_credentials
+Cadastro público (POST /auth/v1/signup)  HTTP 422 signup_disabled
+
+Data API (PostgREST) desligada: GET /rest/v1/responses -> HTTP 503 (serviço inexistente no gateway)
+
+Banco postgres (desenvolvimento, após migrations e seed):
+  Tabelas de public com RLS habilitado: 19/19 (18 do modelo + _prisma_migrations)
+  Políticas em public: 0
+  Tabelas acessíveis (SELECT/INSERT/UPDATE/DELETE) por anon: 0; por authenticated: 0
+  supabase db lint --local --schema public --level warning: "No schema errors found"
+
+Defeito encontrado e corrigido nesta verificação: [auth.email] enable_signup = false desligava o
+provedor de e-mail (HTTP 422 email_provider_disabled no login). Corrigido para true; o cadastro
+público segue bloqueado por [auth] enable_signup = false.

@@ -1,0 +1,90 @@
+
+ RUN  v5.0.3 <repositorio>/backend
+
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > aplica os valores padrão e separa as origens do CORS 24ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > converte PORT e TRUST_PROXY para número 4ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > rejeita a ausência de CORS_ORIGIN 6ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > exige DATABASE_URL com protocolo postgresql (ET02) 8ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > não expõe a senha da DATABASE_URL na mensagem de erro 9ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > rejeita CORS_ORIGIN inválido (nao-e-url) 2ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > rejeita CORS_ORIGIN inválido (ftp://exemplo.com) 1ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > rejeita CORS_ORIGIN inválido (http://localhost:5173,) 1ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > rejeita porta, nível de log e ambiente inválidos, listando cada variável 5ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > não expõe o valor recebido na mensagem de erro 2ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts > loadEnv > exige origens HTTPS em produção (RNF09) 2ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts > errorHandler > responde 500 INTERNAL_ERROR sem stack trace nem mensagem interna (RNF19) 78ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts > errorHandler > preserva status, código e detalhes de um HttpError 16ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts > errorHandler > trata valores lançados que não são Error 11ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > GET /api/v1/health (E43) > responde 200 com o estado da API no envelope { data } 101ms
+ ✓ |unidade-e-integracao| tests/unit/health.test.ts > healthRouter (E43) > responde 503 quando o banco não responde dentro do limite (2 s em produção) 149ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > GET /api/v1/health (E43) > responde 503 SERVICE_UNAVAILABLE quando o SELECT 1 falha (RNF27) 22ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > GET /api/v1/health (E43) > aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13) 554ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > cabeçalhos e rastreabilidade > envia cabeçalhos de segurança e oculta X-Powered-By (Seção 10) 9ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > cabeçalhos e rastreabilidade > gera um X-Request-Id UUID para cada requisição 8ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > cabeçalhos e rastreabilidade > reaproveita um X-Request-Id válido e ignora um inválido 17ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > CORS restrito a CORS_ORIGIN > libera a origem configurada 13ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > CORS restrito a CORS_ORIGIN > não libera origens não autorizadas 15ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > CORS restrito a CORS_ORIGIN > responde ao preflight com os cabeçalhos previstos 17ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > padrão de erros (Tabela 18) > responde 404 ROUTE_NOT_FOUND para rota inexistente 14ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > padrão de erros (Tabela 18) > responde 400 MALFORMED_JSON para JSON inválido 809ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > padrão de erros (Tabela 18) > responde 413 PAYLOAD_TOO_LARGE para corpo acima de 32 KB (RNF11) 12ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts > padrão de erros (Tabela 18) > aceita corpo dentro do limite e segue para o 404 da rota 12ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > estrutura do esquema public > possui exatamente as 18 tabelas da Tabela 17 (além do controle do Prisma) 13ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > estrutura do esquema public > define os 11 enums da Tabela 16 com os valores do PDF 9ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > estrutura do esquema public > usa UUID com gen_random_uuid() e audit_logs.id como bigint de identidade 20ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > estrutura do esquema public > armazena todos os instantes como timestamptz 8ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > estrutura do esquema public > usa CASCADE somente nas dependências subordinadas e RESTRICT nas demais FKs 4ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > RLS e privilégios (Tabela 16 e Seção 10) > habilita RLS em todas as tabelas, sem nenhuma política 7ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > RLS e privilégios (Tabela 16 e Seção 10) > não concede acesso a anon e authenticated nas tabelas, sequências e funções 40ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > auditoria somente de inserção (RF10) > aceita INSERT e rejeita UPDATE, DELETE e TRUNCATE em audit_logs 34ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > imutabilidade de perguntas, versões e respostas > bloqueia texto, tipo e etapa de pergunta publicada, mas permite desativá-la 75ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > imutabilidade de perguntas, versões e respostas > impede alterar ou excluir perguntas de versão (instantâneo) 53ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > imutabilidade de perguntas, versões e respostas > exige que a pergunta da versão seja da mesma pesquisa e do mesmo tipo 41ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > imutabilidade de perguntas, versões e respostas > impede alterar respostas e notas; permite registrar o uso do token uma única vez 58ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > pesquisas: versão vigente e bloqueios após publicação (RN27) > exige versão vigente da própria pesquisa e bloqueia slug e setor publicados 54ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > pesquisas: versão vigente e bloqueios após publicação (RN27) > aceita uma única pergunta geral (nps) por pesquisa e por versão (UNIQUE parcial) 64ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita código de setor fora do padrão 61ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita superadministrador sem escopo global 103ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita administrador de setor com escopo global 90ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita e-mail com maiúsculas 82ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita perfil inativo sem data de desativação 73ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita turno com menos de 1 hora 70ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita turno com mais de 24 horas 59ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita turno importado sem importação 65ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita turno cancelado sem motivo 60ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita importação com totais incoerentes 58ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita importação acima de 2.000 linhas 53ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita importação confirmada sem data de confirmação 46ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita importação com validade acima de 30 minutos 47ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita NPS fora de 0–10 56ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita NPS baixo sem low_score 44ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita origem link com status de QR 45ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita atribuída sem turno 41ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita token de manifestação com validade acima de 60 minutos 45ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita nota específica fora de 1–5 43ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita nota específica registrada para a pergunta geral 42ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > regras de domínio por CHECK > rejeita nome de setor repetido sem distinguir maiúsculas (índice de expressão) 40ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > coerência da atribuição a turno (RN07) > aceita resposta atribuída coerente e rejeita equipe, período, horário ou turno cancelado incoerentes 61ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > coerência da atribuição a turno (RN07) > rejeita resposta anterior à publicação da versão 39ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > gera protocolo FHD-AAAA-NNNNNN pela sequência do banco 44ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > valida contato: telefone ou e-mail, formatos e nome 55ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > impede tornar anônima ou alterar o texto de manifestação registrada 45ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > exige providências (10+ caracteres) e data ao concluir; texto de 10 a 2.000 caracteres 47ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > aceita uma manifestação por resposta e exige o mesmo setor da resposta 49ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts > manifestações, contatos e linha do tempo > valida eventos da linha do tempo e impede alterar ou excluir notas diretamente 63ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 1: rejeita nota de resposta com pergunta de outra versão (FK composta) 87ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 2: rejeita resposta com setor diferente do setor da versão (FK composta) 65ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 3: rejeita contato em manifestação anônima (gatilho) 63ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 4: rejeita turno sobreposto da mesma equipe (restrição de exclusão) 52ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 5: rejeita exclusão física de setor referenciado (ON DELETE RESTRICT) 58ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts > T32 — integridade referencial garantida pelo PostgreSQL > cenário 6: rejeita UPDATE de campo imutável de versão publicada (gatilho) 67ms
+ ✓ |banco| tests/db/health-prisma.test.ts > GET /api/v1/health com PostgreSQL real > responde 200 quando o SELECT 1 do Prisma é atendido 197ms
+ ✓ |banco| tests/db/health-prisma.test.ts > GET /api/v1/health com PostgreSQL real > responde 503 SERVICE_UNAVAILABLE quando o banco está inacessível 31ms
+ ✓ |banco| tests/db/health-prisma.test.ts > GET /api/v1/health com PostgreSQL real > lê os dados pelo Prisma Client gerado do schema (modelos mapeados para snake_case) 84ms
+
+ Test Files  7 passed (7)
+      Tests  80 passed (80)
+   Start at  21:32:45
+   Duration  26.76s (import 83%, tests 11%, transform 5%, worker 1%)
+
+JUNIT report written to <repositorio>/docs/evidencias/ET02/backend-testes-junit.xml

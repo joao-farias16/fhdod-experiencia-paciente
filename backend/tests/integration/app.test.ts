@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { ALLOWED_ORIGIN, buildTestApp, errorOf, FIXED_NOW } from '../helpers.js';
+import { ALLOWED_ORIGIN, buildTestApp, databaseStub, errorOf, FIXED_NOW } from '../helpers.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,6 +20,21 @@ describe('GET /api/v1/health (E43)', () => {
         uptimeSeconds: expect.any(Number) as number,
       },
     });
+  });
+
+  it('responde 503 SERVICE_UNAVAILABLE quando o SELECT 1 falha (RNF27)', async () => {
+    const response = await request(buildTestApp(databaseStub('down'))).get('/api/v1/health');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'O serviço está temporariamente indisponível.',
+        details: [],
+        requestId: response.headers['x-request-id'],
+      },
+    });
+    expect(response.text).not.toContain('banco indisponível');
   });
 
   it('aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13)', async () => {

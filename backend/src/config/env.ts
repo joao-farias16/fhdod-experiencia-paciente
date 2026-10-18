@@ -2,10 +2,17 @@ import { z } from 'zod';
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
+/** URL de conexão PostgreSQL (postgres:// ou postgresql://). */
+export const postgresUrl = z.url({
+  protocol: /^postgres(ql)?$/,
+  message: 'Informe uma URL postgresql:// válida.',
+});
+
 /**
- * Variáveis de ambiente usadas pela API nesta etapa (Tabela 15 da especificação).
- * As demais variáveis (banco, Supabase, segredos HMAC) entram no esquema nas etapas
- * que efetivamente as utilizarem.
+ * Variáveis de ambiente usadas pela API (Tabela 15 da especificação).
+ * DATABASE_URL entrou na ET02; as variáveis do Supabase Auth e os segredos HMAC entram no
+ * esquema nas etapas que efetivamente as utilizarem. DIRECT_URL é lida só pelo Prisma CLI
+ * (prisma.config.ts); TEST_DATABASE_URL e SEED_* só pelos testes e pelo seed.
  */
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -18,6 +25,8 @@ export const envSchema = z.object({
     .pipe(z.array(z.url({ protocol: /^https?$/, message: 'Origem inválida.' })).min(1)),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
+  // Pooler do Supabase em modo transação (porta 6543) em produção; PostgreSQL local em desenvolvimento.
+  DATABASE_URL: postgresUrl,
 });
 
 export type Env = z.infer<typeof envSchema>;
