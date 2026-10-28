@@ -21,31 +21,38 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 ## Estado atual
 
 **ET01 — Repositório, ambiente e Kanban**: integrada em `develop`.
-**ET02 — Modelo de dados**: implementada localmente na branch `feature/ET02-modelo-dados` (aguardando commit, push, CI remota e revisão).
+**ET02 — Modelo de dados**: integrada em `develop`.
+**ET03 — Autenticação e permissões**: integrada em `develop`.
+**ET04, ET05 e ET06 — Setores e escalas, pesquisas e pesquisa pública**: implementadas localmente na branch `feature/ET04-ET06-escalas-pesquisas-publica` (aguardando commit, push, CI remota e revisão; ver [limitações](#limitações-conhecidas-e-pendências)).
 
-| Implementado (ET01 e ET02)                                                            | Reservado para etapas futuras                                |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Monorepo com npm workspaces (`backend`, `frontend`)                                   | Autenticação Supabase, perfis e permissões (ET03)            |
-| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros      | Endpoints de negócio das etapas ET03–ET10                    |
-| **ET02:** Prisma 7, 18 tabelas, 5 migrations, CHECK/EXCLUDE/gatilhos, RLS, seed e T32 | Backup e retenção (scripts), OpenAPI                         |
-| Frontend React 19 com página inicial, página 404 e situação da API                    | Setores, equipes, turnos e importação CSV (ET04)             |
-| ESLint, Prettier, TypeScript strict, Vitest, commitlint                               | Pesquisas, versões e QR Code (ET05); pesquisa pública (ET06) |
-| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)   | Manifestações e Ouvidoria (ET07); dashboard (ET08)           |
-| `.gitignore`, `.env.example` fictícios e varredura de segredos                        | Relatórios Excel (ET09); TV Wall (ET10)                      |
-| Quadro Kanban com os cards da ET01 e o backlog das etapas                             | OpenAPI/Swagger, E2E com Playwright, publicação (ET11–ET12)  |
+| Implementado (ET01 a ET06)                                                                     | Reservado para etapas futuras                                      |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Monorepo com npm workspaces (`backend`, `frontend`)                                            | Manifestação após o envio, protocolo e Ouvidoria (E03, TL10, ET07) |
+| **ET03:** Supabase Auth, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                  | Indicadores do painel (TL03, TL04, ET08)                           |
+| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)        | Relatórios Excel (ET09); TV Wall (ET10)                            |
+| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)     | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12)           |
+| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                     | E2E com axe em todas as telas (ET11)                               |
+| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08) | Publicação na nuvem (ET12)                                         |
+| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)       |                                                                    |
+| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros               |                                                                    |
+| **ET02:** Prisma 7, 18 tabelas, 5 migrations, CHECK/EXCLUDE/gatilhos, RLS, seed e T32          |                                                                    |
+| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                        |                                                                    |
+| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)            |                                                                    |
+| Testes E2E com Playwright (T12, fluxo administrativo, pesquisa pública e escalas/pesquisas)    |                                                                    |
+| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas    |                                                                    |
 
 Desde a ET02, a API conecta-se ao PostgreSQL pelo Prisma; a rota de saúde responde 503 se o banco não responder em 2 s.
 
 ## Tecnologias
 
-| Camada    | Tecnologias (versões instaladas)                                                                                                                     |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Frontend  | React 19.3, TypeScript 5.9, Vite 8, Tailwind CSS 4.3, React Router 8, TanStack Query 5, Lucide React                                                 |
-| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, helmet, cors, express-rate-limit, pino / pino-http                                        |
-| Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0 |
-| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, React Testing Library, Supertest, commitlint + husky                        |
-| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                         |
-| Previstas | Supabase Auth (cliente), React Hook Form, Recharts, qrcode.react, multer, csv-parse, ExcelJS, OpenAPI 3.1 + Swagger UI, Playwright + axe             |
+| Camada    | Tecnologias (versões instaladas)                                                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend  | React 19.3, TypeScript 5.9, Vite 8, Tailwind CSS 4.3, React Router 8, TanStack Query 5, React Hook Form 7, supabase-js 2 (sessão), Lucide React, qrcode.react 4 (QR Code em SVG/PNG) |
+| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, supabase-js 2 (Supabase Auth), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV)    |
+| Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0                                 |
+| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, React Testing Library, Supertest, Playwright 1.63 (E2E), jsqr (T02), commitlint + husky                     |
+| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                         |
+| Previstas | Recharts, ExcelJS, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                     |
 
 As bibliotecas da linha "Previstas" fazem parte da especificação, mas só serão instaladas na etapa que as utilizar, para não manter dependências sem uso.
 
@@ -65,24 +72,29 @@ fhdod-experiencia-paciente/
 │   │   ├── app.ts               createApp(deps): middlewares, rotas e erros
 │   │   ├── server.ts            inicialização, leitura do .env e encerramento gracioso
 │   │   ├── config/env.ts        validação das variáveis de ambiente (Zod)
-│   │   ├── lib/logger.ts        logger JSON (pino)
-│   │   ├── middlewares/         requestId/logs, rate limit, 404 e erros
-│   │   ├── modules/health/      E43 — GET /api/v1/health
+│   │   ├── lib/                 logger JSON (pino), Prisma e Supabase Auth (chave secreta)
+│   │   ├── middlewares/         requestId/logs, rate limit, autenticação, autorização, 404 e erros
+│   │   ├── modules/             health (E43), auth, me (E04–E05), users (E06–E09), audit-logs (E41),
+│   │   │                        sectors (E10–E12), teams (E13–E16), shifts (E17–E19), rosters (E20–E21),
+│   │   │                        surveys (E22–E27) e public-survey (E01–E02)
+│   │   ├── services/            auditoria, escopo de setores, atribuição a turno, idempotência e NPS
 │   │   ├── routes/v1.ts         agregador das rotas /api/v1
-│   │   └── utils/               HttpError e relógio injetável
+│   │   └── utils/               HttpError, relógio, validação e datas
 │   ├── prisma/                  schema.prisma, migrations/ (5) e seed.ts
-│   ├── scripts/db/              verificação do seed, reset local e proteção contra banco remoto
-│   ├── tests/                   unit/, integration/ (Supertest) e db/ (PostgreSQL real, T32)
+│   ├── scripts/                 db/ (seed, reset local, proteção contra banco remoto) e e2e/ (dados dos testes E2E)
+│   ├── tests/                   unit/, integration/, db/ (PostgreSQL real: T05, T12–T17, T22–T26, T32 e pesquisa pública) e supabase/ (Auth local)
 │   ├── prisma.config.ts         configuração do Prisma CLI (DIRECT_URL)
 │   └── .env.example
 ├── frontend/                    Interface (React 19 + Vite)
 │   ├── src/
 │   │   ├── app/                 provedores, roteador e rotas
-│   │   ├── components/          layout comum
-│   │   ├── features/            home, health (situação da API), not-found
+│   │   ├── components/          layout comum e componentes de interface (ui/)
+│   │   ├── features/            home, health, not-found, auth (TL01, TL02), users (TL16), audit (TL17), admin,
+│   │   │                        structure (TL05–TL07), surveys (TL08) e public-survey (TL09, TL11)
 │   │   ├── lib/                 env, cliente HTTP e formatação pt-BR
 │   │   ├── styles/              Tailwind e tokens visuais
-│   │   └── test/                configuração dos testes
+│   │   └── test/                configuração e apoio dos testes
+│   ├── e2e/                     testes ponta a ponta (Playwright)
 │   └── .env.example
 ├── supabase/config.toml         ambiente local (PostgreSQL 54322, Auth 54321, Data API desligada)
 ├── docs/                        documentação técnica e evidencias/
@@ -116,7 +128,11 @@ npm run db:seed:verify -w backend     # confere as contagens no banco
 
 `npm run db:reset` recria o banco **local** (migrations + seed) e recusa URLs remotas. Detalhes: [`docs/padroes-banco-de-dados.md`](docs/padroes-banco-de-dados.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/mapeamento-classes-e-consultas.md`](docs/mapeamento-classes-e-consultas.md).
 
-Contas de demonstração (somente no ambiente local, senha = `SEED_DEMO_PASSWORD` do seu `.env`): `superadmin@`, `admin.setor@`, `gestao@`, `gestao.setores@`, `ouvidoria@` e `visualizador@example.com`.
+Contas de demonstração (somente no ambiente local, senha = `SEED_DEMO_PASSWORD` do seu `.env`): `superadmin@`, `admin.setor@`, `gestao@`, `gestao.setores@`, `ouvidoria@` e `visualizador@example.com`. Entre em `http://localhost:5173/login` (TL01); o superadministrador vai para a gestão de usuários (TL16).
+
+O seed também publica as pesquisas dos 6 setores fictícios. A pesquisa pública abre sem login, por exemplo em `http://localhost:5173/p/pronto-atendimento?origem=qr` (como pelo QR Code) ou `?origem=link`.
+
+> **Windows — "ports are not available" ao iniciar o Supabase.** Se `npm run db:start` falhar com `bind: An attempt was made to access a socket in a way forbidden by its access permissions` nas portas 54321–54323, o Windows reservou essa faixa (veja com `netsh interface ipv4 show excludedportrange protocol=tcp`). Em um terminal **como administrador**, execute `net stop winnat` e `net start winnat` e tente de novo.
 
 ## Variáveis de ambiente
 
@@ -127,22 +143,28 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-| Módulo   | Variável                              | Uso                                                                           |
-| -------- | ------------------------------------- | ----------------------------------------------------------------------------- |
-| backend  | `NODE_ENV`                            | `development`, `test` ou `production`                                         |
-| backend  | `PORT`                                | porta da API (padrão `3333`)                                                  |
-| backend  | `CORS_ORIGIN`                         | **obrigatória**; origens permitidas separadas por vírgula (HTTPS em produção) |
-| backend  | `LOG_LEVEL`                           | nível do pino (padrão `info`)                                                 |
-| backend  | `TRUST_PROXY`                         | número de proxies confiáveis (Render = `1`)                                   |
-| backend  | `DATABASE_URL`                        | **obrigatória** (ET02); API → PostgreSQL (nuvem: pooler transação, 6543)      |
-| backend  | `DIRECT_URL`                          | Prisma Migrate (nuvem: pooler sessão, 5432)                                   |
-| backend  | `TEST_DATABASE_URL`                   | testes de banco (somente servidor local)                                      |
-| backend  | `SEED_*`                              | senha das contas de demonstração, trava de banco remoto e data de referência  |
-| backend  | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | seed (contas de demonstração); autenticação a partir da ET03                  |
-| frontend | `VITE_API_BASE_URL`                   | base da API (padrão `/api/v1`, encaminhado pelo Vite ao backend)              |
-| frontend | `VITE_APP_ENV`                        | `development`, `test` ou `production`                                         |
+| Módulo   | Variável                              | Uso                                                                                                             |
+| -------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| backend  | `NODE_ENV`                            | `development`, `test` ou `production`                                                                           |
+| backend  | `PORT`                                | porta da API (padrão `3333`)                                                                                    |
+| backend  | `CORS_ORIGIN`                         | **obrigatória**; origens permitidas separadas por vírgula (HTTPS em produção)                                   |
+| backend  | `LOG_LEVEL`                           | nível do pino (padrão `info`)                                                                                   |
+| backend  | `TRUST_PROXY`                         | número de proxies confiáveis (Render = `1`)                                                                     |
+| backend  | `DATABASE_URL`                        | **obrigatória** (ET02); API → PostgreSQL (nuvem: pooler transação, 6543)                                        |
+| backend  | `DIRECT_URL`                          | Prisma Migrate (nuvem: pooler sessão, 5432)                                                                     |
+| backend  | `TEST_DATABASE_URL`                   | testes de banco (somente servidor local)                                                                        |
+| backend  | `SEED_*`                              | senha das contas de demonstração, trava de banco remoto e data de referência                                    |
+| backend  | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | **obrigatórias** (ET03): validação do token e administração das contas; seed                                    |
+| backend  | `AUDIT_IP_SECRET`                     | HMAC do IP na auditoria (opcional local; obrigatória em produção, 32+)                                          |
+| backend  | `PUBLIC_APP_URL`                      | base dos links e do QR Code `/p/<slug>` (padrão local `http://localhost:5173`; HTTPS e obrigatória em produção) |
+| backend  | `MANIFESTATION_TOKEN_SECRET`          | HMAC do token devolvido por E02 (opcional local; obrigatória em produção, 32+)                                  |
+| backend  | `SUPABASE_PUBLISHABLE_KEY`            | somente `npm run test:supabase`                                                                                 |
+| frontend | `VITE_API_BASE_URL`                   | base da API (padrão `/api/v1`, encaminhado pelo Vite ao backend)                                                |
+| frontend | `VITE_APP_ENV`                        | `development`, `test` ou `production`                                                                           |
+| frontend | `VITE_SUPABASE_URL`                   | URL do Supabase (local: `http://127.0.0.1:54321`)                                                               |
+| frontend | `VITE_SUPABASE_PUBLISHABLE_KEY`       | chave **publicável** do Supabase (a secreta é recusada pela interface)                                          |
 
-As demais variáveis da Tabela 15 (`PUBLIC_APP_URL`, `MANIFESTATION_TOKEN_SECRET`, `AUDIT_IP_SECRET` e as `VITE_SUPABASE_*`) aparecem comentadas nos exemplos e só serão lidas nas etapas correspondentes. A API valida as variáveis na inicialização e não sobe se alguma for inválida.
+Todas as variáveis da Tabela 15 já são lidas pela API. Sem `MANIFESTATION_TOKEN_SECRET` local, a API usa um segredo aleatório válido enquanto estiver rodando. Valores locais do Supabase: `npx supabase status -o env` (`API_URL`, `SECRET_KEY`, `PUBLISHABLE_KEY`). A API valida as variáveis na inicialização e não sobe se alguma for inválida.
 
 **Nunca versione arquivos `.env`.** Variáveis `VITE_*` vão para o navegador: não coloque segredos no frontend.
 
@@ -180,22 +202,39 @@ curl http://localhost:3333/api/v1/health
 
 Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" } }` (por exemplo, `ROUTE_NOT_FOUND`, `MALFORMED_JSON`, `PAYLOAD_TOO_LARGE`, `RATE_LIMITED`, `INTERNAL_ERROR`). Toda resposta traz o cabeçalho `X-Request-Id`.
 
+### Endpoints implementados
+
+| Grupo                         | Endpoints (prefixo `/api/v1`)                                                                            | Documentação                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura-backend.md`](docs/arquitetura-backend.md)                 |
+| Perfil, usuários e auditoria  | E04–E09, E41                                                                                             | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)     |
+| Setores, equipes e etapas     | E10–E12 `/admin/sectors`, E13–E15 `/admin/teams`, E16 `/admin/journey-stages`                            | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
+| Turnos e importação de escala | E17–E19 `/admin/shifts`, E20 `POST /admin/rosters/import`, E21 `POST /admin/rosters/imports/:id/confirm` | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
+| Pesquisas                     | E22–E25 `/admin/surveys`, E26 `POST /admin/surveys/:id/publish`, E27 `GET /admin/surveys/:id/qr`         | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
+| Pesquisa pública (sem login)  | E01 `GET /public/surveys/:slug`, E02 `POST /public/responses` (cabeçalho `Idempotency-Key` com UUID v4)  | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
+
+A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para a ET11/ET12).
+
 ## Qualidade: lint, typecheck, testes e build
 
-| Comando                            | O que faz                                                         |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)          |
-| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige        |
-| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige           |
-| `npm run typecheck`                | TypeScript nos dois módulos                                       |
-| `npm test`                         | testes dos dois módulos (Vitest)                                  |
-| `npm run test -w backend`          | testes do backend: unidade, integração e banco real (T32)         |
-| `npm run test:db -w backend`       | somente os testes com PostgreSQL (`TEST_DATABASE_URL`)            |
-| `npm run test -w frontend`         | somente testes do frontend                                        |
-| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)              |
-| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`) |
+| Comando                            | O que faz                                                                                                                  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)                                                                   |
+| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige                                                                 |
+| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige                                                                    |
+| `npm run typecheck`                | TypeScript nos dois módulos                                                                                                |
+| `npm test`                         | testes dos dois módulos (Vitest)                                                                                           |
+| `npm run test -w backend`          | testes do backend: unidade, integração e banco real (T32, T12–T17, T22–T26, pesquisa pública)                              |
+| `npm run test:db -w backend`       | somente os testes com PostgreSQL (`TEST_DATABASE_URL`)                                                                     |
+| `npm run test:supabase -w backend` | T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                                           |
+| `npm run test:e2e -w frontend`     | Playwright com Chrome instalado (Supabase local; banco de teste): T12, administração, pesquisa pública e escalas/pesquisas |
+| `npm run test -w frontend`         | somente testes do frontend                                                                                                 |
+| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)                                                                       |
+| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`)                                                          |
 
 Regras de lint relevantes para segurança: `any` explícito proibido (RNF20), `$queryRawUnsafe` proibido (RNF11), `dangerouslySetInnerHTML` proibido (Seção 10).
+
+Os testes de banco usam `TEST_DATABASE_URL` (somente servidor local; o banco é criado e migrado automaticamente). Para usar outro PostgreSQL local sem editar o `.env`, defina a variável na linha de comando, por exemplo `TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55432/fhdod_test npm run test -w backend` com um contêiner `postgres:17`. Se o Vitest do frontend acusar `Timeout waiting for worker to respond` em máquina sobrecarregada, rode `npx vitest run --maxWorkers=2` dentro de `frontend/`.
 
 ## Integração contínua
 
@@ -236,6 +275,67 @@ Critério de conclusão (Tabela 27): migrations, seed; **contagens do seed e T32
 - [ ] Data API do projeto Supabase remoto desligada no painel e migrations aplicadas na nuvem (somente com autorização, ET12)
 
 Evidências: [`docs/evidencias/ET02/`](docs/evidencias/ET02/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
+
+## ET03 — Autenticação e permissões
+
+Critério de conclusão (Tabela 27): **E04–E09, E41, TL01, TL02, TL16, TL17; T12–T17**.
+
+- [x] Login no Supabase Auth, validação do token a cada requisição, perfil/escopo/permissões no E04, logout com revogação
+- [x] E05 (troca de senha), E06–E09 (usuários, escopo, desativação, redefinição assistida com senha temporária CSPRNG)
+- [x] E41 (auditoria) e auditoria na mesma transação das operações; negativas de autorização auditadas
+- [x] Matriz da Seção 6 no backend; escopo por setor nas consultas (403/404)
+- [x] TL01, TL02, TL16 e TL17 integradas à API
+- [x] T12–T17 executados (integração com PostgreSQL real, Supabase Auth local, componentes e E2E)
+- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável)
+- [ ] Revisão do Felipe e conferência das telas com o Figma
+
+Detalhes: [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md). Evidências: [`docs/evidencias/ET03/`](docs/evidencias/ET03/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
+
+## ET04 — Setores, equipes e turnos
+
+Critério de conclusão (Tabela 27): **E10–E21, TL05–TL07; T22–T25**.
+
+- [x] Setores (E10–E12) e equipes (E13–E15) com cadastro, edição, desativação e reativação lógicas, escopo e auditoria
+- [x] Turnos manuais (E17–E19): horas locais em UTC, virada de dia, 1 a 24 h, sem sobreposição por equipe, cancelamento com motivo
+- [x] Importação CSV (E20–E21): pré-validação sem gravar turnos, erros por linha e coluna, confirmação única em até 30 minutos
+- [x] Atribuição das avaliações a turno e equipe (RF24) no registro da resposta (E02)
+- [x] TL05 (`/admin/setores`), TL06 (`/admin/turnos`) e TL07 (`/admin/escalas/importar`) integradas à API
+- [x] T22–T25 aprovados na integração com PostgreSQL real; componentes das telas aprovados
+- [x] E2E administrativo (`frontend/e2e/escalas-e-pesquisas.spec.ts`: TL05, TL07 com turno noturno, TL06) aprovado com Supabase local
+- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do João (responsável da etapa: Felipe)
+
+## ET05 — Pesquisas
+
+Critério de conclusão (Tabela 27): **E16, E22–E27, TL08; T02, T26**.
+
+- [x] Criação em rascunho com a pergunta geral automática; edição de textos; perguntas específicas com etapa, ordem e ativação
+- [x] Bloqueios: setor, slug e pergunta geral após a 1ª publicação; pergunta publicada imutável; limite de 10 específicas ativas
+- [x] Publicação de versões imutáveis com instantâneos, histórico com autor, desativação e reativação; 409 sem alterações
+- [x] Link e QR Code com `origem=qr`/`origem=link`, exportação PNG e SVG e cartaz A4 (TL08)
+- [x] T26 aprovado na integração; URLs exatas do T02 verificadas na integração
+- [x] T02 no E2E: TL08 publicada; os arquivos PNG e SVG baixados decodificam (jsqr) para a URL exata com `origem=qr`, que abre a pesquisa e registra a resposta
+- [ ] Leitura do cartaz com a câmera de um celular (parte manual do T02) — **não executada**
+- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+
+## ET06 — Pesquisa pública
+
+Critério de conclusão (Tabela 27): **E01, E02, TL09, TL11; T01, T03–T06, T10, T27, T28**.
+
+- [x] Acesso sem login nem cookies por link ou QR Code; 404 para rascunho ou inexistente e 410 para inativa
+- [x] Pergunta geral 0–10 obrigatória, específicas 1–5 opcionais com "Limpar resposta", "Etapa X de Y", Voltar e recarga preservadas
+- [x] Validação no frontend e no backend; envio idempotente (`Idempotency-Key`, `request_hash`, UNIQUE) e reenvios automáticos (1, 2 e 4 s)
+- [x] Confirmação somente após 201/200, com o agradecimento da versão; limpeza das chaves `fhdod:*` ao concluir e após 3 min + 60 s
+- [x] T01, T03, T04, T05, T06, T10, T27 e T28 aprovados (integração, componentes e E2E da pesquisa pública em 1440 e 360 px)
+- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do João (responsável da etapa: Felipe)
+
+Detalhes das três etapas: [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md). Evidências: [`docs/evidencias/ET04-ET06/`](docs/evidencias/ET04-ET06/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
+
+## Limitações conhecidas e pendências
+
+- **E2E com Supabase Auth executado em 27/10/2026** depois da liberação das portas do Windows: 18/18 aprovados (`t12-autenticacao`, `administracao`, `escalas-e-pesquisas` e `pesquisa-publica`). Se `npm run db:start` voltar a acusar porta proibida, conferir `netsh interface ipv4 show excludedportrange protocol=tcp` e liberar a faixa (ver [banco local](#banco-de-dados-local-et02)).
+- **Manifestação após nota baixa, protocolo e TL10 são da ET07.** A TL11 já mostra o agradecimento da versão; o protocolo aparecerá quando houver manifestação. O E02 já devolve `lowScore` e o token de manifestação (validade de 60 minutos).
+- **OpenAPI/Swagger, axe e T35/T39** continuam previstos para a ET11/ET12.
+- A matriz de testes completa e a execução contra a nuvem dependem das próximas etapas (ET11–ET12).
 
 ## Branches e colaboração
 

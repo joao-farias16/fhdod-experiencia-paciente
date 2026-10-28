@@ -16,3 +16,20 @@ export class HttpError extends Error {
     this.name = 'HttpError';
   }
 }
+
+/**
+ * Negativa de autorização (403 FORBIDDEN ou SECTOR_OUT_OF_SCOPE). É auditada como
+ * AUTHORIZATION_DENIED uma única vez pelo middleware auditAuthorizationDenials (Seção 6).
+ */
+export class AuthorizationDeniedError extends HttpError {
+  audited = false;
+
+  constructor(
+    code: 'FORBIDDEN' | 'SECTOR_OUT_OF_SCOPE',
+    message: string,
+    readonly permission?: string,
+  ) {
+    super(403, code, message);
+    this.name = 'AuthorizationDeniedError';
+  }
+}

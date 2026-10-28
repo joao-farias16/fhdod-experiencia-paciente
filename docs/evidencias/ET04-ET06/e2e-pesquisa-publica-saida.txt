@@ -1,0 +1,29 @@
+
+Running 8 tests using 1 worker
+
+[WebServer] 20:15:06 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:07 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:08 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  1 [computador-1440] › e2e\pesquisa-publica.spec.ts:39:1 › T01 — abre por link sem login nem cookies; 404 e 410 com mensagem (5.2s)
+[WebServer] 20:15:10 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:13 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  2 [computador-1440] › e2e\pesquisa-publica.spec.ts:54:1 › T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas (4.7s)
+[WebServer] 20:15:15 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:17 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  3 [computador-1440] › e2e\pesquisa-publica.spec.ts:102:1 › T28 — concluir apaga os dados; Voltar não mostra respostas (3.4s)
+[WebServer] 20:15:18 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  4 [computador-1440] › e2e\pesquisa-publica.spec.ts:132:1 › T28 — 3 min + 60 s sem uso apagam as respostas (2.1s)
+[WebServer] 20:15:24 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:25 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:26 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  5 [celular-360] › e2e\pesquisa-publica.spec.ts:39:1 › T01 — abre por link sem login nem cookies; 404 e 410 com mensagem (3.8s)
+[WebServer] 20:15:27 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:29 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  6 [celular-360] › e2e\pesquisa-publica.spec.ts:54:1 › T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas (3.7s)
+[WebServer] 20:15:31 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+[WebServer] 20:15:32 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  7 [celular-360] › e2e\pesquisa-publica.spec.ts:102:1 › T28 — concluir apaga os dados; Voltar não mostra respostas (3.0s)
+[WebServer] 20:15:34 [vite] (client) [console.warn] No `HydrateFallback` element provided to render during initial hydration
+  ✓  8 [celular-360] › e2e\pesquisa-publica.spec.ts:132:1 › T28 — 3 min + 60 s sem uso apagam as respostas (2.1s)
+
+  8 passed (41.4s)

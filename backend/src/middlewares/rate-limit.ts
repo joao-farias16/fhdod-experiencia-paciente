@@ -24,3 +24,20 @@ export function ipRateLimit({ windowMs, limit }: RateLimitOptions) {
     },
   });
 }
+
+/**
+ * Limitação por perfil autenticado (Seção 10: rotas autenticadas 300/min, E05 5 a cada 15 min).
+ * Deve ser usada depois de `authenticate`; a chave é o id do perfil, nunca o IP.
+ */
+export function profileRateLimit({ windowMs, limit }: RateLimitOptions) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (req) => `perfil:${req.auth?.profileId ?? 'anonimo'}`,
+    handler(_req, _res, next) {
+      next(new HttpError(429, 'RATE_LIMITED', 'Muitas requisições. Aguarde e tente novamente.'));
+    },
+  });
+}

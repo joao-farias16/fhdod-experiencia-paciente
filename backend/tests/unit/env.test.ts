@@ -3,12 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { EnvValidationError, loadEnv } from '../../src/config/env.js';
 
 const DATABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+// Valores fictícios do Supabase Auth local (ET03).
+const SUPABASE = {
+  SUPABASE_URL: 'http://127.0.0.1:54321',
+  SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
+};
+const BASE = { DATABASE_URL, ...SUPABASE };
 
 describe('loadEnv', () => {
   it('aplica os valores padrão e separa as origens do CORS', () => {
     const env = loadEnv({
       CORS_ORIGIN: 'http://localhost:5173, http://127.0.0.1:5173',
-      DATABASE_URL,
+      ...BASE,
     });
 
     expect(env).toEqual({
@@ -18,13 +24,15 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'info',
       TRUST_PROXY: 0,
       DATABASE_URL,
+      ...SUPABASE,
+      PUBLIC_APP_URL: 'http://localhost:5173',
     });
   });
 
   it('converte PORT e TRUST_PROXY para número', () => {
     const env = loadEnv({
       CORS_ORIGIN: 'http://localhost:5173',
-      DATABASE_URL,
+      ...BASE,
       PORT: '4000',
       TRUST_PROXY: '1',
     });
@@ -43,8 +51,11 @@ describe('loadEnv', () => {
       loadEnv({ CORS_ORIGIN: 'http://localhost:5173', DATABASE_URL: 'mysql://u:p@localhost/db' }),
     ).toThrow(/DATABASE_URL/);
     expect(
-      loadEnv({ CORS_ORIGIN: 'http://localhost:5173', DATABASE_URL: 'postgres://u:p@db:5432/x' })
-        .DATABASE_URL,
+      loadEnv({
+        CORS_ORIGIN: 'http://localhost:5173',
+        ...SUPABASE,
+        DATABASE_URL: 'postgres://u:p@db:5432/x',
+      }).DATABASE_URL,
     ).toBe('postgres://u:p@db:5432/x');
   });
 
@@ -64,7 +75,7 @@ describe('loadEnv', () => {
   it.each([['nao-e-url'], ['ftp://exemplo.com'], ['http://localhost:5173,']])(
     'rejeita CORS_ORIGIN inválido (%s)',
     (value) => {
-      expect(() => loadEnv({ CORS_ORIGIN: value, DATABASE_URL })).toThrow(EnvValidationError);
+      expect(() => loadEnv({ CORS_ORIGIN: value, ...BASE })).toThrow(EnvValidationError);
     },
   );
 
@@ -72,7 +83,7 @@ describe('loadEnv', () => {
     try {
       loadEnv({
         CORS_ORIGIN: 'http://localhost:5173',
-        DATABASE_URL,
+        ...BASE,
         PORT: '70000',
         LOG_LEVEL: 'verbose',
         NODE_ENV: 'staging',
@@ -88,7 +99,7 @@ describe('loadEnv', () => {
   it('não expõe o valor recebido na mensagem de erro', () => {
     const error: unknown = (() => {
       try {
-        return loadEnv({ CORS_ORIGIN: 'valor-secreto-qualquer', DATABASE_URL });
+        return loadEnv({ CORS_ORIGIN: 'valor-secreto-qualquer', ...BASE });
       } catch (caught) {
         return caught;
       }
@@ -99,12 +110,91 @@ describe('loadEnv', () => {
   });
 
   it('exige origens HTTPS em produção (RNF09)', () => {
+    const production = {
+      NODE_ENV: 'production',
+      DATABASE_URL,
+      SUPABASE_URL: 'https://exemplo.supabase.co',
+      SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
+      AUDIT_IP_SECRET: 'x'.repeat(32),
+      MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32),
+      PUBLIC_APP_URL: 'https://fhdod.example',
+    };
+    expect(() => loadEnv({ ...production, CORS_ORIGIN: 'http://fhdod.example' })).toThrow(/https/);
+    expect(loadEnv({ ...production, CORS_ORIGIN: 'https://fhdod.example' }).CORS_ORIGIN).toEqual([
+      'https://fhdod.example',
+    ]);
+  });
+
+  it('exige SUPABASE_URL e SUPABASE_SECRET_KEY (ET03) sem expor a chave', () => {
+    const base = { CORS_ORIGIN: 'http://localhost:5173', DATABASE_URL };
+    expect(() => loadEnv(base)).toThrow(/SUPABASE_URL/);
+    expect(() => loadEnv({ ...base, SUPABASE_URL: 'http://127.0.0.1:54321' })).toThrow(
+      /SUPABASE_SECRET_KEY/,
+    );
+    try {
+      loadEnv({ ...base, SUPABASE_URL: 'nao-e-url', SUPABASE_SECRET_KEY: 'sb_secret_ficticia' });
+      expect.unreachable('loadEnv deveria lançar EnvValidationError');
+    } catch (error) {
+      expect((error as EnvValidationError).message).toMatch(/SUPABASE_URL/);
+      expect((error as EnvValidationError).message).not.toContain('sb_secret_ficticia');
+    }
+  });
+
+  it('AUDIT_IP_SECRET é opcional fora de produção, com no mínimo 32 caracteres', () => {
+    const base = { CORS_ORIGIN: 'http://localhost:5173', ...BASE };
+    expect(loadEnv({ ...base, AUDIT_IP_SECRET: '' }).AUDIT_IP_SECRET).toBeUndefined();
+    expect(() => loadEnv({ ...base, AUDIT_IP_SECRET: 'curto' })).toThrow(/AUDIT_IP_SECRET/);
+    expect(loadEnv({ ...base, AUDIT_IP_SECRET: 'y'.repeat(32) }).AUDIT_IP_SECRET).toBe(
+      'y'.repeat(32),
+    );
+  });
+
+  it('em produção, exige Supabase em HTTPS e AUDIT_IP_SECRET', () => {
+    const production = {
+      NODE_ENV: 'production',
+      CORS_ORIGIN: 'https://fhdod.example',
+      DATABASE_URL,
+      SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
+    };
     expect(() =>
-      loadEnv({ NODE_ENV: 'production', CORS_ORIGIN: 'http://fhdod.example', DATABASE_URL }),
-    ).toThrow(/https/);
-    expect(
-      loadEnv({ NODE_ENV: 'production', CORS_ORIGIN: 'https://fhdod.example', DATABASE_URL })
-        .CORS_ORIGIN,
-    ).toEqual(['https://fhdod.example']);
+      loadEnv({
+        ...production,
+        SUPABASE_URL: 'http://exemplo.supabase.co',
+        AUDIT_IP_SECRET: 'z'.repeat(32),
+      }),
+    ).toThrow(/SUPABASE_URL/);
+    expect(() => loadEnv({ ...production, SUPABASE_URL: 'https://exemplo.supabase.co' })).toThrow(
+      /AUDIT_IP_SECRET/,
+    );
+  });
+
+  it('PUBLIC_APP_URL e MANIFESTATION_TOKEN_SECRET: padrão local e obrigatórios em produção', () => {
+    const local = loadEnv({ CORS_ORIGIN: 'http://localhost:5173', ...BASE });
+    expect(local.PUBLIC_APP_URL).toBe('http://localhost:5173');
+    expect(local.MANIFESTATION_TOKEN_SECRET).toBeUndefined();
+    expect(() =>
+      loadEnv({ CORS_ORIGIN: 'http://localhost:5173', ...BASE, MANIFESTATION_TOKEN_SECRET: 'x' }),
+    ).toThrow(/MANIFESTATION_TOKEN_SECRET/);
+
+    const production = {
+      NODE_ENV: 'production',
+      CORS_ORIGIN: 'https://fhdod.example',
+      DATABASE_URL,
+      SUPABASE_URL: 'https://exemplo.supabase.co',
+      SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
+      AUDIT_IP_SECRET: 'z'.repeat(32),
+    };
+    expect(() => loadEnv({ ...production, PUBLIC_APP_URL: 'https://fhdod.example' })).toThrow(
+      /MANIFESTATION_TOKEN_SECRET/,
+    );
+    expect(() => loadEnv({ ...production, MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32) })).toThrow(
+      /PUBLIC_APP_URL/,
+    );
+    const ok = loadEnv({
+      ...production,
+      MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32),
+      PUBLIC_APP_URL: 'https://fhdod.example/',
+    });
+    expect(ok.PUBLIC_APP_URL).toBe('https://fhdod.example');
   });
 });

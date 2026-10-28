@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, apiGet } from './api-client';
+import { ApiError, apiGet, apiRequest } from './api-client';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -69,5 +69,64 @@ describe('apiGet', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ status: 'ok' })));
 
     await expect(apiGet('/health')).rejects.toMatchObject({ code: 'UNEXPECTED_RESPONSE' });
+  });
+});
+
+describe('apiRequest (rotas autenticadas)', () => {
+  it('envia o token só no cabeçalho Authorization, JSON no corpo e sem cache', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ data: [1], meta: { page: 1, pageSize: 20, total: 1 } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      apiRequest('/admin/users', { method: 'POST', token: 'abc', body: { a: 1 } }),
+    ).resolves.toEqual({
+      data: [1],
+      meta: { page: 1, pageSize: 20, total: 1 },
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/admin/users', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer abc',
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+      body: '{"a":1}',
+    });
+  });
+
+  it('204 devolve data indefinido; erros trazem os detalhes por campo', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    await expect(
+      apiRequest('/me/password', { method: 'POST', token: 't', body: {} }),
+    ).resolves.toEqual({
+      data: undefined,
+      meta: undefined,
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          {
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Inválido.',
+              details: [{ field: 'email', message: 'Informe.' }],
+              requestId: 'r',
+            },
+          },
+          400,
+        ),
+      ),
+    );
+    await expect(
+      apiRequest('/admin/users', { method: 'POST', token: 't', body: {} }),
+    ).rejects.toMatchObject({
+      status: 400,
+      details: [{ field: 'email', message: 'Informe.' }],
+    });
   });
 });

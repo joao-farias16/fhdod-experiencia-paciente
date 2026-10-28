@@ -5,3 +5,6 @@ package-lock.json
 *.tsbuildinfo
 backend/src/generated
 backend/prisma/migrations
+playwright-report
+test-results
+playwright/.cache
