@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="105" failures="0" errors="0" time="45.2957288">
+    <testsuite name="src/app/App.test.tsx" timestamp="2026-10-28T20:00:42.649Z" hostname="Farias" tests="4" failures="0" errors="0" skipped="0" time="0.82753">
+        <testcase classname="src/app/App.test.tsx" name="página inicial &gt; identifica o sistema FHDOD e o aviso de dados fictícios" time="0.5338863">
+        </testcase>
+        <testcase classname="src/app/App.test.tsx" name="página inicial &gt; mostra o estado de conexão e o horário da verificação no fuso local" time="0.0553706">
+        </testcase>
+        <testcase classname="src/app/App.test.tsx" name="página inicial &gt; informa API indisponível e permite tentar novamente" time="0.1709792">
+        </testcase>
+        <testcase classname="src/app/App.test.tsx" name="rota inexistente &gt; exibe a página não encontrada com link para o início" time="0.0624802">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/ui/ui.test.tsx" timestamp="2026-10-28T20:00:42.655Z" hostname="Farias" tests="7" failures="0" errors="0" skipped="0" time="1.2944987">
+        <testcase classname="src/components/ui/ui.test.tsx" name="Dialog (RNF07) &gt; foca o primeiro controle, prende o Tab no diálogo e devolve o foco ao fechar" time="0.8799951">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="Pagination e estados &gt; mostra o intervalo e navega entre páginas" time="0.1423413">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="Pagination e estados &gt; desabilita a navegação nos limites e informa lista vazia" time="0.0186605">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="Pagination e estados &gt; erro mostra a mensagem da API e o código; erro genérico usa texto padrão" time="0.0283112">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="TemporaryPasswordDialog (RF03) &gt; copia a senha e informa o resultado" time="0.0653494">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="TemporaryPasswordDialog (RF03) &gt; sem permissão de área de transferência, orienta a anotar" time="0.151525">
+        </testcase>
+        <testcase classname="src/components/ui/ui.test.tsx" name="TemporaryPasswordDialog (RF03) &gt; não renderiza nada sem senha" time="0.0034715">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/audit/AuditPage.test.tsx" timestamp="2026-10-28T20:00:42.659Z" hostname="Farias" tests="4" failures="0" errors="0" skipped="0" time="2.4330643">
+        <testcase classname="src/features/audit/AuditPage.test.tsx" name="TL17 — consulta da auditoria &gt; lista eventos em dd/mm/aaaa hh:mm (America/Sao_Paulo), com rótulos e detalhes legíveis" time="0.8211512">
+        </testcase>
+        <testcase classname="src/features/audit/AuditPage.test.tsx" name="TL17 — consulta da auditoria &gt; usa os últimos 30 dias e 50 itens por padrão; aplica os filtros escolhidos" time="0.7720354">
+        </testcase>
+        <testcase classname="src/features/audit/AuditPage.test.tsx" name="TL17 — consulta da auditoria &gt; valida o período (data inicial ≤ final, até 366 dias) antes de consultar" time="0.834488">
+        </testcase>
+        <testcase classname="src/features/audit/AuditPage.test.tsx" name="describeDetails &gt; traduz os detalhes técnicos e usa o id quando o setor é desconhecido" time="0.0013611">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/auth/ChangePasswordPage.test.tsx" timestamp="2026-10-28T20:00:42.661Z" hostname="Farias" tests="5" failures="0" errors="0" skipped="0" time="3.8617806">
+        <testcase classname="src/features/auth/ChangePasswordPage.test.tsx" name="TL02 — troca de senha &gt; mostra as regras e marca cada uma como atendida conforme a digitação" time="0.9193388">
+        </testcase>
+        <testcase classname="src/features/auth/ChangePasswordPage.test.tsx" name="TL02 — troca de senha &gt; senha fora da política ou confirmação diferente não chega ao backend" time="0.5874329">
+        </testcase>
+        <testcase classname="src/features/auth/ChangePasswordPage.test.tsx" name="TL02 — troca de senha &gt; senha válida: E05, novo login com a senha nova e tela inicial do perfil" time="0.8665279">
+        </testcase>
+        <testcase classname="src/features/auth/ChangePasswordPage.test.tsx" name="TL02 — troca de senha &gt; 400 do backend mostra mensagem sem repetir a senha" time="0.7577192">
+        </testcase>
+        <testcase classname="src/features/auth/ChangePasswordPage.test.tsx" name="TL02 — troca de senha &gt; 429 informa a espera" time="0.7263389">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/auth/auth-client.test.ts" timestamp="2026-10-28T20:00:42.663Z" hostname="Farias" tests="9" failures="0" errors="0" skipped="0" time="0.0338583">
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; devolve o access token da sessão atual ou null" time="0.0090507">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; login válido devolve o token" time="0.0038536">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; senha errada → AuthApiError: Invalid login credentials" time="0.0033193">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; conta bloqueada → AuthApiError: User is banned" time="0.0023276">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; muitas tentativas → AuthApiError: Rate limit" time="0.0024257">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; rede → AuthRetryableFetchError: Failed to fetch" time="0.0013748">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; exceção inesperada no login vira falha de rede" time="0.0015652">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; signOut revoga (scope local) e apaga a sessão guardada mesmo se o Supabase falhar" time="0.0023683">
+        </testcase>
+        <testcase classname="src/features/auth/auth-client.test.ts" name="createSupabaseAuthClient &gt; repassa mudanças de sessão e permite cancelar a inscrição" time="0.0022178">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/auth/auth-flow.test.tsx" timestamp="2026-10-28T20:00:42.667Z" hostname="Farias" tests="17" failures="0" errors="0" skipped="0" time="9.0912875">
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; credenciais inválidas: permanece em /login com mensagem genérica" time="1.4653507">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; e-mail inexistente recebe exatamente a mesma mensagem" time="0.7677833">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; conta sem perfil (401): mensagem genérica e sessão encerrada" time="0.8059799">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; conta desativada (403): mensagem genérica e sessão encerrada" time="0.7790559">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; valida campos obrigatórios sem chamar o Supabase" time="0.1143667">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; SA vai para a gestão de usuários; o token vai no cabeçalho Authorization" time="0.8158222">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; perfil sem administração de usuários vai para /painel" time="0.8445823">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="TL01 — login administrativo &gt; troca de senha pendente leva à TL02" time="0.8417853">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; sem sessão, as rotas administrativas redirecionam a /login" time="0.054308">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; com troca pendente, outra rota administrativa redireciona a /trocar-senha" time="0.0590065">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; Sair encerra a sessão, limpa os dados e Voltar não mostra a tela administrativa" time="0.4523051">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; depois de Sair, o próximo usuário vai para a própria tela inicial (sem herdar a anterior)" time="0.975022">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; acesso direto sem sessão volta à tela pedida depois do login" time="0.746048">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; sessão expirada (evento do Supabase) volta ao login com aviso" time="0.0995465">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="proteção de rotas e logout (RF02) &gt; 401 da API em uso encerra a sessão; 403 ACCOUNT_DISABLED também" time="0.0925573">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="menu e permissões (RF05) &gt; SA vê Usuários e Auditoria; VI não" time="0.1232434">
+        </testcase>
+        <testcase classname="src/features/auth/auth-flow.test.tsx" name="menu e permissões (RF05) &gt; acesso direto a tela sem permissão mostra &quot;Acesso não permitido&quot; sem chamar a API" time="0.0473418">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/dashboard/dashboard.test.tsx" timestamp="2026-10-28T20:00:42.674Z" hostname="Farias" tests="7" failures="0" errors="0" skipped="0" time="3.4155028">
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="T11 — atualização do painel &gt; a cada 60 s com a aba visível e pelo botão Atualizar: total + 1 com n visível" time="1.0760243">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF56 e RF60 — filtros na URL e estado sem dados &gt; aplicar período personalizado e turno grava na URL e consulta o E28 com os filtros" time="1.0414693">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF56 e RF60 — filtros na URL e estado sem dados &gt; período inválido (mais de 366 dias) → mensagem e nenhuma consulta nova" time="0.4758468">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF56 e RF60 — filtros na URL e estado sem dados &gt; sem dados → mensagem e Limpar filtros; NPS nunca exibido como 0" time="0.249833">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF56 e RF60 — filtros na URL e estado sem dados &gt; RN21: VI com grupo suprimido vê &quot;menos de 5 respostas&quot; e não vê botões de exportação" time="0.1756012">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF62 — exportação com os filtros do painel &gt; GE exporta respostas com os filtros da URL e vê o nome do arquivo gerado" time="0.3108278">
+        </testcase>
+        <testcase classname="src/features/dashboard/dashboard.test.tsx" name="RF62 — exportação com os filtros do painel &gt; TL14: a Ouvidoria só vê o relatório de manifestações, com Incluir textos" time="0.0798985">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/ombudsman/ombudsman.test.tsx" timestamp="2026-10-28T20:00:42.676Z" hostname="Farias" tests="5" failures="0" errors="0" skipped="0" time="2.3886078">
+        <testcase classname="src/features/ombudsman/ombudsman.test.tsx" name="T18 — lista e detalhe &gt; lista com protocolo, trecho e contato (Sim), sem dados de contato; filtro de status na consulta" time="0.855821">
+        </testcase>
+        <testcase classname="src/features/ombudsman/ombudsman.test.tsx" name="T18 — lista e detalhe &gt; detalhe: relato, avaliação vinculada, linha do tempo; só as transições permitidas" time="0.2110147">
+        </testcase>
+        <testcase classname="src/features/ombudsman/ombudsman.test.tsx" name="T18 — lista e detalhe &gt; arquivar sem nota → mensagem sem chamada; mudança válida envia updatedAt; 409 oferece recarga" time="0.7342887">
+        </testcase>
+        <testcase classname="src/features/ombudsman/ombudsman.test.tsx" name="T19 — contato auditado e eliminação &gt; Ver contato mostra finalidade e dados; Eliminar pede confirmação e envia o motivo" time="0.5160414">
+        </testcase>
+        <testcase classname="src/features/ombudsman/ombudsman.test.tsx" name="Permissões na interface &gt; VI não vê o menu Ouvidoria e recebe &quot;Acesso não permitido&quot; na rota direta" time="0.0671493">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/public-survey/ManifestationForm.test.tsx" timestamp="2026-10-28T20:00:42.679Z" hostname="Farias" tests="5" failures="0" errors="0" skipped="0" time="7.4856874">
+        <testcase classname="src/features/public-survey/ManifestationForm.test.tsx" name="T07 — oferta após nota baixa &gt; NPS 3 → oferta em destaque; &quot;Não, obrigado&quot; esconde a oferta sem chamar o E03" time="1.2611712">
+            <system-err>
+No `HydrateFallback` element provided to render during initial hydration
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/features/public-survey/ManifestationForm.test.tsx" name="T07 — oferta após nota baixa &gt; NPS 10 → sem oferta em destaque, só a ação secundária" time="0.2521792">
+        </testcase>
+        <testcase classname="src/features/public-survey/ManifestationForm.test.tsx" name="T07 — oferta após nota baixa &gt; registrar: valida tipo e descrição, envia anônima por padrão (T08) e mostra o protocolo" time="1.8729154">
+        </testcase>
+        <testcase classname="src/features/public-survey/ManifestationForm.test.tsx" name="T09 — contato opcional &gt; sem aceite e telefone de 9 dígitos → mensagens e nada enviado; só e-mail com aceite → enviado" time="2.6789275">
+        </testcase>
+        <testcase classname="src/features/public-survey/ManifestationForm.test.tsx" name="T09 — contato opcional &gt; token expirado (422) → mensagem do servidor e sem nova tentativa" time="1.4161392">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/public-survey/PublicSurveyPage.test.tsx" timestamp="2026-10-28T20:00:42.682Z" hostname="Farias" tests="5" failures="0" errors="0" skipped="0" time="4.2087981">
+        <testcase classname="src/features/public-survey/PublicSurveyPage.test.tsx" name="TL09 — pesquisa pública &gt; exige a nota geral (mensagem e foco), navega com progresso e mantém respostas ao voltar e recarregar" time="1.6558409">
+            <system-err>
+No `HydrateFallback` element provided to render during initial hydration
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/features/public-survey/PublicSurveyPage.test.tsx" name="TL09 — pesquisa pública &gt; envia com Idempotency-Key, repete automaticamente com a mesma chave após 503 e confirma só após 201" time="1.6006495">
+        </testcase>
+        <testcase classname="src/features/public-survey/PublicSurveyPage.test.tsx" name="TL09 — pesquisa pública &gt; falha definitiva mantém as respostas; repetir usa a mesma chave e mudar a resposta gera outra" time="0.6526184">
+        </testcase>
+        <testcase classname="src/features/public-survey/PublicSurveyPage.test.tsx" name="TL09 — pesquisa pública &gt; após 3 min sem uso pergunta &quot;Você ainda está aí?&quot; e, 60 s depois, apaga as respostas" time="0.215793">
+        </testcase>
+        <testcase classname="src/features/public-survey/PublicSurveyPage.test.tsx" name="TL09 — pesquisa pública &gt; slug inexistente → &quot;Pesquisa não encontrada&quot;; pesquisa inativa → &quot;Pesquisa indisponível&quot;" time="0.0799459">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/structure/structure.test.tsx" timestamp="2026-10-28T20:00:42.684Z" hostname="Farias" tests="3" failures="0" errors="0" skipped="0" time="2.7841788">
+        <testcase classname="src/features/structure/structure.test.tsx" name="TL05 — setores e equipes &gt; SA cadastra setor (código em maiúsculas) e o 409 aparece no campo código" time="1.6278936">
+        </testcase>
+        <testcase classname="src/features/structure/structure.test.tsx" name="TL05 — setores e equipes &gt; AS não vê cadastro de setor, mas cadastra equipe no próprio setor" time="0.7681883">
+        </testcase>
+        <testcase classname="src/features/structure/structure.test.tsx" name="TL07 — importação de escalas &gt; mostra erros por linha de um arquivo recusado e confirma um arquivo válido" time="0.383925">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/surveys/SurveyEditorPage.test.tsx" timestamp="2026-10-28T20:00:42.686Z" hostname="Farias" tests="1" failures="0" errors="0" skipped="0" time="1.4165317">
+        <testcase classname="src/features/surveys/SurveyEditorPage.test.tsx" name="TL08 — editor de pesquisa &gt; bloqueia campos publicados, exibe QR com a URL exata e publica a versão 2" time="1.4129966">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/features/users/UsersPage.test.tsx" timestamp="2026-10-28T20:00:42.688Z" hostname="Farias" tests="11" failures="0" errors="0" skipped="0" time="5.9891203">
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — lista e filtros &gt; mostra perfil, escopo e situação com datas em dd/mm/aaaa" time="0.4987669">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — lista e filtros &gt; a própria linha não oferece desativar nem redefinir senha (RN24)" time="0.4821406">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — lista e filtros &gt; envia os filtros ao E06" time="0.915644">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — lista e filtros &gt; erro ao carregar mostra o código da requisição e permite tentar de novo" time="0.2280558">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — cadastro com senha temporária exibida uma vez &gt; cadastra AS com setores ativos e mostra a senha temporária até Concluir" time="1.2704048">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — cadastro com senha temporária exibida uma vez &gt; e-mail duplicado (409) aparece no campo de e-mail" time="1.011192">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — cadastro com senha temporária exibida uma vez &gt; Esc fecha o diálogo e devolve o foco ao botão" time="0.2359856">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — edição, desativação e redefinição &gt; editar a si mesmo envia somente o nome" time="0.4867545">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — edição, desativação e redefinição &gt; desativação exige confirmação e envia isActive: false" time="0.249136">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — edição, desativação e redefinição &gt; erro 422 da desativação aparece no diálogo" time="0.2453662">
+        </testcase>
+        <testcase classname="src/features/users/UsersPage.test.tsx" name="TL16 — edição, desativação e redefinição &gt; redefinição gera a senha temporária e a exibe uma vez; inativo não pode ser redefinido" time="0.3594508">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/api-client.test.ts" timestamp="2026-10-28T20:00:42.691Z" hostname="Farias" tests="7" failures="0" errors="0" skipped="0" time="0.034726">
+        <testcase classname="src/lib/api-client.test.ts" name="apiGet &gt; chama a base da API e devolve o conteúdo de data" time="0.0162956">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiGet &gt; converte o envelope de erro da API em ApiError" time="0.0040748">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiGet &gt; trata falha de rede como NETWORK_ERROR" time="0.0019082">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiGet &gt; trata resposta sem o envelope esperado como UNEXPECTED_RESPONSE" time="0.0026543">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiGet &gt; rejeita resposta 200 sem data" time="0.0016519">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiRequest (rotas autenticadas) &gt; envia o token só no cabeçalho Authorization, JSON no corpo e sem cache" time="0.0020079">
+        </testcase>
+        <testcase classname="src/lib/api-client.test.ts" name="apiRequest (rotas autenticadas) &gt; 204 devolve data indefinido; erros trazem os detalhes por campo" time="0.0020284">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/env.test.ts" timestamp="2026-10-28T20:00:42.694Z" hostname="Farias" tests="8" failures="0" errors="0" skipped="0" time="0.0185023">
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; usa /api/v1 e development por padrão" time="0.00533">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; remove barras finais da URL da API" time="0.0021453">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; rejeita ambiente desconhecido" time="0.00211">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; rejeita URL da API sem protocolo http(s)" time="0.0010693">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; exige https em produção quando a URL é absoluta (RNF09)" time="0.0011196">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; lê a URL e a chave publicável do Supabase (ET03)" time="0.0005166">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; recusa a chave secreta do Supabase no navegador (Seção 10)" time="0.0016803">
+        </testcase>
+        <testcase classname="src/lib/env.test.ts" name="parsePublicEnv &gt; exige URL http(s) do Supabase e https em produção" time="0.0006927">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/format.test.ts" timestamp="2026-10-28T20:00:42.698Z" hostname="Farias" tests="7" failures="0" errors="0" skipped="0" time="0.0120542">
+        <testcase classname="src/lib/format.test.ts" name="formatDateTime (RNF29) &gt; converte o instante UTC para dd/mm/aaaa hh:mm em America/Sao_Paulo" time="0.0039472">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="formatDateTime (RNF29) &gt; muda o dia quando o horário local ainda é o dia anterior" time="0.0007301">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="formatDateTime (RNF29) &gt; usa 00 para a meia-noite" time="0.0005128">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="formatDateTime (RNF29) &gt; rejeita instante inválido" time="0.001023">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="datas locais e query string (RN25, RNF29) &gt; data local no fuso do hospital perto da meia-noite UTC" time="0.0006388">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="datas locais e query string (RN25, RNF29) &gt; soma dias, conta intervalos inclusivos e formata dd/mm/aaaa" time="0.0013202">
+        </testcase>
+        <testcase classname="src/lib/format.test.ts" name="datas locais e query string (RN25, RNF29) &gt; monta a query string sem valores vazios" time="0.0006591">
+        </testcase>
+    </testsuite>
+</testsuites>

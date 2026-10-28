@@ -1,0 +1,105 @@
+
+ RUN  v5.0.3 <repo>/frontend
+
+ ✓ src/features/users/UsersPage.test.tsx (11 tests) 5989ms
+   ✓ TL16 — lista e filtros (4)
+     ✓ mostra perfil, escopo e situação com datas em dd/mm/aaaa 499ms
+     ✓ a própria linha não oferece desativar nem redefinir senha (RN24) 482ms
+     ✓ envia os filtros ao E06 916ms
+   ✓ TL16 — cadastro com senha temporária exibida uma vez (3)
+     ✓ cadastra AS com setores ativos e mostra a senha temporária até Concluir 1270ms
+     ✓ e-mail duplicado (409) aparece no campo de e-mail 1011ms
+   ✓ TL16 — edição, desativação e redefinição (4)
+     ✓ editar a si mesmo envia somente o nome 487ms
+     ✓ redefinição gera a senha temporária e a exibe uma vez; inativo não pode ser redefinido 359ms
+ ✓ src/features/auth/auth-flow.test.tsx (17 tests) 9091ms
+   ✓ TL01 — login administrativo (8)
+     ✓ credenciais inválidas: permanece em /login com mensagem genérica 1465ms
+     ✓ e-mail inexistente recebe exatamente a mesma mensagem 768ms
+     ✓ conta sem perfil (401): mensagem genérica e sessão encerrada 806ms
+     ✓ conta desativada (403): mensagem genérica e sessão encerrada 779ms
+     ✓ SA vai para a gestão de usuários; o token vai no cabeçalho Authorization 816ms
+     ✓ perfil sem administração de usuários vai para /painel 845ms
+     ✓ troca de senha pendente leva à TL02 842ms
+   ✓ proteção de rotas e logout (RF02) (7)
+     ✓ Sair encerra a sessão, limpa os dados e Voltar não mostra a tela administrativa 452ms
+     ✓ depois de Sair, o próximo usuário vai para a própria tela inicial (sem herdar a anterior) 975ms
+     ✓ acesso direto sem sessão volta à tela pedida depois do login 746ms
+stderr | src/features/public-survey/ManifestationForm.test.tsx > T07 — oferta após nota baixa > NPS 3 → oferta em destaque; "Não, obrigado" esconde a oferta sem chamar o E03
+No `HydrateFallback` element provided to render during initial hydration
+
+ ✓ src/features/auth/ChangePasswordPage.test.tsx (5 tests) 3862ms
+   ✓ TL02 — troca de senha (5)
+     ✓ mostra as regras e marca cada uma como atendida conforme a digitação 919ms
+     ✓ senha fora da política ou confirmação diferente não chega ao backend 587ms
+     ✓ senha válida: E05, novo login com a senha nova e tela inicial do perfil 867ms
+     ✓ 400 do backend mostra mensagem sem repetir a senha 758ms
+     ✓ 429 informa a espera 726ms
+ ✓ src/features/public-survey/ManifestationForm.test.tsx (5 tests) 7486ms
+   ✓ T07 — oferta após nota baixa (3)
+     ✓ NPS 3 → oferta em destaque; "Não, obrigado" esconde a oferta sem chamar o E03 1261ms
+     ✓ registrar: valida tipo e descrição, envia anônima por padrão (T08) e mostra o protocolo 1873ms
+   ✓ T09 — contato opcional (2)
+     ✓ sem aceite e telefone de 9 dígitos → mensagens e nada enviado; só e-mail com aceite → enviado 2679ms
+     ✓ token expirado (422) → mensagem do servidor e sem nova tentativa 1416ms
+stderr | src/features/public-survey/PublicSurveyPage.test.tsx > TL09 — pesquisa pública > exige a nota geral (mensagem e foco), navega com progresso e mantém respostas ao voltar e recarregar
+No `HydrateFallback` element provided to render during initial hydration
+
+Not implemented: navigation to another Document
+ ✓ src/features/dashboard/dashboard.test.tsx (7 tests) 3416ms
+   ✓ T11 — atualização do painel (1)
+     ✓ a cada 60 s com a aba visível e pelo botão Atualizar: total + 1 com n visível 1076ms
+   ✓ RF56 e RF60 — filtros na URL e estado sem dados (4)
+     ✓ aplicar período personalizado e turno grava na URL e consulta o E28 com os filtros 1041ms
+     ✓ período inválido (mais de 366 dias) → mensagem e nenhuma consulta nova 476ms
+   ✓ RF62 — exportação com os filtros do painel (2)
+     ✓ GE exporta respostas com os filtros da URL e vê o nome do arquivo gerado 311ms
+ ✓ src/features/public-survey/PublicSurveyPage.test.tsx (5 tests) 4209ms
+   ✓ TL09 — pesquisa pública (5)
+     ✓ exige a nota geral (mensagem e foco), navega com progresso e mantém respostas ao voltar e recarregar 1656ms
+     ✓ envia com Idempotency-Key, repete automaticamente com a mesma chave após 503 e confirma só após 201 1601ms
+     ✓ falha definitiva mantém as respostas; repetir usa a mesma chave e mudar a resposta gera outra 653ms
+ ✓ src/features/audit/AuditPage.test.tsx (4 tests) 2433ms
+   ✓ TL17 — consulta da auditoria (3)
+     ✓ lista eventos em dd/mm/aaaa hh:mm (America/Sao_Paulo), com rótulos e detalhes legíveis 821ms
+     ✓ usa os últimos 30 dias e 50 itens por padrão; aplica os filtros escolhidos 772ms
+     ✓ valida o período (data inicial ≤ final, até 366 dias) antes de consultar 834ms
+ ✓ src/features/structure/structure.test.tsx (3 tests) 2784ms
+   ✓ TL05 — setores e equipes (2)
+     ✓ SA cadastra setor (código em maiúsculas) e o 409 aparece no campo código 1628ms
+     ✓ AS não vê cadastro de setor, mas cadastra equipe no próprio setor 768ms
+   ✓ TL07 — importação de escalas (1)
+     ✓ mostra erros por linha de um arquivo recusado e confirma um arquivo válido 384ms
+ ✓ src/components/ui/ui.test.tsx (7 tests) 1294ms
+   ✓ Dialog (RNF07) (1)
+     ✓ foca o primeiro controle, prende o Tab no diálogo e devolve o foco ao fechar 880ms
+ ✓ src/features/ombudsman/ombudsman.test.tsx (5 tests) 2389ms
+   ✓ T18 — lista e detalhe (3)
+     ✓ lista com protocolo, trecho e contato (Sim), sem dados de contato; filtro de status na consulta 856ms
+     ✓ arquivar sem nota → mensagem sem chamada; mudança válida envia updatedAt; 409 oferece recarga 734ms
+   ✓ T19 — contato auditado e eliminação (1)
+     ✓ Ver contato mostra finalidade e dados; Eliminar pede confirmação e envia o motivo 516ms
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+ ✓ src/features/surveys/SurveyEditorPage.test.tsx (1 test) 1417ms
+   ✓ TL08 — editor de pesquisa (1)
+     ✓ bloqueia campos publicados, exibe QR com a URL exata e publica a versão 2 1413ms
+ ✓ src/app/App.test.tsx (4 tests) 828ms
+   ✓ página inicial (3)
+     ✓ identifica o sistema FHDOD e o aviso de dados fictícios 534ms
+ ✓ src/lib/api-client.test.ts (7 tests) 35ms
+ ✓ src/features/auth/auth-client.test.ts (9 tests) 34ms
+ ✓ src/lib/env.test.ts (8 tests) 19ms
+ ✓ src/lib/format.test.ts (7 tests) 12ms
+
+ Test Files  16 passed (16)
+      Tests  105 passed (105)
+   Start at  16:59:26
+   Duration  76.03s (environment 45%, tests 31%, import 11%, setup 8%, transform 4%)
+
+Environment  jsdom was created 16 times · 65.93s total, 45% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+JUNIT report written to <repo>/docs/evidencias/ET07-ET09/frontend-testes-junit.xml

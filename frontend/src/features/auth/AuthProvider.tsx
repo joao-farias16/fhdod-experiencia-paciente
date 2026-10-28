@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 
-import { ApiError, type ApiRequestInit, apiRequest } from '../../lib/api-client';
+import { apiDownload, ApiError, type ApiRequestInit, apiRequest } from '../../lib/api-client';
 import { type AuthClient, createSupabaseAuthClient } from './auth-client';
 import {
   AuthClientContext,
@@ -102,15 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [client, resolveSession, sessionUnavailable, queryClient]);
 
-  const request = useCallback(
-    async <T, M = undefined>(path: string, init: Omit<ApiRequestInit, 'token'> = {}) => {
+  /** Executa a chamada com o token atual e trata 401, conta desativada e troca de senha. */
+  const withSession = useCallback(
+    async <R,>(call: (token: string) => Promise<R>): Promise<R> => {
       const token = await client.getAccessToken();
       if (token === null) {
         await signOut(SESSION_EXPIRED);
         throw new ApiError(401, 'UNAUTHENTICATED', SESSION_EXPIRED);
       }
       try {
-        return await apiRequest<T, M>(path, { ...init, token });
+        return await call(token);
       } catch (error) {
         if (error instanceof ApiError) {
           if (error.status === 401) await signOut(SESSION_EXPIRED);
@@ -125,6 +126,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [client, signOut],
+  );
+
+  const request = useCallback(
+    <T, M = undefined>(path: string, init: Omit<ApiRequestInit, 'token'> = {}) =>
+      withSession((token) => apiRequest<T, M>(path, { ...init, token })),
+    [withSession],
+  );
+
+  const download = useCallback(
+    (path: string, fallbackName: string) =>
+      withSession((token) => apiDownload(path, { token, fallbackName })),
+    [withSession],
   );
 
   const signIn = useCallback<AuthContextValue['signIn']>(
@@ -171,8 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client, resolveSession, sessionUnavailable]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ state, signIn, signOut, changePassword, reload, request }),
-    [state, signIn, signOut, changePassword, reload, request],
+    () => ({ state, signIn, signOut, changePassword, reload, request, download }),
+    [state, signIn, signOut, changePassword, reload, request, download],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

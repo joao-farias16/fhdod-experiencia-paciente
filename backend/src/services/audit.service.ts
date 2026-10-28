@@ -42,10 +42,24 @@ export const SURVEY_AUDIT_ACTIONS = [
   'SURVEY_PUBLISHED',
 ] as const;
 
+/** ET07: Ouvidoria — consulta, alteração, nota e contato (Seção 10). */
+export const MANIFESTATION_AUDIT_ACTIONS = [
+  'MANIFESTATION_VIEWED',
+  'MANIFESTATION_UPDATED',
+  'MANIFESTATION_NOTE_ADDED',
+  'MANIFESTATION_CONTACT_VIEWED',
+  'MANIFESTATION_CONTACT_DELETED',
+] as const;
+
+/** ET09: exportações Excel (RF67). */
+export const REPORT_AUDIT_ACTIONS = ['REPORT_EXPORTED'] as const;
+
 export const AUDIT_ACTIONS = [
   ...ACCESS_AUDIT_ACTIONS,
   ...STRUCTURE_AUDIT_ACTIONS,
   ...SURVEY_AUDIT_ACTIONS,
+  ...MANIFESTATION_AUDIT_ACTIONS,
+  ...REPORT_AUDIT_ACTIONS,
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -59,6 +73,8 @@ export const AUDIT_ENTITY_TYPES = [
   'shift',
   'shift_import',
   'survey_config',
+  'manifestation',
+  'report',
 ] as const;
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
 

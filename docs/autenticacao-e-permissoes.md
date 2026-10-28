@@ -185,7 +185,7 @@ Cada registro traz autor e perfil, entidade, `request_id` (o mesmo `X-Request-Id
 - **Tela inicial do perfil**: SA → `/admin/usuarios`; demais → `/painel`; troca pendente → `/trocar-senha`. Acesso direto sem sessão volta à tela pedida após o login; depois de **Sair**, o próximo usuário vai para a própria tela inicial.
 - **Sair**: `signOut` (revoga o token de renovação), apaga o armazenamento e o cache de consultas em memória; Voltar leva ao login sem dados. Sessão expirada (evento do Supabase), 401 ou 403 ACCOUNT_DISABLED da API também encerram a sessão.
 - **Acessibilidade**: link "Pular para o conteúdo", foco visível de 2 px, alvos de 44 px, diálogos com `aria-modal`, foco preso e Esc, avisos com `role="alert"`/`status`, ícone + texto (nunca só cor), tabelas com cabeçalhos e região rolável nomeada, datas `dd/mm/aaaa hh:mm` em America/Sao_Paulo.
-- **Figma**: o arquivo "sistema hospital" não pôde ser consultado nesta sessão (a integração exige autenticação interativa). As telas seguem as diretrizes da Tabela 22 e o padrão visual existente da ET01; a conferência com os frames TL01, TL02, TL16 e TL17 fica para a revisão.
+- **Figma**: na ET03 o arquivo "sistema hospital" não pôde ser consultado (a integração exigia autenticação interativa). Em 28/10/2026 as telas TL01, TL02, TL16 e TL17 foram reproduzidas no arquivo a partir da interface implementada (seção "Acesso, usuários e auditoria (ET03)" da Page 1); ver [`manifestacoes-dashboard-relatorios.md`](manifestacoes-dashboard-relatorios.md#supabase-e-figma).
 
 ## Variáveis de ambiente
 

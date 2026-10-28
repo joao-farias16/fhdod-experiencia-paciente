@@ -289,6 +289,45 @@ const CALLS: Call[] = [
     send: (auth) => request(app).get('/api/v1/admin/surveys').set('Authorization', auth),
     state: () => Promise.resolve(null),
   },
+  // ET07–ET09: Ouvidoria, dashboard e exportação (consultas sem efeito colateral nos dados).
+  {
+    id: 'E28',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/dashboard/summary').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E29',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/dashboard/sectors').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E33',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/dashboard/questions').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E34-respostas',
+    allowedStatus: 200,
+    send: (auth) =>
+      request(app).get('/api/v1/reports/export?type=responses').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E34-manifestacoes',
+    allowedStatus: 200,
+    send: (auth) =>
+      request(app).get('/api/v1/reports/export?type=manifestations').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E35',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/ouvidoria/manifestations').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
   {
     id: 'E41',
     allowedStatus: 200,
@@ -297,7 +336,7 @@ const CALLS: Call[] = [
   },
 ];
 
-describe('T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05)', () => {
+describe('T14 — chamadas diretas à API por perfil (ET03 e consultas das ET04, ET05 e ET07–ET09)', () => {
   const cases = CALLS.flatMap((call) =>
     ACTORS.map((actor) => [call.id, actor.key, call, actor] as const),
   );

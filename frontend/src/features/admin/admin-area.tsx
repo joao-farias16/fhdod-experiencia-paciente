@@ -3,7 +3,8 @@ import { Outlet } from 'react-router';
 import { AuditPage } from '../audit/AuditPage';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ChangePasswordPage } from '../auth/ChangePasswordPage';
-import { RequireAuth, RequirePermission } from '../auth/guards';
+import { useMe } from '../auth/auth-context';
+import { ForbiddenPage, RequireAuth, RequirePermission } from '../auth/guards';
 import { LoginPage } from '../auth/LoginPage';
 import { RosterImportPage } from '../structure/RosterImportPage';
 import { SectorsPage } from '../structure/SectorsPage';
@@ -12,11 +13,15 @@ import { SurveyEditorPage } from '../surveys/SurveyEditorPage';
 import { SurveyPosterPage } from '../surveys/SurveyPosterPage';
 import { SurveysPage } from '../surveys/SurveysPage';
 import { UsersPage } from '../users/UsersPage';
+import { DashboardPage } from '../dashboard/DashboardPage';
+import { SectorDashboardPage } from '../dashboard/SectorDashboardPage';
+import { ManifestationDetailPage } from '../ombudsman/ManifestationDetailPage';
+import { ManifestationsPage } from '../ombudsman/ManifestationsPage';
+import { ReportsPage } from '../reports/ReportsPage';
 import { AdminLayout } from './AdminLayout';
-import { PainelPage } from './PainelPage';
 
 /**
- * Área administrativa (TL01, TL02, TL05–TL08, TL16 e TL17). Carregada sob demanda pelas rotas: o supabase-js e
+ * Área administrativa (TL01–TL08, TL12–TL14, TL16 e TL17). Carregada sob demanda pelas rotas: o supabase-js e
  * a sessão existem somente aqui, nunca na pesquisa pública nem na TV Wall (Seção 7, RF72).
  */
 export function AdminRoot() {
@@ -103,4 +108,50 @@ export function SurveyPosterRoute() {
   );
 }
 
-export { ChangePasswordPage, LoginPage, PainelPage };
+/** TL03 — dashboard geral (todos os perfis administrativos). */
+export function PainelPage() {
+  return (
+    <RequirePermission permission="dashboard:read">
+      <DashboardPage />
+    </RequirePermission>
+  );
+}
+
+/** TL04 — dashboard por setor. */
+export function SectorPanelRoute() {
+  return (
+    <RequirePermission permission="dashboard:read">
+      <SectorDashboardPage />
+    </RequirePermission>
+  );
+}
+
+/** TL12 — lista de manifestações (OU). */
+export function ManifestationsRoute() {
+  return (
+    <RequirePermission permission="manifestations:read">
+      <ManifestationsPage />
+    </RequirePermission>
+  );
+}
+
+/** TL13 — detalhe e acompanhamento (OU). */
+export function ManifestationDetailRoute() {
+  return (
+    <RequirePermission permission="manifestations:read">
+      <ManifestationDetailPage />
+    </RequirePermission>
+  );
+}
+
+/** TL14 — relatórios (perfis com alguma permissão de exportação). */
+export function ReportsRoute() {
+  const me = useMe();
+  return me.permissions.some((permission) => permission.startsWith('reports:')) ? (
+    <ReportsPage />
+  ) : (
+    <ForbiddenPage />
+  );
+}
+
+export { ChangePasswordPage, LoginPage };

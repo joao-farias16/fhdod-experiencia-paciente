@@ -6,10 +6,16 @@ import { authenticate } from '../middlewares/authenticate.js';
 import { requirePasswordChanged } from '../middlewares/authorize.js';
 import { profileRateLimit } from '../middlewares/rate-limit.js';
 import { auditLogsRouter } from '../modules/audit-logs/audit-logs.routes.js';
+import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import type { AuthAdmin, TokenVerifier } from '../modules/auth/auth.types.js';
 import { healthRouter } from '../modules/health/health.routes.js';
+import {
+  ombudsmanRouter,
+  publicManifestationRouter,
+} from '../modules/manifestations/manifestations.routes.js';
 import { meRouter } from '../modules/me/me.routes.js';
 import { publicSurveyRouter } from '../modules/public-survey/public-survey.routes.js';
+import { reportsRouter } from '../modules/reports/reports.routes.js';
 import { rostersRouter } from '../modules/rosters/rosters.routes.js';
 import { sectorsRouter } from '../modules/sectors/sectors.routes.js';
 import { shiftsRouter } from '../modules/shifts/shifts.routes.js';
@@ -51,8 +57,9 @@ export function v1Router({
   ];
 
   router.use(healthRouter({ clock, prisma }));
-  // Pesquisa pública (E01, E02): sem autenticação e sem cookies.
+  // Pesquisa pública (E01, E02) e manifestação (E03): sem autenticação e sem cookies.
   router.use(publicSurveyRouter({ prisma, clock, manifestationTokenSecret }));
+  router.use(publicManifestationRouter({ prisma, clock, manifestationTokenSecret }));
   router.use(meRouter({ prisma, authAdmin, authChain, ipSecret }));
 
   const admin = Router();
@@ -65,6 +72,16 @@ export function v1Router({
   admin.use(surveysRouter({ prisma, clock, ipSecret, publicAppUrl }));
   admin.use(auditLogsRouter({ prisma, clock }));
   router.use('/admin', admin);
+
+  // ET07–ET09: Ouvidoria (E35–E40), dashboard (E28–E33) e relatórios Excel (E34).
+  const authenticated = (child: Router) => {
+    const wrapper = Router();
+    wrapper.use(...authChain, requirePasswordChanged, child);
+    return wrapper;
+  };
+  router.use('/ouvidoria', authenticated(ombudsmanRouter({ prisma, clock, ipSecret })));
+  router.use('/dashboard', authenticated(dashboardRouter({ prisma, clock })));
+  router.use('/reports', authenticated(reportsRouter({ prisma, clock, ipSecret })));
 
   return router;
 }

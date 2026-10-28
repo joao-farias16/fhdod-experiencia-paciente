@@ -37,6 +37,20 @@ function isErrorEnvelope(value: unknown): value is ErrorEnvelope {
   );
 }
 
+/** Erro da API a partir do corpo de uma resposta sem sucesso. */
+function errorOf(status: number, body: unknown): ApiError {
+  if (isErrorEnvelope(body)) {
+    return new ApiError(
+      status,
+      body.error.code,
+      body.error.message,
+      body.error.requestId,
+      body.error.details ?? [],
+    );
+  }
+  return new ApiError(status, 'UNEXPECTED_RESPONSE', 'Resposta inesperada do servidor.');
+}
+
 /** Metadados das listas paginadas (Seção 7). */
 export interface PageMeta {
   page: number;
@@ -94,18 +108,7 @@ export async function apiRequest<T, M = undefined>(
 
   const body: unknown = await response.json().catch(() => null);
 
-  if (!response.ok) {
-    if (isErrorEnvelope(body)) {
-      throw new ApiError(
-        response.status,
-        body.error.code,
-        body.error.message,
-        body.error.requestId,
-        body.error.details ?? [],
-      );
-    }
-    throw new ApiError(response.status, 'UNEXPECTED_RESPONSE', 'Resposta inesperada do servidor.');
-  }
+  if (!response.ok) throw errorOf(response.status, body);
   if (typeof body !== 'object' || body === null || !('data' in body)) {
     throw new ApiError(response.status, 'UNEXPECTED_RESPONSE', 'Resposta inesperada do servidor.');
   }
@@ -119,4 +122,56 @@ export async function apiRequest<T, M = undefined>(
 export async function apiGet<T>(path: string, init?: { signal?: AbortSignal }): Promise<T> {
   const { data } = await apiRequest<T>(path, { signal: init?.signal });
   return data;
+}
+
+/** Arquivo baixado da API (E34): conteúdo e nome informado em Content-Disposition. */
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
+}
+
+function fileNameOf(disposition: string | null, fallback: string): string {
+  const match = disposition === null ? null : /filename="([^"]+)"/.exec(disposition);
+  return match?.[1] ?? fallback;
+}
+
+/**
+ * Download autenticado de arquivo (relatórios Excel). Erros chegam como JSON no padrão da API e
+ * viram ApiError, como em apiRequest.
+ */
+export async function apiDownload(
+  path: string,
+  init: { token: string; signal?: AbortSignal | undefined; fallbackName: string },
+): Promise<DownloadedFile> {
+  let response: Response;
+  try {
+    response = await fetch(`${env.apiBaseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${init.token}` },
+      cache: 'no-store',
+      ...(init.signal ? { signal: init.signal } : {}),
+    });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
+    throw new ApiError(0, 'NETWORK_ERROR', 'Não foi possível conectar ao servidor.');
+  }
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw errorOf(response.status, body);
+  }
+  return {
+    blob: await response.blob(),
+    fileName: fileNameOf(response.headers.get('Content-Disposition'), init.fallbackName),
+  };
+}
+
+/** Entrega o arquivo ao navegador como download. */
+export function saveFile({ blob, fileName }: DownloadedFile): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

@@ -59,7 +59,10 @@ test('cadastro, troca obrigatória, desativação, redefinição e auditoria', a
   await page.getByRole('button', { name: 'Salvar nova senha' }).click();
   await expect(page).toHaveURL(/\/painel$/);
   await expect(page.getByText('Senha alterada com sucesso.')).toBeVisible();
-  await expect(page.getByText('Pronto Atendimento E2E')).toBeVisible();
+  // Escopo exibido no cabeçalho do painel (TL03); o nome também aparece no filtro de setor.
+  await expect(
+    page.getByText(/^Escopo:/).getByText('Pronto Atendimento E2E', { exact: true }),
+  ).toBeVisible();
   await logout(page);
 
   // A senha temporária deixou de autenticar.

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { ApiEnvelope, ApiRequestInit } from '../../lib/api-client';
+import type { ApiEnvelope, ApiRequestInit, DownloadedFile } from '../../lib/api-client';
 import type { AuthClient } from './auth-client';
 import type { Me } from './auth-types';
 
@@ -29,6 +29,8 @@ export interface AuthContextValue {
     path: string,
     init?: Omit<ApiRequestInit, 'token'>,
   ) => Promise<ApiEnvelope<T, M>>;
+  /** Download autenticado de arquivo (E34), com o mesmo tratamento de sessão de `request`. */
+  download: (path: string, fallbackName: string) => Promise<DownloadedFile>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
