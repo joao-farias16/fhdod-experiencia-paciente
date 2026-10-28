@@ -69,10 +69,53 @@ function offsetMs(instant: number, timeZone: string): number {
 
 /** Instante UTC do início (00:00) da data local no fuso (RN25: instantes armazenados em UTC). */
 export function startOfLocalDay(value: string, timeZone = HOSPITAL_TIME_ZONE): Date {
-  const [year, month, day] = partsOf(value);
-  const guess = Date.UTC(year, month - 1, day);
+  return localDateTimeToInstant(value, '00:00', timeZone);
+}
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** Hora local HH:MM válida (00:00 a 23:59). */
+export function isValidLocalTime(value: string): boolean {
+  return TIME_PATTERN.test(value);
+}
+
+/** Minutos desde 00:00 de uma hora HH:MM já validada. */
+export function minutesOfDay(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number) as [number, number];
+  return hours * 60 + minutes;
+}
+
+/**
+ * Instante UTC de uma data (AAAA-MM-DD) e hora (HH:MM) locais no fuso do hospital (RN25, RF19).
+ * O deslocamento é recalculado no próprio instante, o que trata fusos com horário de verão.
+ */
+export function localDateTimeToInstant(
+  date: string,
+  time: string,
+  timeZone = HOSPITAL_TIME_ZONE,
+): Date {
+  const [year, month, day] = partsOf(date);
+  const minutes = minutesOfDay(time);
+  const guess = Date.UTC(year, month - 1, day, Math.floor(minutes / 60), minutes % 60);
   let instant = guess - offsetMs(guess, timeZone);
-  // Reajuste para fusos com horário de verão (o deslocamento pode mudar no próprio dia).
   instant = guess - offsetMs(instant, timeZone);
   return new Date(instant);
+}
+
+/** Hora local HH:MM de um instante no fuso informado. */
+export function localTimeOf(instant: Date, timeZone = HOSPITAL_TIME_ZONE): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(instant);
+}
+
+/** Converte DD/MM/AAAA (formato do CSV de escala) em AAAA-MM-DD; inválida → undefined. */
+export function parseBrazilianDate(value: string): string | undefined {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (match === null) return undefined;
+  const iso = `${match[3] ?? ''}-${match[2] ?? ''}-${match[1] ?? ''}`;
+  return isValidLocalDate(iso) ? iso : undefined;
 }

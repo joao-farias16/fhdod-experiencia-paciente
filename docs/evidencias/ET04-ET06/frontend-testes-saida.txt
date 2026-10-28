@@ -1,0 +1,77 @@
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/frontend
+
+ ✓ src/features/users/UsersPage.test.tsx (11 tests) 4812ms
+   ✓ TL16 — lista e filtros (4)
+     ✓ envia os filtros ao E06 700ms
+   ✓ TL16 — cadastro com senha temporária exibida uma vez (3)
+     ✓ cadastra AS com setores ativos e mostra a senha temporária até Concluir 1161ms
+     ✓ e-mail duplicado (409) aparece no campo de e-mail 876ms
+   ✓ TL16 — edição, desativação e redefinição (4)
+     ✓ editar a si mesmo envia somente o nome 431ms
+     ✓ redefinição gera a senha temporária e a exibe uma vez; inativo não pode ser redefinido 342ms
+ ✓ src/features/auth/auth-flow.test.tsx (17 tests) 8083ms
+   ✓ TL01 — login administrativo (8)
+     ✓ credenciais inválidas: permanece em /login com mensagem genérica 1138ms
+     ✓ e-mail inexistente recebe exatamente a mesma mensagem 711ms
+     ✓ conta sem perfil (401): mensagem genérica e sessão encerrada 743ms
+     ✓ conta desativada (403): mensagem genérica e sessão encerrada 680ms
+     ✓ SA vai para a gestão de usuários; o token vai no cabeçalho Authorization 797ms
+     ✓ perfil sem administração de usuários vai para /painel 779ms
+     ✓ troca de senha pendente leva à TL02 799ms
+   ✓ proteção de rotas e logout (RF02) (7)
+     ✓ depois de Sair, o próximo usuário vai para a própria tela inicial (sem herdar a anterior) 869ms
+     ✓ acesso direto sem sessão volta à tela pedida depois do login 811ms
+ ✓ src/features/auth/ChangePasswordPage.test.tsx (5 tests) 3555ms
+   ✓ TL02 — troca de senha (5)
+     ✓ mostra as regras e marca cada uma como atendida conforme a digitação 835ms
+     ✓ senha fora da política ou confirmação diferente não chega ao backend 588ms
+     ✓ senha válida: E05, novo login com a senha nova e tela inicial do perfil 767ms
+     ✓ 400 do backend mostra mensagem sem repetir a senha 671ms
+     ✓ 429 informa a espera 691ms
+stderr | src/features/public-survey/PublicSurveyPage.test.tsx > TL09 — pesquisa pública > exige a nota geral (mensagem e foco), navega com progresso e mantém respostas ao voltar e recarregar
+No `HydrateFallback` element provided to render during initial hydration
+
+ ✓ src/features/public-survey/PublicSurveyPage.test.tsx (5 tests) 3777ms
+   ✓ TL09 — pesquisa pública (5)
+     ✓ exige a nota geral (mensagem e foco), navega com progresso e mantém respostas ao voltar e recarregar 1596ms
+     ✓ envia com Idempotency-Key, repete automaticamente com a mesma chave após 503 e confirma só após 201 1520ms
+     ✓ falha definitiva mantém as respostas; repetir usa a mesma chave e mudar a resposta gera outra 434ms
+ ✓ src/components/ui/ui.test.tsx (7 tests) 1056ms
+   ✓ Dialog (RNF07) (1)
+     ✓ foca o primeiro controle, prende o Tab no diálogo e devolve o foco ao fechar 712ms
+ ✓ src/features/structure/structure.test.tsx (3 tests) 2430ms
+   ✓ TL05 — setores e equipes (2)
+     ✓ SA cadastra setor (código em maiúsculas) e o 409 aparece no campo código 1263ms
+     ✓ AS não vê cadastro de setor, mas cadastra equipe no próprio setor 744ms
+   ✓ TL07 — importação de escalas (1)
+     ✓ mostra erros por linha de um arquivo recusado e confirma um arquivo válido 419ms
+ ✓ src/features/audit/AuditPage.test.tsx (4 tests) 2200ms
+   ✓ TL17 — consulta da auditoria (3)
+     ✓ lista eventos em dd/mm/aaaa hh:mm (America/Sao_Paulo), com rótulos e detalhes legíveis 669ms
+     ✓ usa os últimos 30 dias e 50 itens por padrão; aplica os filtros escolhidos 674ms
+     ✓ valida o período (data inicial ≤ final, até 366 dias) antes de consultar 852ms
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+ ✓ src/features/surveys/SurveyEditorPage.test.tsx (1 test) 1195ms
+   ✓ TL08 — editor de pesquisa (1)
+     ✓ bloqueia campos publicados, exibe QR com a URL exata e publica a versão 2 1188ms
+ ✓ src/app/App.test.tsx (4 tests) 659ms
+   ✓ página inicial (3)
+     ✓ identifica o sistema FHDOD e o aviso de dados fictícios 425ms
+ ✓ src/lib/api-client.test.ts (7 tests) 28ms
+ ✓ src/features/auth/auth-client.test.ts (9 tests) 25ms
+ ✓ src/lib/env.test.ts (8 tests) 16ms
+ ✓ src/lib/format.test.ts (7 tests) 8ms
+
+ Test Files  13 passed (13)
+      Tests  88 passed (88)
+   Start at  20:13:28
+   Duration  56.02s (environment 50%, tests 26%, import 11%, setup 9%, transform 3%)
+
+Environment  jsdom was created 13 times · 53.31s total, 50% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+JUNIT report written to C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/docs/evidencias/ET04-ET06/frontend-testes-junit.xml

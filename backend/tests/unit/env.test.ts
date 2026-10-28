@@ -25,6 +25,7 @@ describe('loadEnv', () => {
       TRUST_PROXY: 0,
       DATABASE_URL,
       ...SUPABASE,
+      PUBLIC_APP_URL: 'http://localhost:5173',
     });
   });
 
@@ -115,6 +116,8 @@ describe('loadEnv', () => {
       SUPABASE_URL: 'https://exemplo.supabase.co',
       SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
       AUDIT_IP_SECRET: 'x'.repeat(32),
+      MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32),
+      PUBLIC_APP_URL: 'https://fhdod.example',
     };
     expect(() => loadEnv({ ...production, CORS_ORIGIN: 'http://fhdod.example' })).toThrow(/https/);
     expect(loadEnv({ ...production, CORS_ORIGIN: 'https://fhdod.example' }).CORS_ORIGIN).toEqual([
@@ -163,5 +166,35 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...production, SUPABASE_URL: 'https://exemplo.supabase.co' })).toThrow(
       /AUDIT_IP_SECRET/,
     );
+  });
+
+  it('PUBLIC_APP_URL e MANIFESTATION_TOKEN_SECRET: padrão local e obrigatórios em produção', () => {
+    const local = loadEnv({ CORS_ORIGIN: 'http://localhost:5173', ...BASE });
+    expect(local.PUBLIC_APP_URL).toBe('http://localhost:5173');
+    expect(local.MANIFESTATION_TOKEN_SECRET).toBeUndefined();
+    expect(() =>
+      loadEnv({ CORS_ORIGIN: 'http://localhost:5173', ...BASE, MANIFESTATION_TOKEN_SECRET: 'x' }),
+    ).toThrow(/MANIFESTATION_TOKEN_SECRET/);
+
+    const production = {
+      NODE_ENV: 'production',
+      CORS_ORIGIN: 'https://fhdod.example',
+      DATABASE_URL,
+      SUPABASE_URL: 'https://exemplo.supabase.co',
+      SUPABASE_SECRET_KEY: 'chave-ficticia-de-teste',
+      AUDIT_IP_SECRET: 'z'.repeat(32),
+    };
+    expect(() => loadEnv({ ...production, PUBLIC_APP_URL: 'https://fhdod.example' })).toThrow(
+      /MANIFESTATION_TOKEN_SECRET/,
+    );
+    expect(() => loadEnv({ ...production, MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32) })).toThrow(
+      /PUBLIC_APP_URL/,
+    );
+    const ok = loadEnv({
+      ...production,
+      MANIFESTATION_TOKEN_SECRET: 'm'.repeat(32),
+      PUBLIC_APP_URL: 'https://fhdod.example/',
+    });
+    expect(ok.PUBLIC_APP_URL).toBe('https://fhdod.example');
   });
 });

@@ -126,6 +126,7 @@ export interface ApiCall {
   query: URLSearchParams;
   body: unknown;
   authorization: string | null;
+  idempotencyKey: string | null;
 }
 
 type Handler = (call: ApiCall) => Response | Promise<Response>;
@@ -148,6 +149,7 @@ export function mockApi(handlers: Record<string, Handler>) {
       query: url.searchParams,
       body: typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined,
       authorization: headers.get('Authorization'),
+      idempotencyKey: headers.get('Idempotency-Key'),
     };
     calls.push(call);
     const handler = handlers[`${method} ${path}`];

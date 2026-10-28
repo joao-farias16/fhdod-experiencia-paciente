@@ -3,7 +3,13 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from '../generated/prisma/client.js';
 
 export { Prisma, PrismaClient };
-export type { UserRole } from '../generated/prisma/client.js';
+export type {
+  AttributionStatus,
+  QuestionType,
+  ResponseOrigin,
+  ShiftPeriod,
+  UserRole,
+} from '../generated/prisma/client.js';
 
 /** Cliente usado dentro de `prisma.$transaction(async (tx) => ...)`. */
 export type TransactionClient = Prisma.TransactionClient;

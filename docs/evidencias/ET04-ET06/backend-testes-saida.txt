@@ -1,0 +1,89 @@
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/backend
+
+ ✓ |unidade-e-integracao| tests/unit/regras-escala-pesquisa.test.ts (10 tests) 202ms
+ ✓ |unidade-e-integracao| tests/unit/supabase.test.ts (16 tests) 219ms
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts (15 tests) 182ms
+ ✓ |unidade-e-integracao| tests/unit/auth-regras.test.ts (40 tests) 854ms
+   ✓ RF03 — senha temporária (CSPRNG) (2)
+     ✓ tem 16 caracteres, cumpre a RN28 e não repete em 2.000 gerações 651ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts (3 tests) 130ms
+ ✓ |unidade-e-integracao| tests/unit/health.test.ts (1 test) 170ms
+ ✓ |unidade-e-integracao| tests/unit/auth-middlewares.test.ts (10 tests) 258ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts (13 tests) 682ms
+   ✓ GET /api/v1/health (E43) (3)
+     ✓ aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13) 384ms
+ ✓ |banco| tests/db/t13-senha.test.ts (22 tests) 8257ms
+   ✓ T13 — troca obrigatória pendente (RF04) (5)
+     ✓ E06 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 533ms
+     ✓ E41 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 329ms
+     ✓ E07 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito 363ms
+   ✓ T13 — E05 POST /api/v1/me/password (10)
+     ✓ senha fraca longa (73 caracteres) → 400 VALIDATION_ERROR sem gravar nada 350ms
+     ✓ senha válida → 204; atualiza o Supabase, libera o acesso e audita sem a senha 332ms
+   ✓ T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) (7)
+     ✓ fluxo completo: usuário entra com a temporária, só E04/E05 respondem, troca e volta a usar 1440ms
+     ✓ sessão anterior à redefinição não consegue concluir a troca obrigatória (401) 1290ms
+ ✓ |banco| tests/db/t16-bloqueio-conta.test.ts (11 tests) 4054ms
+   ✓ T16 — desativação com token ainda válido (3)
+     ✓ a requisição seguinte do usuário recebe 403 ACCOUNT_DISABLED 699ms
+     ✓ mesmo sem o bloqueio no Supabase, o perfil inativo é recusado a cada requisição 325ms
+     ✓ o histórico permanece: perfil, vínculos, autoria e auditoria (sem exclusão física) 351ms
+   ✓ T16 — regras de desativação (RN24) (4)
+     ✓ dois SA desativando um ao outro ao mesmo tempo: sempre resta um SA ativo 308ms
+   ✓ T16 — reativação e consistência com o Supabase Auth (4)
+     ✓ reativação libera o acesso na requisição seguinte e remove o bloqueio 410ms
+     ✓ falha ao bloquear no Supabase Auth desfaz a desativação (503, nada gravado) 490ms
+     ✓ repetir a desativação de quem já está inativo não gera novo registro 309ms
+ ✓ |banco| tests/db/t14-permissoes.test.ts (302 tests) 3519ms
+(node:36636) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ✓ |banco| tests/db/t26-pesquisas.test.ts (6 tests) 3945ms
+   ✓ T26 — configuração, versionamento e publicação (6)
+     ✓ cria rascunho com a pergunta geral automática; link de rascunho → 404; slug repetido → 409 1169ms
+     ✓ publica a v1 com instantâneos, gera link e QR exatos e recebe resposta 767ms
+     ✓ pergunta publicada, setor, slug e pergunta geral ficam bloqueados (422); textos editáveis 628ms
+     ✓ limite de 10 específicas ativas (422) e desativação/reativação da pesquisa (410) 520ms
+     ✓ E22 filtra por situação e escopo; GE, OU e VI → 403; setor inativo → E01 410 318ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts (43 tests | 1 skipped) 3659ms
+ ✓ |banco| tests/db/t22-t23-importacao-escala.test.ts (6 tests) 2908ms
+   ✓ T22 — importação válida de escala (1)
+     ✓ 60 linhas com turno noturno: pré-valida sem gravar, confirma 60 turnos e recusa a 2ª confirmação 1326ms
+   ✓ T23 — rejeição de arquivos inválidos (nada gravado) (3)
+     ✓ erros por linha e coluna: data, hora, duração, turno, equipe, escopo, campo e sobreposições 449ms
+   ✓ T22/T23 — confirmação: 30 minutos e revalidação (RN19) (2)
+     ✓ equipe desativada ou sobreposição surgida depois da pré-validação → 422/409, nada gravado 362ms
+(node:11684) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ✓ |banco| tests/db/publica-e01-e02.test.ts (12 tests) 2431ms
+   ✓ T01 — E01 sem login nem cookies; 404 e 410 (2)
+     ✓ slug inexistente ou inválido → 404; pesquisa inativa → 410 com mensagem 387ms
+   ✓ RN26 — versão substituída aceita respostas por 24 horas (1)
+     ✓ v1 aceita até 24 h após a publicação da v2; depois, 409 SURVEY_VERSION_OUTDATED 412ms
+ ✓ |banco| tests/db/t24-setores-equipes-turnos.test.ts (8 tests) 2635ms
+   ✓ T24 — setores (RF12–RF15; E10–E12) (2)
+     ✓ SA cadastra, edita, desativa e reativa; duplicidades, código inválido e code no PATCH 869ms
+   ✓ T24 — equipes (RF16–RF18; E13–E15) e etapas (E16) (2)
+     ✓ AS cadastra e edita equipes do próprio setor; fora do escopo → 403/404; lista restrita 354ms
+ ✓ |banco| tests/db/t17-auditoria.test.ts (28 tests) 2799ms
+   ✓ T17 — catálogo: exatamente um registro por operação (8)
+     ✓ USER_CREATED (E07) 615ms
+ ✓ |banco| tests/db/t15-escopo-setor.test.ts (23 tests) 2327ms
+   ✓ T15 — E10 GET /admin/sectors (endpoint real) (6)
+     ✓ AS restrito ao setor A vê somente o setor A, com contagens 319ms
+ ✓ |banco| tests/db/usuarios.test.ts (17 tests) 2142ms
+   ✓ E06 — GET /admin/users (3)
+     ✓ lista somente os usuários do hospital, ordenados por nome, com meta 415ms
+ ✓ |banco| tests/db/t25-atribuicao.test.ts (1 test) 1193ms
+   ✓ T25 — atribuição a turno e equipe pelo E02 (1)
+     ✓ link, QR com turno único, sem turno, ambíguo, turno cancelado e equipe inativa 890ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts (6 tests) 481ms
+ ✓ |banco| tests/db/t12-autenticacao.test.ts (14 tests) 828ms
+ ✓ |banco| tests/db/health-prisma.test.ts (3 tests) 318ms
+
+ Test Files  23 passed (23)
+      Tests  609 passed | 1 skipped (610)
+   Start at  20:12:03
+   Duration  80.75s (tests 49%, import 44%, transform 7%)
+
+JUNIT report written to C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente/docs/evidencias/ET04-ET06/backend-testes-junit.xml

@@ -1,0 +1,1270 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="610" failures="0" errors="0" time="44.1920323">
+    <testsuite name="tests/db/health-prisma.test.ts" timestamp="2026-10-27T23:13:23.879Z" hostname="Farias" tests="3" failures="0" errors="0" skipped="0" time="0.318042">
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; responde 200 quando o SELECT 1 do Prisma é atendido" time="0.2053839">
+        </testcase>
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; responde 503 SERVICE_UNAVAILABLE quando o banco está inacessível" time="0.0332047">
+        </testcase>
+        <testcase classname="tests/db/health-prisma.test.ts" name="GET /api/v1/health com PostgreSQL real &gt; lê os dados pelo Prisma Client gerado do schema (modelos mapeados para snake_case)" time="0.0719695">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/modelo-de-dados.test.ts" timestamp="2026-10-27T23:13:23.885Z" hostname="Farias" tests="43" failures="0" errors="0" skipped="1" time="3.6585122">
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; possui exatamente as 18 tabelas da Tabela 17 (além do controle do Prisma)" time="0.0160272">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; define os 11 enums da Tabela 16 com os valores do PDF" time="0.0110768">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; usa UUID com gen_random_uuid() e audit_logs.id como bigint de identidade" time="0.0255189">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; armazena todos os instantes como timestamptz" time="0.0104913">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="estrutura do esquema public &gt; usa CASCADE somente nas dependências subordinadas e RESTRICT nas demais FKs" time="0.0067624">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="RLS e privilégios (Tabela 16 e Seção 10) &gt; habilita RLS em todas as tabelas, sem nenhuma política" time="0.0094685">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="RLS e privilégios (Tabela 16 e Seção 10) &gt; não concede acesso a anon e authenticated nas tabelas, sequências e funções" time="0.0053118">
+            <skipped/>
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="auditoria somente de inserção (RF10) &gt; aceita INSERT e rejeita UPDATE, DELETE e TRUNCATE em audit_logs" time="0.0852094">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; bloqueia texto, tipo e etapa de pergunta publicada, mas permite desativá-la" time="0.1809615">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; impede alterar ou excluir perguntas de versão (instantâneo)" time="0.1158675">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; exige que a pergunta da versão seja da mesma pesquisa e do mesmo tipo" time="0.1175271">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="imutabilidade de perguntas, versões e respostas &gt; impede alterar respostas e notas; permite registrar o uso do token uma única vez" time="0.1250679">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="pesquisas: versão vigente e bloqueios após publicação (RN27) &gt; exige versão vigente da própria pesquisa e bloqueia slug e setor publicados" time="0.1268488">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="pesquisas: versão vigente e bloqueios após publicação (RN27) &gt; aceita uma única pergunta geral (nps) por pesquisa e por versão (UNIQUE parcial)" time="0.096748">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita código de setor fora do padrão" time="0.0957423">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita superadministrador sem escopo global" time="0.0936273">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita administrador de setor com escopo global" time="0.0877522">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita e-mail com maiúsculas" time="0.0800551">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita perfil inativo sem data de desativação" time="0.0795232">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno com menos de 1 hora" time="0.0820866">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno com mais de 24 horas" time="0.1042152">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno importado sem importação" time="0.0915805">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita turno cancelado sem motivo" time="0.0938855">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação com totais incoerentes" time="0.0962946">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação acima de 2.000 linhas" time="0.1060613">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação confirmada sem data de confirmação" time="0.0985167">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita importação com validade acima de 30 minutos" time="0.079691">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita NPS fora de 0–10" time="0.0900026">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita NPS baixo sem low_score" time="0.0738424">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita origem link com status de QR" time="0.0820298">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita atribuída sem turno" time="0.080334">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita token de manifestação com validade acima de 60 minutos" time="0.0985452">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nota específica fora de 1–5" time="0.086187">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nota específica registrada para a pergunta geral" time="0.0830536">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="regras de domínio por CHECK &gt; rejeita nome de setor repetido sem distinguir maiúsculas (índice de expressão)" time="0.0853663">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="coerência da atribuição a turno (RN07) &gt; aceita resposta atribuída coerente e rejeita equipe, período, horário ou turno cancelado incoerentes" time="0.1334921">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="coerência da atribuição a turno (RN07) &gt; rejeita resposta anterior à publicação da versão" time="0.0880127">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; gera protocolo FHD-AAAA-NNNNNN pela sequência do banco" time="0.0898434">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; valida contato: telefone ou e-mail, formatos e nome" time="0.1084961">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; impede tornar anônima ou alterar o texto de manifestação registrada" time="0.08552">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; exige providências (10+ caracteres) e data ao concluir; texto de 10 a 2.000 caracteres" time="0.1014532">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; aceita uma manifestação por resposta e exige o mesmo setor da resposta" time="0.0841805">
+        </testcase>
+        <testcase classname="tests/db/modelo-de-dados.test.ts" name="manifestações, contatos e linha do tempo &gt; valida eventos da linha do tempo e impede alterar ou excluir notas diretamente" time="0.10485">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/publica-e01-e02.test.ts" timestamp="2026-10-27T23:13:23.903Z" hostname="Farias" tests="12" failures="0" errors="0" skipped="0" time="2.4310278">
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T01 — E01 sem login nem cookies; 404 e 410 &gt; devolve a versão vigente por etapas, com cache público de 60 s e sem dados internos" time="0.0329899">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T01 — E01 sem login nem cookies; 404 e 410 &gt; slug inexistente ou inválido → 404; pesquisa inativa → 410 com mensagem" time="0.3865501">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T03, T04 e T06 — validação no backend e persistência &gt; T04: NPS 9 e duas específicas → 201; 1 resposta e 2 notas, na mesma versão" time="0.1802851">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T03, T04 e T06 — validação no backend e persistência &gt; T03 e T06: notas e perguntas inválidas → 400, sem nenhuma gravação" time="0.1306859">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T10 — idempotência do envio (RN13) &gt; repetição devolve o original (200), conteúdo diferente → 409 e 5 envios concorrentes → 1 linha" time="0.180247">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="RN26 — versão substituída aceita respostas por 24 horas &gt; v1 aceita até 24 h após a publicação da v2; depois, 409 SURVEY_VERSION_OUTDATED" time="0.4118722">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=4, passivos=3, D=3 → 10" time="0.0034731">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=0, passivos=0, D=0 → null" time="0.002261">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=10, passivos=0, D=0 → 100" time="0.0023795">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=0, passivos=0, D=10 → -100" time="0.0020166">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=1, passivos=15, D=0 → 6.3" time="0.0017876">
+        </testcase>
+        <testcase classname="tests/db/publica-e01-e02.test.ts" name="T05 — computeNps e o SQL da Seção 8 (RN03) &gt; P=0, passivos=15, D=1 → -6.3" time="0.0029581">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t12-autenticacao.test.ts" timestamp="2026-10-27T23:13:23.907Z" hostname="Farias" tests="14" failures="0" errors="0" skipped="0" time="0.8282779">
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 UNAUTHENTICATED sem cabeçalho Authorization" time="0.0380692">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 UNAUTHENTICATED com esquema diferente de Bearer" time="0.0143522">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 UNAUTHENTICATED com Bearer vazio" time="0.0065266">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 UNAUTHENTICATED com token malformado" time="0.0068137">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 UNAUTHENTICATED com token de três partes inválidas" time="0.0071098">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 com token expirado" time="0.0062196">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 200 com token válido: perfil, escopo e permissões da Seção 6 (RF05)" time="0.271209">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 401 para conta do Supabase Auth sem perfil na aplicação" time="0.0179336">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 403 ACCOUNT_DISABLED para perfil desativado com token válido" time="0.0330814">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 403 ACCOUNT_DISABLED quando o Supabase Auth indica bloqueio (ban)" time="0.025744">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; após o logout (signOut), o mesmo token recebe 401 e nenhum dado (RF02)" time="0.042627">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; não registra o token nem o perfil em resposta de erro" time="0.01437">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; protege rotas administrativas sem token (401) antes de qualquer outra verificação" time="0.0732407">
+        </testcase>
+        <testcase classname="tests/db/t12-autenticacao.test.ts" name="T12 — E04 GET /api/v1/me &gt; responde 503 SERVICE_UNAVAILABLE quando o Supabase Auth não responde" time="0.0139602">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t13-senha.test.ts" timestamp="2026-10-27T23:13:23.910Z" hostname="Farias" tests="22" failures="0" errors="0" skipped="0" time="8.2572114">
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — troca obrigatória pendente (RF04) &gt; E06 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito" time="0.5326067">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — troca obrigatória pendente (RF04) &gt; E10 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito" time="0.2975246">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — troca obrigatória pendente (RF04) &gt; E41 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito" time="0.3286808">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — troca obrigatória pendente (RF04) &gt; E07 responde 403 PASSWORD_CHANGE_REQUIRED antes da permissão e sem efeito" time="0.3630326">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — troca obrigatória pendente (RF04) &gt; E04 continua acessível e informa mustChangePassword: true" time="0.2800626">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha fraca curta (9 caracteres) → 400 VALIDATION_ERROR sem gravar nada" time="0.2397879">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha fraca sem números → 400 VALIDATION_ERROR sem gravar nada" time="0.2057399">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha fraca sem letras → 400 VALIDATION_ERROR sem gravar nada" time="0.2295001">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha fraca longa (73 caracteres) → 400 VALIDATION_ERROR sem gravar nada" time="0.3503236">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha fraca vazia → 400 VALIDATION_ERROR sem gravar nada" time="0.2786961">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; rejeita campos desconhecidos e corpo ausente (Zod estrito)" time="0.280408">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; senha válida → 204; atualiza o Supabase, libera o acesso e audita sem a senha" time="0.3315023">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; troca voluntária é permitida (mandatory: false)" time="0.2994708">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; falha no Supabase Auth desfaz a transação (flag e auditoria preservadas) → 503" time="0.2335857">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E05 POST /api/v1/me/password &gt; limita E05 a 5 tentativas a cada 15 minutos por perfil (429 com Retry-After)" time="0.2567163">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; gera senha temporária de 16 caracteres, marca a troca e audita sem a senha" time="0.2240965">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; cada redefinição gera uma senha diferente (CSPRNG)" time="0.2935258">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; fluxo completo: usuário entra com a temporária, só E04/E05 respondem, troca e volta a usar" time="1.440294">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; sessão anterior à redefinição não consegue concluir a troca obrigatória (401)" time="1.2898841">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; redefinir a própria senha → 422 SELF_MODIFICATION_FORBIDDEN" time="0.1422302">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; usuário inativo → 422 USER_INACTIVE; inexistente → 404; id inválido → 400" time="0.1672407">
+        </testcase>
+        <testcase classname="tests/db/t13-senha.test.ts" name="T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03) &gt; falha no Supabase Auth: nada é marcado nem auditado (503)" time="0.132392">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t14-permissoes.test.ts" timestamp="2026-10-27T23:13:23.916Z" hostname="Farias" tests="302" failures="0" errors="0" skipped="0" time="3.5192324">
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; cobre exatamente os endpoints E01–E43 da Tabela 19 (E34 por tipo de relatório)" time="0.0033924">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E01 × superadmin" time="0.0006891">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E01 × sector_admin" time="0.0004169">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E01 × management" time="0.0004053">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E01 × ombudsman" time="0.0002153">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E01 × viewer" time="0.0002927">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E02 × superadmin" time="0.000131">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E02 × sector_admin" time="0.0002444">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E02 × management" time="0.0006222">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E02 × ombudsman" time="0.0002267">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E02 × viewer" time="0.0002082">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E03 × superadmin" time="0.0000849">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E03 × sector_admin" time="0.0000541">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E03 × management" time="0.0000504">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E03 × ombudsman" time="0.0000516">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E03 × viewer" time="0.0001001">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E04 × superadmin" time="0.0004581">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E04 × sector_admin" time="0.0001587">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E04 × management" time="0.00011">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E04 × ombudsman" time="0.0000756">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E04 × viewer" time="0.0000731">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E05 × superadmin" time="0.000304">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E05 × sector_admin" time="0.0001862">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E05 × management" time="0.000109">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E05 × ombudsman" time="0.0001094">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E05 × viewer" time="0.0001045">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E06 × superadmin" time="0.00009">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E06 × sector_admin" time="0.0000877">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E06 × management" time="0.0000818">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E06 × ombudsman" time="0.0000713">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E06 × viewer" time="0.0000791">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E07 × superadmin" time="0.0002023">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E07 × sector_admin" time="0.0000795">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E07 × management" time="0.0001604">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E07 × ombudsman" time="0.0003952">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E07 × viewer" time="0.000073">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E08 × superadmin" time="0.0001975">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E08 × sector_admin" time="0.0002118">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E08 × management" time="0.0000767">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E08 × ombudsman" time="0.00007">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E08 × viewer" time="0.0046665">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E09 × superadmin" time="0.0002936">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E09 × sector_admin" time="0.0000876">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E09 × management" time="0.0000745">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E09 × ombudsman" time="0.0000661">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E09 × viewer" time="0.0000594">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E10 × superadmin" time="0.0002295">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E10 × sector_admin" time="0.0000955">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E10 × management" time="0.0000631">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E10 × ombudsman" time="0.0000599">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E10 × viewer" time="0.0000582">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E11 × superadmin" time="0.0000598">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E11 × sector_admin" time="0.000058">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E11 × management" time="0.0000584">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E11 × ombudsman" time="0.0000585">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E11 × viewer" time="0.0000566">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E12 × superadmin" time="0.0000569">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E12 × sector_admin" time="0.0000564">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E12 × management" time="0.000084">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E12 × ombudsman" time="0.0000618">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E12 × viewer" time="0.0000568">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E13 × superadmin" time="0.000057">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E13 × sector_admin" time="0.0001317">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E13 × management" time="0.000074">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E13 × ombudsman" time="0.000059">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E13 × viewer" time="0.000057">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E14 × superadmin" time="0.0000592">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E14 × sector_admin" time="0.0000567">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E14 × management" time="0.0000568">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E14 × ombudsman" time="0.0000561">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E14 × viewer" time="0.0000561">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E15 × superadmin" time="0.0000567">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E15 × sector_admin" time="0.000056">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E15 × management" time="0.0000571">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E15 × ombudsman" time="0.000059">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E15 × viewer" time="0.0000568">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E16 × superadmin" time="0.0000572">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E16 × sector_admin" time="0.0000571">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E16 × management" time="0.0000564">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E16 × ombudsman" time="0.0000558">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E16 × viewer" time="0.0000957">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E17 × superadmin" time="0.0000597">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E17 × sector_admin" time="0.0000566">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E17 × management" time="0.0000556">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E17 × ombudsman" time="0.0000538">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E17 × viewer" time="0.0000536">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E18 × superadmin" time="0.0000545">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E18 × sector_admin" time="0.000054">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E18 × management" time="0.0000535">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E18 × ombudsman" time="0.0000725">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E18 × viewer" time="0.0000556">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E19 × superadmin" time="0.0000627">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E19 × sector_admin" time="0.0000553">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E19 × management" time="0.0000537">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E19 × ombudsman" time="0.0000562">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E19 × viewer" time="0.0000545">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E20 × superadmin" time="0.0000554">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E20 × sector_admin" time="0.0000545">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E20 × management" time="0.000054">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E20 × ombudsman" time="0.0000536">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E20 × viewer" time="0.000129">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E21 × superadmin" time="0.0000647">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E21 × sector_admin" time="0.0000946">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E21 × management" time="0.0000586">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E21 × ombudsman" time="0.0000576">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E21 × viewer" time="0.0000583">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E22 × superadmin" time="0.0000662">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E22 × sector_admin" time="0.0000587">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E22 × management" time="0.0000557">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E22 × ombudsman" time="0.0000572">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E22 × viewer" time="0.0000549">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E23 × superadmin" time="0.0000547">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E23 × sector_admin" time="0.0000672">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E23 × management" time="0.0000553">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E23 × ombudsman" time="0.0000544">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E23 × viewer" time="0.0000564">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E24 × superadmin" time="0.0000574">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E24 × sector_admin" time="0.0000566">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E24 × management" time="0.0000806">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E24 × ombudsman" time="0.0000578">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E24 × viewer" time="0.0000568">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E25 × superadmin" time="0.0000563">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E25 × sector_admin" time="0.0000556">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E25 × management" time="0.0000558">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E25 × ombudsman" time="0.0000574">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E25 × viewer" time="0.0000547">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E26 × superadmin" time="0.0000561">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E26 × sector_admin" time="0.000072">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E26 × management" time="0.000054">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E26 × ombudsman" time="0.0000541">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E26 × viewer" time="0.0000531">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E27 × superadmin" time="0.0000579">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E27 × sector_admin" time="0.0000544">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E27 × management" time="0.0000689">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E27 × ombudsman" time="0.0000598">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E27 × viewer" time="0.0000566">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E28 × superadmin" time="0.000055">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E28 × sector_admin" time="0.0000574">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E28 × management" time="0.0000533">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E28 × ombudsman" time="0.0000534">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E28 × viewer" time="0.0000551">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E29 × superadmin" time="0.0000553">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E29 × sector_admin" time="0.0023867">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E29 × management" time="0.0001181">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E29 × ombudsman" time="0.0000678">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E29 × viewer" time="0.0000624">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E30 × superadmin" time="0.000056">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E30 × sector_admin" time="0.000055">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E30 × management" time="0.0000565">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E30 × ombudsman" time="0.0000563">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E30 × viewer" time="0.0000808">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E31 × superadmin" time="0.0001032">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E31 × sector_admin" time="0.0001376">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E31 × management" time="0.0000577">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E31 × ombudsman" time="0.000052">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E31 × viewer" time="0.0000529">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E32 × superadmin" time="0.000056">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E32 × sector_admin" time="0.0000526">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E32 × management" time="0.0000505">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E32 × ombudsman" time="0.0000511">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E32 × viewer" time="0.00005">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E33 × superadmin" time="0.0000509">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E33 × sector_admin" time="0.0000513">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E33 × management" time="0.0000504">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E33 × ombudsman" time="0.0000501">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E33 × viewer" time="0.0000504">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-respostas × superadmin" time="0.0000515">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-respostas × sector_admin" time="0.0000519">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-respostas × management" time="0.0000516">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-respostas × ombudsman" time="0.0000526">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-respostas × viewer" time="0.0000528">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-indicadores × superadmin" time="0.0000535">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-indicadores × sector_admin" time="0.0000753">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-indicadores × management" time="0.0000552">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-indicadores × ombudsman" time="0.000052">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-indicadores × viewer" time="0.0000528">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-manifestacoes × superadmin" time="0.000051">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-manifestacoes × sector_admin" time="0.000051">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-manifestacoes × management" time="0.0000512">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-manifestacoes × ombudsman" time="0.0000528">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E34-manifestacoes × viewer" time="0.0000537">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E35 × superadmin" time="0.000055">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E35 × sector_admin" time="0.0000536">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E35 × management" time="0.0000563">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E35 × ombudsman" time="0.0000554">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E35 × viewer" time="0.0000532">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E36 × superadmin" time="0.0000544">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E36 × sector_admin" time="0.0000532">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E36 × management" time="0.0000504">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E36 × ombudsman" time="0.0000514">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E36 × viewer" time="0.0000511">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E37 × superadmin" time="0.0000627">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E37 × sector_admin" time="0.0000514">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E37 × management" time="0.0000524">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E37 × ombudsman" time="0.0000518">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E37 × viewer" time="0.0000517">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E38 × superadmin" time="0.0000522">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E38 × sector_admin" time="0.0000528">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E38 × management" time="0.0000547">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E38 × ombudsman" time="0.0000527">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E38 × viewer" time="0.0000524">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E39 × superadmin" time="0.0000526">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E39 × sector_admin" time="0.0000517">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E39 × management" time="0.0000522">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E39 × ombudsman" time="0.0000611">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E39 × viewer" time="0.0000541">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E40 × superadmin" time="0.0000503">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E40 × sector_admin" time="0.0000697">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E40 × management" time="0.0000528">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E40 × ombudsman" time="0.000051">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E40 × viewer" time="0.0001335">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E41 × superadmin" time="0.0000646">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E41 × sector_admin" time="0.000059">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E41 × management" time="0.0000579">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E41 × ombudsman" time="0.0000565">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E41 × viewer" time="0.0000575">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E42 × superadmin" time="0.0000586">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E42 × sector_admin" time="0.0000417">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E42 × management" time="0.0000384">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E42 × ombudsman" time="0.0000378">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E42 × viewer" time="0.0001167">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E43 × superadmin" time="0.0000461">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E43 × sector_admin" time="0.0000396">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E43 × management" time="0.0000364">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E43 × ombudsman" time="0.0000364">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; E43 × viewer" time="0.0000372">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; regras especiais: SA sem textos e contatos; GE sem Ouvidoria; VI só leitura" time="0.0021227">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — matriz completa da Seção 6 × política do backend &gt; toda permissão declarada é usada por algum endpoint" time="0.0003276">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com sa" time="0.2898187">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com as" time="0.0395731">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com ge" time="0.0384191">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com geB" time="0.0318387">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com ou" time="0.0351013">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E04 com vi" time="0.0388309">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com sa" time="0.0680062">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com as" time="0.0265999">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com ge" time="0.0298623">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com geB" time="0.0252031">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com ou" time="0.0260333">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E05 com vi" time="0.0248015">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com sa" time="0.0781906">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com as" time="0.0486228">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com ge" time="0.0290119">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com geB" time="0.0412115">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com ou" time="0.0532447">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E06 com vi" time="0.0421955">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com sa" time="0.1136001">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com as" time="0.0434081">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com ge" time="0.0393599">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com geB" time="0.0361479">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com ou" time="0.0342485">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E07 com vi" time="0.036298">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com sa" time="0.0867084">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com as" time="0.0362875">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com ge" time="0.0320725">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com geB" time="0.0377417">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com ou" time="0.0336223">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E08 com vi" time="0.0303419">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com sa" time="0.0624741">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com as" time="0.0326956">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com ge" time="0.0314564">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com geB" time="0.0328078">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com ou" time="0.0389168">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E09 com vi" time="0.0362475">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com sa" time="0.0340718">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com as" time="0.0387784">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com ge" time="0.0268084">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com geB" time="0.0270526">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com ou" time="0.0265682">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E10 com vi" time="0.0291492">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com sa" time="0.0421699">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com as" time="0.0351306">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com ge" time="0.0312557">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com geB" time="0.0332994">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com ou" time="0.0280981">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E13 com vi" time="0.0285888">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com sa" time="0.0242541">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com as" time="0.0231116">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com ge" time="0.0268366">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com geB" time="0.0293587">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com ou" time="0.0295155">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E16 com vi" time="0.0267981">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com sa" time="0.0780914">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com as" time="0.0321177">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com ge" time="0.0271233">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com geB" time="0.0290871">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com ou" time="0.0265555">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E17 com vi" time="0.0258084">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com sa" time="0.0349894">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com as" time="0.0356224">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com ge" time="0.0263165">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com geB" time="0.0256164">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com ou" time="0.0283941">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E22 com vi" time="0.0267988">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com sa" time="0.0436088">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com as" time="0.0268474">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com ge" time="0.0255039">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com geB" time="0.029892">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com ou" time="0.026218">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; E41 com vi" time="0.0333255">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; o menu do frontend vem de E04, mas a rota oculta continua protegida (RF05)" time="0.0756622">
+        </testcase>
+        <testcase classname="tests/db/t14-permissoes.test.ts" name="T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05) &gt; o novo perfil vale na requisição seguinte (RF07)" time="0.2476042">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t15-escopo-setor.test.ts" timestamp="2026-10-27T23:13:23.991Z" hostname="Farias" tests="23" failures="0" errors="0" skipped="0" time="2.3272392">
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; AS restrito ao setor A vê somente o setor A, com contagens" time="0.3186731">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; GE restrito ao setor B vê somente o setor B" time="0.0290047">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; perfis globais veem todos os setores do hospital, inclusive inativos (histórico)" time="0.0797211">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; escopo vazio → lista vazia (nada fora do escopo)" time="0.0238442">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; setor inativo associado continua visível como inativo" time="0.0203997">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E10 GET /admin/sectors (endpoint real) &gt; filtros inválidos → 400" time="0.0436829">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E22 e E23 (endpoints reais de pesquisas) &gt; AS sem filtro: somente pesquisas do setor A" time="0.0785007">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E22 e E23 (endpoints reais de pesquisas) &gt; AS com filtro do setor B → 403 SECTOR_OUT_OF_SCOPE, auditado" time="0.0780709">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E22 e E23 (endpoints reais de pesquisas) &gt; E23 de pesquisa de outro setor → 404, indistinguível de inexistente" time="0.1318186">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E22 e E23 (endpoints reais de pesquisas) &gt; GE (restrito ou global) não acessa pesquisas: 403 FORBIDDEN pela matriz" time="0.0622306">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E22 e E23 (endpoints reais de pesquisas) &gt; escopo vazio: lista vazia e qualquer filtro → 403" time="0.0592344">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E28 e E34 (rotas-sonda de indicadores e exportação) &gt; consultas devolvem apenas dados do escopo autorizado" time="0.1200413">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E28 e E34 (rotas-sonda de indicadores e exportação) &gt; GE restrito filtrando outro setor no E28 → 403 SECTOR_OUT_OF_SCOPE" time="0.0351026">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — E28 e E34 (rotas-sonda de indicadores e exportação) &gt; E34: GE e AS restritos filtrando outro setor → 403; sem filtro, só o escopo" time="0.1083944">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; tentativa de ampliar o próprio escopo: AS → 403; SA (para si) → 422" time="0.2232738">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; associação a setor inativo → 422 SECTOR_INACTIVE; inexistente → 422 INVALID_SCOPE" time="0.1973799">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; vínculo existente com setor que foi desativado pode ser mantido" time="0.1491731">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E07 — AS sem setor → 400 (RN18)" time="0.0205541">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E07 — AS com escopo global → 400 (RN18)" time="0.0160418">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E07 — GE sem escopo → 400 (RN18)" time="0.0147779">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E07 — VI com global e setores → 400 (RN18)" time="0.0175487">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E07 — SA restrito → 400 (RN18)" time="0.0175331">
+        </testcase>
+        <testcase classname="tests/db/t15-escopo-setor.test.ts" name="T15 — administração do escopo (E07 e E08) &gt; E08 — trocar GE global por AS sem setores → 400; alteração de escopo vale na requisição seguinte" time="0.1405928">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t16-bloqueio-conta.test.ts" timestamp="2026-10-27T23:13:23.998Z" hostname="Farias" tests="11" failures="0" errors="0" skipped="0" time="4.0536193">
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — desativação com token ainda válido &gt; a requisição seguinte do usuário recebe 403 ACCOUNT_DISABLED" time="0.699082">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — desativação com token ainda válido &gt; mesmo sem o bloqueio no Supabase, o perfil inativo é recusado a cada requisição" time="0.3246248">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — desativação com token ainda válido &gt; o histórico permanece: perfil, vínculos, autoria e auditoria (sem exclusão física)" time="0.3512085">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — regras de desativação (RN24) &gt; desativar a própria conta → 422 SELF_MODIFICATION_FORBIDDEN (havendo outro SA)" time="0.2543628">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — regras de desativação (RN24) &gt; desativar o último SA ativo → 422 LAST_SUPERADMIN" time="0.2709769">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — regras de desativação (RN24) &gt; rebaixar o último SA ativo também é recusado (422 LAST_SUPERADMIN)" time="0.2646797">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — regras de desativação (RN24) &gt; dois SA desativando um ao outro ao mesmo tempo: sempre resta um SA ativo" time="0.3076222">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — reativação e consistência com o Supabase Auth &gt; reativação libera o acesso na requisição seguinte e remove o bloqueio" time="0.4095982">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — reativação e consistência com o Supabase Auth &gt; falha ao bloquear no Supabase Auth desfaz a desativação (503, nada gravado)" time="0.4896927">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — reativação e consistência com o Supabase Auth &gt; repetir a desativação de quem já está inativo não gera novo registro" time="0.3085015">
+        </testcase>
+        <testcase classname="tests/db/t16-bloqueio-conta.test.ts" name="T16 — reativação e consistência com o Supabase Auth &gt; o e-mail é imutável (campo desconhecido no PATCH → 400)" time="0.2777422">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t17-auditoria.test.ts" timestamp="2026-10-27T23:13:24.001Z" hostname="Farias" tests="28" failures="0" errors="0" skipped="0" time="2.7994579">
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; USER_CREATED (E07)" time="0.6151629">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; USER_UPDATED (E08: nome e perfil)" time="0.1305246">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; USER_DEACTIVATED e USER_REACTIVATED (E08: isActive)" time="0.2032149">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; USER_PASSWORD_RESET (E09)" time="0.0928739">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; PASSWORD_CHANGED (E05)" time="0.0446566">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; AUTHORIZATION_DENIED (negativa de permissão)" time="0.0356895">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; o catálogo da ET03 foi exercitado por completo" time="0.0049714">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — catálogo: exatamente um registro por operação &gt; nenhum dado pessoal, senha, token ou segredo na trilha" time="0.006535">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — atomicidade: falha da auditoria impede a operação &gt; E07: sem perfil gravado e conta do Supabase Auth compensada (excluída)" time="0.057295">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — atomicidade: falha da auditoria impede a operação &gt; E08: nome e situação inalterados; nenhum bloqueio no Supabase" time="0.148549">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — atomicidade: falha da auditoria impede a operação &gt; E09 e E05: senha não alterada no Supabase e flag preservada" time="0.0997744">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — imutabilidade de audit_logs no próprio banco &gt; UPDATE, DELETE e TRUNCATE são rejeitados pelo PostgreSQL" time="0.039077">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; perfil as → 403 FORBIDDEN" time="0.0258267">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; perfil ge → 403 FORBIDDEN" time="0.0258604">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; perfil ou → 403 FORBIDDEN" time="0.0241894">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; perfil vi → 403 FORBIDDEN" time="0.0252655">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; página de no máximo 100 itens, em ordem decrescente, com meta" time="0.1055486">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; o padrão é a página de 50 itens dos últimos 30 dias; o período explícito inclui eventos antigos" time="0.0621537">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; filtra por autor, ação e entidade" time="0.0658381">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; SA de outro hospital não vê estes eventos" time="0.2362884">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; não devolve o HMAC do IP" time="0.0264383">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; from posterior a to → 400 VALIDATION_ERROR" time="0.0146779">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; período de 367 dias → 400 VALIDATION_ERROR" time="0.0133948">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; data inexistente → 400 VALIDATION_ERROR" time="0.0128579">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; formato brasileiro → 400 VALIDATION_ERROR" time="0.0128533">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; autor inválido → 400 VALIDATION_ERROR" time="0.0155523">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; parâmetro desconhecido → 400 VALIDATION_ERROR" time="0.0153186">
+        </testcase>
+        <testcase classname="tests/db/t17-auditoria.test.ts" name="T17 — E41 GET /api/v1/admin/audit-logs (RF11) &gt; 366 dias é aceito (limite inclusivo da RN25)" time="0.025212">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t22-t23-importacao-escala.test.ts" timestamp="2026-10-27T23:13:24.008Z" hostname="Farias" tests="6" failures="0" errors="0" skipped="0" time="2.9081368">
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T22 — importação válida de escala &gt; 60 linhas com turno noturno: pré-valida sem gravar, confirma 60 turnos e recusa a 2ª confirmação" time="1.3256529">
+        </testcase>
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T23 — rejeição de arquivos inválidos (nada gravado) &gt; erros por linha e coluna: data, hora, duração, turno, equipe, escopo, campo e sobreposições" time="0.4489802">
+        </testcase>
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T23 — rejeição de arquivos inválidos (nada gravado) &gt; erros de arquivo: 1,2 MB (413), .xlsx (415), vazio, codificação, linhas demais, sem arquivo" time="0.165051">
+        </testcase>
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T23 — rejeição de arquivos inválidos (nada gravado) &gt; GE, OU e VI não importam escalas (403)" time="0.0664251">
+        </testcase>
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T22/T23 — confirmação: 30 minutos e revalidação (RN19) &gt; confirmação após 30 minutos → 409 IMPORT_EXPIRED, sem turnos" time="0.1013205">
+        </testcase>
+        <testcase classname="tests/db/t22-t23-importacao-escala.test.ts" name="T22/T23 — confirmação: 30 minutos e revalidação (RN19) &gt; equipe desativada ou sobreposição surgida depois da pré-validação → 422/409, nada gravado" time="0.3618588">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t24-setores-equipes-turnos.test.ts" timestamp="2026-10-27T23:13:24.010Z" hostname="Farias" tests="8" failures="0" errors="0" skipped="0" time="2.6353084">
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — setores (RF12–RF15; E10–E12) &gt; SA cadastra, edita, desativa e reativa; duplicidades, código inválido e code no PATCH" time="0.8693946">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — setores (RF12–RF15; E10–E12) &gt; somente o SA cadastra e altera setores (Tabela 13); recurso de outro hospital → 404" time="0.2072029">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — equipes (RF16–RF18; E13–E15) e etapas (E16) &gt; AS cadastra e edita equipes do próprio setor; fora do escopo → 403/404; lista restrita" time="0.3543848">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — equipes (RF16–RF18; E13–E15) e etapas (E16) &gt; E16 — etapas ordenadas para SA e AS; demais perfis → 403" time="0.0336713">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; E17–E19) &gt; turno 19:00–07:00 termina no dia seguinte, em UTC; sobreposição → 409 SHIFT_OVERLAP" time="0.1748504">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; E17–E19) &gt; validações: duração, janela de datas, equipe e setor inativos, escopo" time="0.2899319">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; E17–E19) &gt; E17 — escala por setor, equipe e até 62 dias, no fuso local; cancelamento com motivo" time="0.2903747">
+        </testcase>
+        <testcase classname="tests/db/t24-setores-equipes-turnos.test.ts" name="T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; E17–E19) &gt; turnos e escalas: GE, OU e VI → 403 (Tabela 13)" time="0.1073929">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t25-atribuicao.test.ts" timestamp="2026-10-27T23:13:24.012Z" hostname="Farias" tests="1" failures="0" errors="0" skipped="0" time="1.1926298">
+        <testcase classname="tests/db/t25-atribuicao.test.ts" name="T25 — atribuição a turno e equipe pelo E02 &gt; link, QR com turno único, sem turno, ambíguo, turno cancelado e equipe inativa" time="0.8901373">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t26-pesquisas.test.ts" timestamp="2026-10-27T23:13:24.013Z" hostname="Farias" tests="6" failures="0" errors="0" skipped="0" time="3.9447474">
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; cria rascunho com a pergunta geral automática; link de rascunho → 404; slug repetido → 409" time="1.1692211">
+        </testcase>
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; publica a v1 com instantâneos, gera link e QR exatos e recebe resposta" time="0.7671827">
+        </testcase>
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; pergunta publicada, setor, slug e pergunta geral ficam bloqueados (422); textos editáveis" time="0.627842">
+        </testcase>
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; publica a v2; a v1 e a resposta antiga permanecem; publicar sem mudanças → 409" time="0.2455047">
+        </testcase>
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; limite de 10 específicas ativas (422) e desativação/reativação da pesquisa (410)" time="0.5203569">
+        </testcase>
+        <testcase classname="tests/db/t26-pesquisas.test.ts" name="T26 — configuração, versionamento e publicação &gt; E22 filtra por situação e escopo; GE, OU e VI → 403; setor inativo → E01 410" time="0.3176529">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/t32-integridade-referencial.test.ts" timestamp="2026-10-27T23:13:24.015Z" hostname="Farias" tests="6" failures="0" errors="0" skipped="0" time="0.4805629">
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 1: rejeita nota de resposta com pergunta de outra versão (FK composta)" time="0.0906897">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 2: rejeita resposta com setor diferente do setor da versão (FK composta)" time="0.067109">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 3: rejeita contato em manifestação anônima (gatilho)" time="0.0719956">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 4: rejeita turno sobreposto da mesma equipe (restrição de exclusão)" time="0.0622164">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 5: rejeita exclusão física de setor referenciado (ON DELETE RESTRICT)" time="0.0684216">
+        </testcase>
+        <testcase classname="tests/db/t32-integridade-referencial.test.ts" name="T32 — integridade referencial garantida pelo PostgreSQL &gt; cenário 6: rejeita UPDATE de campo imutável de versão publicada (gatilho)" time="0.0845942">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/db/usuarios.test.ts" timestamp="2026-10-27T23:13:24.017Z" hostname="Farias" tests="17" failures="0" errors="0" skipped="0" time="2.1424874">
+        <testcase classname="tests/db/usuarios.test.ts" name="E06 — GET /admin/users &gt; lista somente os usuários do hospital, ordenados por nome, com meta" time="0.4150097">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E06 — GET /admin/users &gt; filtra por perfil, situação, setor e busca (nome ou e-mail)" time="0.2459268">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E06 — GET /admin/users &gt; pagina com pageSize entre 1 e 100" time="0.2627922">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; cria conta e perfil; o usuário autentica com a senha temporária e deve trocá-la" time="0.2420301">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; SA recebe escopo global por padrão" time="0.0558556">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; e-mail já cadastrado na aplicação → 409, sem chamar o Supabase Auth" time="0.0203429">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; e-mail que já existe somente no Supabase Auth → 409 e nenhum perfil" time="0.025227">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; Supabase Auth indisponível → 503 e nenhum perfil" time="0.0240543">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; campo desconhecido → 400 VALIDATION_ERROR" time="0.0163872">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; e-mail inválido → 400 VALIDATION_ERROR" time="0.0158145">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; nome curto → 400 VALIDATION_ERROR" time="0.0187842">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; perfil inexistente → 400 VALIDATION_ERROR" time="0.0154641">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E07 — POST /admin/users &gt; setores repetidos → 400 VALIDATION_ERROR" time="0.0155639">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E08 — PATCH /admin/users/:id &gt; GE restrito passa a global sem informar setores (vínculos removidos)" time="0.0787759">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E08 — PATCH /admin/users/:id &gt; VI global passa a restrito ao informar setores" time="0.0741209">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E08 — PATCH /admin/users/:id &gt; usuário de outro hospital ou inexistente → 404" time="0.0732078">
+        </testcase>
+        <testcase classname="tests/db/usuarios.test.ts" name="E08 — PATCH /admin/users/:id &gt; corpo vazio → 400" time="0.0148069">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/app.test.ts" timestamp="2026-10-27T23:13:24.021Z" hostname="Farias" tests="13" failures="0" errors="0" skipped="0" time="0.6820167">
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; responde 200 com o estado da API no envelope { data }" time="0.1313765">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; responde 503 SERVICE_UNAVAILABLE quando o SELECT 1 falha (RNF27)" time="0.0217334">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="GET /api/v1/health (E43) &gt; aplica limitação de 60 requisições por minuto por IP com Retry-After (RNF13)" time="0.3841899">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; envia cabeçalhos de segurança e oculta X-Powered-By (Seção 10)" time="0.0100544">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; gera um X-Request-Id UUID para cada requisição" time="0.010247">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="cabeçalhos e rastreabilidade &gt; reaproveita um X-Request-Id válido e ignora um inválido" time="0.0152802">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; libera a origem configurada" time="0.0096036">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; não libera origens não autorizadas" time="0.0094374">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="CORS restrito a CORS_ORIGIN &gt; responde ao preflight com os cabeçalhos previstos" time="0.0110127">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 404 ROUTE_NOT_FOUND para rota inexistente" time="0.0118064">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 400 MALFORMED_JSON para JSON inválido" time="0.0393454">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; responde 413 PAYLOAD_TOO_LARGE para corpo acima de 32 KB (RNF11)" time="0.0112074">
+        </testcase>
+        <testcase classname="tests/integration/app.test.ts" name="padrão de erros (Tabela 18) &gt; aceita corpo dentro do limite e segue para o 404 da rota" time="0.0107694">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/auth-middlewares.test.ts" timestamp="2026-10-27T23:13:24.024Z" hostname="Farias" tests="10" failures="0" errors="0" skipped="0" time="0.2576226">
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="errorHandler — indisponibilidade (Tabela 18) &gt; Supabase Auth → 503 SERVICE_UNAVAILABLE sem detalhes internos" time="0.0862748">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="errorHandler — indisponibilidade (Tabela 18) &gt; inicialização do Prisma → 503 SERVICE_UNAVAILABLE sem detalhes internos" time="0.0152621">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="errorHandler — indisponibilidade (Tabela 18) &gt; banco inacessível (P1001) → 503 SERVICE_UNAVAILABLE sem detalhes internos" time="0.0113504">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="errorHandler — indisponibilidade (Tabela 18) &gt; outro erro conhecido do Prisma continua 500" time="0.011009">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="negativas de autorização &gt; rota pública do catálogo não exige permissão" time="0.0159959">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="negativas de autorização &gt; registra uma negativa por requisição; erro já auditado não é registrado de novo" time="0.0353554">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="negativas de autorização &gt; falha ao auditar não libera o acesso: continua 403" time="0.0135413">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="negativas de autorização &gt; authOf sem autenticação montada → 500 (erro de configuração das rotas)" time="0.0145778">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="E41 — período padrão (RN25) &gt; sem datas: últimos 30 dias até hoje (fuso do hospital)" time="0.0460996">
+        </testcase>
+        <testcase classname="tests/unit/auth-middlewares.test.ts" name="E41 — período padrão (RN25) &gt; só &quot;to&quot;: 30 dias terminando nele; só &quot;from&quot;: 30 dias a partir dele, sem passar de hoje" time="0.0028704">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/auth-regras.test.ts" timestamp="2026-10-27T23:13:24.028Z" hostname="Farias" tests="40" failures="0" errors="0" skipped="0" time="0.853919">
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; Abcdefgh12 → true" time="0.0134177">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; abcdefghij1 → true" time="0.0015979">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; A1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx → true" time="0.0009657">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; Abcdefg12 → false" time="0.0022241">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; abcdefghijk → false" time="0.0020944">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; 12345678901 → false" time="0.002021">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; çãõéíóúâêô1 → false" time="0.0017614">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; A1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx → false" time="0.0043328">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN28 — política de senhas &gt; as mensagens de erro nunca repetem a senha recebida" time="0.0262137">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RF03 — senha temporária (CSPRNG) &gt; tem 16 caracteres, cumpre a RN28 e não repete em 2.000 gerações" time="0.6512747">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RF03 — senha temporária (CSPRNG) &gt; usa todos os símbolos do alfabeto (distribuição sem lacunas)" time="0.015258">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; superadmin, global=true, setores=[] → 0 violação(ões)" time="0.0007955">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; superadmin, global=false, setores=[] → 1 violação(ões)" time="0.0002848">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; superadmin, global=true, setores=[&quot;00000000-0000-4000-8000-00000000000a&quot;] → 1 violação(ões)" time="0.0004017">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; sector_admin, global=false, setores=[&quot;00000000-0000-4000-8000-00000000000a&quot;] → 0 violação(ões)" time="0.0001968">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; sector_admin, global=false, setores=[] → 1 violação(ões)" time="0.0001409">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; sector_admin, global=true, setores=[] → 1 violação(ões)" time="0.0001459">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; management, global=true, setores=[] → 0 violação(ões)" time="0.0001082">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; ombudsman, global=false, setores=[&quot;00000000-0000-4000-8000-00000000000a&quot;] → 0 violação(ões)" time="0.0001033">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; viewer, global=false, setores=[] → 1 violação(ões)" time="0.0001109">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN18 — coerência entre perfil e escopo &gt; viewer, global=true, setores=[&quot;00000000-0000-4000-8000-00000000000a&quot;] → 1 violação(ões)" time="0.0001275">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN10 — aplicação do escopo &gt; sem filtro: global não restringe; restrito usa os próprios setores" time="0.0029946">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN10 — aplicação do escopo &gt; filtro dentro do escopo é aceito (sem duplicatas); fora → 403 SECTOR_OUT_OF_SCOPE" time="0.0028869">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN10 — aplicação do escopo &gt; recurso individual fora do escopo ou inexistente → 404" time="0.0034611">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN25 — datas locais do filtro (America/Sao_Paulo) &gt; converte o início do dia local para UTC (UTC−3)" time="0.0799423">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN25 — datas locais do filtro (America/Sao_Paulo) &gt; identifica a data local de um instante UTC perto da meia-noite" time="0.0048402">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="RN25 — datas locais do filtro (America/Sao_Paulo) &gt; valida datas, soma dias e conta o intervalo inclusivo" time="0.0019545">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave password nos detalhes" time="0.0021866">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave newPassword nos detalhes" time="0.0014241">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave temporaryPassword nos detalhes" time="0.000673">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave token nos detalhes" time="0.0005148">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave secretKey nos detalhes" time="0.0005438">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave email nos detalhes" time="0.0004777">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave fullName nos detalhes" time="0.0004956">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave phone nos detalhes" time="0.0004898">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave ip nos detalhes" time="0.0004671">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; recusa a chave contact nos detalhes" time="0.0004382">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; aceita os detalhes usados pelo catálogo" time="0.000942">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; não grava nada quando os detalhes são proibidos e ignora requestId inválido" time="0.0054121">
+        </testcase>
+        <testcase classname="tests/unit/auth-regras.test.ts" name="Seção 10 — auditoria sem dados pessoais nem segredos &gt; o IP vira HMAC-SHA256 determinístico e só com segredo configurado" time="0.0029849">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/env.test.ts" timestamp="2026-10-27T23:13:24.047Z" hostname="Farias" tests="15" failures="0" errors="0" skipped="0" time="0.1818264">
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; aplica os valores padrão e separa as origens do CORS" time="0.0745582">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; converte PORT e TRUST_PROXY para número" time="0.0061734">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita a ausência de CORS_ORIGIN" time="0.0152345">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; exige DATABASE_URL com protocolo postgresql (ET02)" time="0.0103247">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; não expõe a senha da DATABASE_URL na mensagem de erro" time="0.0063722">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (nao-e-url)" time="0.01084">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (ftp://exemplo.com)" time="0.0022297">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita CORS_ORIGIN inválido (http://localhost:5173,)" time="0.0023992">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; rejeita porta, nível de log e ambiente inválidos, listando cada variável" time="0.0077821">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; não expõe o valor recebido na mensagem de erro" time="0.0032331">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; exige origens HTTPS em produção (RNF09)" time="0.0051253">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; exige SUPABASE_URL e SUPABASE_SECRET_KEY (ET03) sem expor a chave" time="0.0061612">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; AUDIT_IP_SECRET é opcional fora de produção, com no mínimo 32 caracteres" time="0.0062565">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; em produção, exige Supabase em HTTPS e AUDIT_IP_SECRET" time="0.0039763">
+        </testcase>
+        <testcase classname="tests/unit/env.test.ts" name="loadEnv &gt; PUBLIC_APP_URL e MANIFESTATION_TOKEN_SECRET: padrão local e obrigatórios em produção" time="0.0085515">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/error-handler.test.ts" timestamp="2026-10-27T23:13:24.053Z" hostname="Farias" tests="3" failures="0" errors="0" skipped="0" time="0.1296241">
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; responde 500 INTERNAL_ERROR sem stack trace nem mensagem interna (RNF19)" time="0.0842807">
+        </testcase>
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; preserva status, código e detalhes de um HttpError" time="0.0231111">
+        </testcase>
+        <testcase classname="tests/unit/error-handler.test.ts" name="errorHandler &gt; trata valores lançados que não são Error" time="0.0169844">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/health.test.ts" timestamp="2026-10-27T23:13:24.056Z" hostname="Farias" tests="1" failures="0" errors="0" skipped="0" time="0.1695071">
+        <testcase classname="tests/unit/health.test.ts" name="healthRouter (E43) &gt; responde 503 quando o banco não responde dentro do limite (2 s em produção)" time="0.1654895">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/regras-escala-pesquisa.test.ts" timestamp="2026-10-27T23:13:24.057Z" hostname="Farias" tests="10" failures="0" errors="0" skipped="0" time="0.2021101">
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=4, passivos=3, D=3 → 10" time="0.0084081">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=0, passivos=0, D=0 → null" time="0.0010662">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=10, passivos=0, D=0 → 100" time="0.0006788">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=0, passivos=0, D=10 → -100" time="0.0013974">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=1, passivos=15, D=0 → 6.3" time="0.0009005">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; P=0, passivos=15, D=1 → -6.3" time="0.0009076">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="T05 — computeNps (unitário) &gt; classificação e nota baixa" time="0.0047538">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="janela do turno (RN20, RN25) &gt; 19:00–07:00 termina no dia seguinte; 07:00–07:00 dura 24 h; menos de 1 h é inválido" time="0.1553995">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="janela do turno (RN20, RN25) &gt; converte hora local em UTC e lê datas DD/MM/AAAA" time="0.0068467">
+        </testcase>
+        <testcase classname="tests/unit/regras-escala-pesquisa.test.ts" name="idempotência (RN13) &gt; hash canônico independe da ordem das chaves; chave precisa ser UUID v4" time="0.0121875">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/supabase.test.ts" timestamp="2026-10-27T23:13:24.061Z" hostname="Farias" tests="16" failures="0" errors="0" skipped="0" time="0.2189135">
+        <testcase classname="tests/unit/supabase.test.ts" name="formato do token &gt; aceita somente JWT compacto de três segmentos base64url" time="0.0137226">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="formato do token &gt; lê sub e iat do conteúdo; conteúdo ilegível → vazio" time="0.006711">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; cria o cliente sem persistir sessão no servidor" time="0.0026945">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; token válido → valid com a emissão" time="0.0853151">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; token malformado não chega ao Supabase" time="0.0055706">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; erro 403 bad_jwt → invalid" time="0.0078825">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; erro 403 user_not_found → invalid" time="0.0071614">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; erro 400 undefined → invalid" time="0.021896">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; erro 401 session_not_found → invalid" time="0.0190254">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; sessão encerrada por signOut (AuthSessionMissingError) → invalid" time="0.0042546">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; user_banned → banned com o sub do token já validado" time="0.003071">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="verificador (auth.getUser) &gt; falha de rede, 5xx ou exceção → AuthServiceUnavailableError" time="0.0093355">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="operações administrativas &gt; createUser confirma o e-mail e devolve o id; e-mail repetido → erro específico" time="0.0039849">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="operações administrativas &gt; updatePassword: senha fraca → AuthWeakPasswordError; outra falha → indisponível" time="0.0031504">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="operações administrativas &gt; setBanned usa ban_duration (bloqueio longo e &quot;none&quot; na reativação)" time="0.0077479">
+        </testcase>
+        <testcase classname="tests/unit/supabase.test.ts" name="operações administrativas &gt; deleteUser propaga indisponibilidade" time="0.0027255">
+        </testcase>
+    </testsuite>
+</testsuites>

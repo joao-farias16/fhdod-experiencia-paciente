@@ -8,7 +8,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { PrismaClient } from '../../src/lib/prisma.js';
-import { AUDIT_ACTIONS } from '../../src/services/audit.service.js';
+import { ACCESS_AUDIT_ACTIONS } from '../../src/services/audit.service.js';
 import { localDateOf } from '../../src/utils/dates.js';
 import { FakeSupabase } from '../fake-supabase.js';
 import { errorOf } from '../helpers.js';
@@ -168,7 +168,7 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
        WHERE p.hospital_id = $1 ORDER BY action`,
       [scenario.fx.hospitalId],
     );
-    expect(rows.map((row) => row.action)).toEqual([...AUDIT_ACTIONS].sort());
+    expect(rows.map((row) => row.action)).toEqual([...ACCESS_AUDIT_ACTIONS].sort());
   });
 
   it('nenhum dado pessoal, senha, token ou segredo na trilha', async () => {
@@ -177,7 +177,7 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
       [scenario.fx.hospitalId],
     );
     const serialized = JSON.stringify(rows);
-    expect(rows.length).toBeGreaterThanOrEqual(AUDIT_ACTIONS.length);
+    expect(rows.length).toBeGreaterThanOrEqual(ACCESS_AUDIT_ACTIONS.length);
     for (const secret of [...secrets, ...Object.values(scenario.users).map((u) => u.email)]) {
       expect(serialized).not.toContain(secret);
     }

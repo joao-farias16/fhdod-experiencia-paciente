@@ -8,6 +8,9 @@ import { can, homePathFor, ROLE_LABELS } from '../auth/auth-types';
 /** Itens do menu montados a partir das permissões do E04 (RF05); o backend continua decidindo. */
 const NAV_ITEMS = [
   { to: '/painel', label: 'Painel', permission: 'dashboard:read' },
+  { to: '/admin/pesquisas', label: 'Pesquisas', permission: 'surveys:read' },
+  { to: '/admin/setores', label: 'Setores e equipes', permission: 'teams:create' },
+  { to: '/admin/turnos', label: 'Escalas', permission: 'shifts:read' },
   { to: '/admin/usuarios', label: 'Usuários', permission: 'users:read' },
   { to: '/admin/auditoria', label: 'Auditoria', permission: 'audit_logs:read' },
 ] as const;

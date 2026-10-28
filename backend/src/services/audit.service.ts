@@ -3,11 +3,10 @@ import { createHmac } from 'node:crypto';
 import type { TransactionClient, UserRole } from '../lib/prisma.js';
 
 /**
- * Catálogo de ações auditadas da ET03 (RF10, RN16, Seção 10: ações de usuários e negativas de
- * autorização). As etapas seguintes acrescentam as ações de setores, equipes, turnos,
- * importações, pesquisas, exportações e manifestações.
+ * Catálogo de ações auditadas (RF10, RN16, Seção 10), agrupado pela etapa que o introduziu.
+ * ET03: usuários, senha e negativas de autorização.
  */
-export const AUDIT_ACTIONS = [
+export const ACCESS_AUDIT_ACTIONS = [
   'USER_CREATED',
   'USER_UPDATED',
   'USER_DEACTIVATED',
@@ -17,10 +16,50 @@ export const AUDIT_ACTIONS = [
   'AUTHORIZATION_DENIED',
 ] as const;
 
+/** ET04: setores, equipes, turnos e importações de escala. */
+export const STRUCTURE_AUDIT_ACTIONS = [
+  'SECTOR_CREATED',
+  'SECTOR_UPDATED',
+  'SECTOR_DEACTIVATED',
+  'SECTOR_REACTIVATED',
+  'TEAM_CREATED',
+  'TEAM_UPDATED',
+  'TEAM_DEACTIVATED',
+  'TEAM_REACTIVATED',
+  'SHIFT_CREATED',
+  'SHIFT_CANCELLED',
+  'ROSTER_IMPORT_VALIDATED',
+  'ROSTER_IMPORT_REJECTED',
+  'ROSTER_IMPORT_COMMITTED',
+] as const;
+
+/** ET05: pesquisas, perguntas e publicação. */
+export const SURVEY_AUDIT_ACTIONS = [
+  'SURVEY_CREATED',
+  'SURVEY_UPDATED',
+  'SURVEY_DEACTIVATED',
+  'SURVEY_REACTIVATED',
+  'SURVEY_PUBLISHED',
+] as const;
+
+export const AUDIT_ACTIONS = [
+  ...ACCESS_AUDIT_ACTIONS,
+  ...STRUCTURE_AUDIT_ACTIONS,
+  ...SURVEY_AUDIT_ACTIONS,
+] as const;
+
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** Tipos de entidade registrados em audit_logs.entity_type. */
-export const AUDIT_ENTITY_TYPES = ['profile', 'endpoint'] as const;
+export const AUDIT_ENTITY_TYPES = [
+  'profile',
+  'endpoint',
+  'sector',
+  'team',
+  'shift',
+  'shift_import',
+  'survey_config',
+] as const;
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
 
 type DetailValue = string | number | boolean | null | readonly string[];

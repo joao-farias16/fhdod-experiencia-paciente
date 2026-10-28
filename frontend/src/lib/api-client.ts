@@ -53,7 +53,10 @@ export interface ApiRequestInit {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   /** Access token do Supabase Auth (rotas administrativas). */
   token?: string | undefined;
+  /** JSON (serializado aqui) ou FormData (envio de arquivo, multipart). */
   body?: unknown;
+  /** Cabeçalhos adicionais, como Idempotency-Key (E02). */
+  headers?: Record<string, string>;
   signal?: AbortSignal | undefined;
 }
 
@@ -66,9 +69,10 @@ export async function apiRequest<T, M = undefined>(
   path: string,
   init: ApiRequestInit = {},
 ): Promise<ApiEnvelope<T, M>> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  const headers: Record<string, string> = { ...init.headers, Accept: 'application/json' };
   if (init.token !== undefined) headers.Authorization = `Bearer ${init.token}`;
-  if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = init.body instanceof FormData;
+  if (init.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   let response: Response;
   try {
@@ -76,7 +80,9 @@ export async function apiRequest<T, M = undefined>(
       method: init.method ?? 'GET',
       headers,
       cache: 'no-store',
-      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      ...(init.body === undefined
+        ? {}
+        : { body: isForm ? (init.body as FormData) : JSON.stringify(init.body) }),
       ...(init.signal ? { signal: init.signal } : {}),
     });
   } catch (cause) {

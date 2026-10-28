@@ -2,7 +2,7 @@
  * T14 — Permissões por perfil (RF05–RF07), integração com PostgreSQL real.
  * 1. A matriz inteira da Seção 6 (Tabela 13 × Tabela 19), transcrita aqui de forma independente
  *    do código, é comparada com a política do backend em cada combinação perfil × endpoint.
- * 2. Os endpoints existentes nesta etapa (E04–E10 e E41) são chamados diretamente pela API com
+ * 2. Os endpoints E04–E10, E41 e as consultas E13, E16, E17 e E22 são chamados diretamente pela API com
  *    cada perfil: permitido → código do contrato; negado → 403 FORBIDDEN, sem efeito colateral e
  *    com exatamente um registro AUTHORIZATION_DENIED.
  */
@@ -261,6 +261,34 @@ const CALLS: Call[] = [
     send: (auth) => request(app).get('/api/v1/admin/sectors').set('Authorization', auth),
     state: () => Promise.resolve(null),
   },
+  // ET04 e ET05: consultas de equipes, etapas, escala e pesquisas (sem efeito colateral).
+  {
+    id: 'E13',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/admin/teams').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E16',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/admin/journey-stages').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E17',
+    allowedStatus: 200,
+    send: (auth) =>
+      request(app)
+        .get(`/api/v1/admin/shifts?sectorId=${scenario.fx.sectorA}&from=2026-09-01&to=2026-09-01`)
+        .set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
+  {
+    id: 'E22',
+    allowedStatus: 200,
+    send: (auth) => request(app).get('/api/v1/admin/surveys').set('Authorization', auth),
+    state: () => Promise.resolve(null),
+  },
   {
     id: 'E41',
     allowedStatus: 200,
@@ -269,7 +297,7 @@ const CALLS: Call[] = [
   },
 ];
 
-describe('T14 — chamadas diretas à API por perfil (endpoints da ET03)', () => {
+describe('T14 — chamadas diretas à API por perfil (endpoints da ET03 e consultas da ET04/ET05)', () => {
   const cases = CALLS.flatMap((call) =>
     ACTORS.map((actor) => [call.id, actor.key, call, actor] as const),
   );

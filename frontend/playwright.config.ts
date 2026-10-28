@@ -36,7 +36,7 @@ export default defineConfig({
     {
       name: 'celular-360',
       // O fluxo administrativo grava dados; roda uma vez, no computador.
-      testIgnore: /administracao\.spec\.ts/,
+      testIgnore: /(administracao|escalas-e-pesquisas)\.spec\.ts/,
       use: { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true },
     },
   ],
@@ -51,6 +51,8 @@ export default defineConfig({
         PORT: BACKEND_PORT,
         DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
         CORS_ORIGIN: `http://localhost:${FRONTEND_PORT}`,
+        // Links e QR Code das pesquisas apontam para o frontend dos testes (ET05, T02).
+        PUBLIC_APP_URL: `http://localhost:${FRONTEND_PORT}`,
         LOG_LEVEL: 'warn',
       },
     },

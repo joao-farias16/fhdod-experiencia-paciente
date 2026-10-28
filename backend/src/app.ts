@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
@@ -19,10 +21,12 @@ export const JSON_BODY_LIMIT = '32kb';
 /**
  * Dependências externas da aplicação: configuração, logger, relógio, cliente Prisma (ET02) e,
  * desde a ET03, o verificador de token e as operações administrativas do Supabase Auth — o que
- * permite testar a API sem Supabase (Seção 7).
+ * permite testar a API sem Supabase (Seção 7). PUBLIC_APP_URL (links e QR Code) e
+ * MANIFESTATION_TOKEN_SECRET (token devolvido por E02) entram nas ET05 e ET06.
  */
 export interface AppDeps {
-  env: Pick<Env, 'CORS_ORIGIN' | 'TRUST_PROXY' | 'AUDIT_IP_SECRET'>;
+  env: Pick<Env, 'CORS_ORIGIN' | 'TRUST_PROXY' | 'AUDIT_IP_SECRET'> &
+    Partial<Pick<Env, 'PUBLIC_APP_URL' | 'MANIFESTATION_TOKEN_SECRET'>>;
   logger: Logger;
   prisma: PrismaClient;
   auth: { verifier: TokenVerifier; admin: AuthAdmin };
@@ -58,6 +62,10 @@ export function createApp({ env, logger, prisma, auth, clock = systemClock }: Ap
       verifier: auth.verifier,
       authAdmin: auth.admin,
       ipSecret: env.AUDIT_IP_SECRET,
+      publicAppUrl: env.PUBLIC_APP_URL ?? 'http://localhost:5173',
+      // Fora de produção, sem segredo configurado, o token vale só enquanto o processo rodar
+      // (loadEnv exige MANIFESTATION_TOKEN_SECRET em produção).
+      manifestationTokenSecret: env.MANIFESTATION_TOKEN_SECRET ?? randomBytes(32).toString('hex'),
     }),
   );
 

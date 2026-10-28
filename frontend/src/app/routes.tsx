@@ -23,6 +23,13 @@ export const routes: RouteObject[] = [
     element: <AppLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      {
+        // ET06: pesquisa pública (TL09, TL11), em pedaço próprio e sem o cliente do Supabase.
+        path: 'p/:slug',
+        lazy: async () => ({
+          Component: (await import('../features/public-survey/PublicSurveyPage')).PublicSurveyPage,
+        }),
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
@@ -42,8 +49,17 @@ export const routes: RouteObject[] = [
               { path: 'painel', lazy: admin((m) => m.PainelPage) },
               { path: 'admin/usuarios', lazy: admin((m) => m.UsersRoute) },
               { path: 'admin/auditoria', lazy: admin((m) => m.AuditRoute) },
+              // ET04: setores e equipes (TL05), escala (TL06) e importação (TL07).
+              { path: 'admin/setores', lazy: admin((m) => m.SectorsRoute) },
+              { path: 'admin/turnos', lazy: admin((m) => m.ShiftsRoute) },
+              { path: 'admin/escalas/importar', lazy: admin((m) => m.RosterImportRoute) },
+              // ET05: pesquisas (TL08).
+              { path: 'admin/pesquisas', lazy: admin((m) => m.SurveysRoute) },
+              { path: 'admin/pesquisas/:id', lazy: admin((m) => m.SurveyEditorRoute) },
             ],
           },
+          // Cartaz A4 do QR Code (RF30): sem o layout administrativo, para impressão.
+          { path: 'admin/pesquisas/:id/cartaz', lazy: admin((m) => m.SurveyPosterRoute) },
         ],
       },
     ],

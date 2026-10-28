@@ -9,11 +9,34 @@ export const ACTION_LABELS: Record<string, string> = {
   USER_PASSWORD_RESET: 'Senha redefinida pelo superadministrador',
   PASSWORD_CHANGED: 'Senha trocada pelo próprio usuário',
   AUTHORIZATION_DENIED: 'Acesso negado',
+  SECTOR_CREATED: 'Setor cadastrado',
+  SECTOR_UPDATED: 'Setor alterado',
+  SECTOR_DEACTIVATED: 'Setor desativado',
+  SECTOR_REACTIVATED: 'Setor reativado',
+  TEAM_CREATED: 'Equipe cadastrada',
+  TEAM_UPDATED: 'Equipe alterada',
+  TEAM_DEACTIVATED: 'Equipe desativada',
+  TEAM_REACTIVATED: 'Equipe reativada',
+  SHIFT_CREATED: 'Turno cadastrado',
+  SHIFT_CANCELLED: 'Turno cancelado',
+  ROSTER_IMPORT_VALIDATED: 'Escala validada para importação',
+  ROSTER_IMPORT_REJECTED: 'Escala recusada na validação',
+  ROSTER_IMPORT_COMMITTED: 'Escala importada',
+  SURVEY_CREATED: 'Pesquisa criada',
+  SURVEY_UPDATED: 'Pesquisa alterada',
+  SURVEY_DEACTIVATED: 'Pesquisa desativada',
+  SURVEY_REACTIVATED: 'Pesquisa reativada',
+  SURVEY_PUBLISHED: 'Versão da pesquisa publicada',
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
   profile: 'Usuário',
   endpoint: 'Rota da API',
+  sector: 'Setor',
+  team: 'Equipe',
+  shift: 'Turno',
+  shift_import: 'Importação de escala',
+  survey_config: 'Pesquisa',
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -21,6 +44,15 @@ const FIELD_LABELS: Record<string, string> = {
   role: 'perfil',
   scope: 'escopo',
   isActive: 'situação',
+  name: 'nome',
+  description: 'descrição',
+  title: 'título',
+  introText: 'introdução',
+  thankYouMessage: 'agradecimento',
+  slug: 'endereço',
+  sectorId: 'setor',
+  npsQuestionText: 'pergunta geral',
+  questions: 'perguntas',
 };
 
 function roleLabel(value: unknown): string {
@@ -64,10 +96,19 @@ export function describeDetails(details: unknown, sectorName: (id: string) => st
   if ('mandatory' in entries) lines.push(`Troca obrigatória: ${yesNo(entries.mandatory)}`);
   if ('changeRequired' in entries)
     lines.push(`Troca exigida no próximo acesso: ${yesNo(entries.changeRequired)}`);
-  if ('code' in entries)
+  if (entries.code === 'SECTOR_OUT_OF_SCOPE' || entries.code === 'FORBIDDEN')
     lines.push(
       `Motivo: ${entries.code === 'SECTOR_OUT_OF_SCOPE' ? 'setor fora do escopo' : 'sem permissão'}`,
     );
+  else if (typeof entries.code === 'string') lines.push(`Código: ${entries.code}`);
+  if (typeof entries.slug === 'string') lines.push(`Endereço: /p/${entries.slug}`);
+  if (typeof entries.versionNumber === 'number') lines.push(`Versão: ${entries.versionNumber}`);
+  if (typeof entries.totalRows === 'number')
+    lines.push(
+      `Linhas: ${entries.totalRows} (aceitas: ${String(entries.acceptedRows)}, com erro: ${String(entries.rejectedRows)})`,
+    );
+  if (typeof entries.createdShifts === 'number')
+    lines.push(`Turnos gravados: ${entries.createdShifts}`);
   if (typeof entries.method === 'string') lines.push(`Método: ${entries.method}`);
   if (typeof entries.permission === 'string')
     lines.push(`Permissão exigida: ${entries.permission}`);

@@ -3,11 +3,11 @@
  * Procedimento da Seção 12: AS e GE restritos em E10, E22, E28, E34 e E23 de outro setor → só o
  * escopo; 403 SECTOR_OUT_OF_SCOPE em filtro; 404 em recurso.
  *
- * E10 é o endpoint real. E22, E23, E28 e E34 pertencem às ET05, ET08 e ET09; aqui são verificados
- * por rotas-sonda que usam a MESMA cadeia de produção (authenticate → requirePasswordChanged →
- * requirePermission → serviços de escopo → auditoria de negativas → tratamento de erros) sobre as
- * tabelas reais (survey_configs e responses). Ao implementar esses endpoints, as etapas seguintes
- * devem repetir estes cenários contra as rotas definitivas.
+ * E10, E22 e E23 são os endpoints reais (E22/E23 desde a ET05). E28 e E34 pertencem às ET08 e
+ * ET09; aqui são verificados por rotas-sonda que usam a MESMA cadeia de produção (authenticate →
+ * requirePasswordChanged → requirePermission → serviços de escopo → auditoria de negativas →
+ * tratamento de erros) sobre a tabela real responses. Ao implementar esses endpoints, as etapas
+ * seguintes devem repetir estes cenários contra as rotas definitivas.
  */
 import express, { type RequestHandler } from 'express';
 import request from 'supertest';
@@ -25,11 +25,7 @@ import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFoundHandler } from '../../src/middlewares/not-found.js';
 import { requestLogger } from '../../src/middlewares/request-logger.js';
 import { authOf } from '../../src/modules/auth/request-context.js';
-import {
-  assertResourceInScope,
-  resolveSectorFilter,
-  sectorWhere,
-} from '../../src/services/scope.js';
+import { resolveSectorFilter, sectorWhere } from '../../src/services/scope.js';
 import { FakeSupabase } from '../fake-supabase.js';
 import { errorOf } from '../helpers.js';
 import {
@@ -64,33 +60,6 @@ function buildProbeApp(): express.Express {
     requirePasswordChanged,
   ];
 
-  // E22 — lista de pesquisas com filtro sectorIds.
-  probeApp.get('/api/v1/admin/surveys', ...chain, requirePermission('E22'), async (req, res) => {
-    const auth = authOf(req);
-    const surveys = await prisma.surveyConfig.findMany({
-      where: {
-        ...sectorWhere(auth.scope, sectorIdsQuery(req.query.sectorIds)),
-        sector: { hospitalId: auth.hospitalId },
-      },
-      select: { id: true, sectorId: true },
-      orderBy: { id: 'asc' },
-    });
-    res.json({ data: surveys });
-  });
-  // E23 — detalhe de pesquisa: fora do escopo ou inexistente → 404.
-  probeApp.get(
-    '/api/v1/admin/surveys/:id',
-    ...chain,
-    requirePermission('E23'),
-    async (req, res) => {
-      const survey = await prisma.surveyConfig.findUnique({
-        where: { id: String(req.params.id) },
-        select: { id: true, sectorId: true },
-      });
-      assertResourceInScope(authOf(req).scope, survey?.sectorId);
-      res.json({ data: survey });
-    },
-  );
   // E28 — total de respostas do recorte (interseção filtro × escopo).
   probeApp.get(
     '/api/v1/dashboard/summary',
@@ -210,9 +179,9 @@ describe('T15 — E10 GET /admin/sectors (endpoint real)', () => {
   });
 });
 
-describe('T15 — E22 e E23 (rotas-sonda de pesquisas)', () => {
+describe('T15 — E22 e E23 (endpoints reais de pesquisas)', () => {
   it('AS sem filtro: somente pesquisas do setor A', async () => {
-    const response = await get(probe, '/api/v1/admin/surveys', 'as');
+    const response = await get(app, '/api/v1/admin/surveys', 'as');
     expect(response.status).toBe(200);
     expect((response.body as { data: { id: string }[] }).data.map((s) => s.id)).toEqual([
       scenario.fx.surveyA,
@@ -222,25 +191,15 @@ describe('T15 — E22 e E23 (rotas-sonda de pesquisas)', () => {
   it('AS com filtro do setor B → 403 SECTOR_OUT_OF_SCOPE, auditado', async () => {
     const before = (await deniedRowsOf(db, scenario.users.as.profileId)).length;
     await expectOutOfScope(
-      await get(probe, `/api/v1/admin/surveys?sectorIds=${scenario.fx.sectorB}`, 'as'),
+      await get(app, `/api/v1/admin/surveys?sectorId=${scenario.fx.sectorB}`, 'as'),
       'as',
       before,
     );
   });
 
-  it('AS com filtro misto (A e B) também é recusado', async () => {
-    const before = (await deniedRowsOf(db, scenario.users.as.profileId)).length;
-    const response = await get(
-      probe,
-      `/api/v1/admin/surveys?sectorIds=${scenario.fx.sectorA},${scenario.fx.sectorB}`,
-      'as',
-    );
-    await expectOutOfScope(response, 'as', before);
-  });
-
   it('E23 de pesquisa de outro setor → 404, indistinguível de inexistente', async () => {
-    const other = await get(probe, `/api/v1/admin/surveys/${scenario.fx.surveyB}`, 'as');
-    const missing = await get(probe, `/api/v1/admin/surveys/${crypto.randomUUID()}`, 'as');
+    const other = await get(app, `/api/v1/admin/surveys/${scenario.fx.surveyB}`, 'as');
+    const missing = await get(app, `/api/v1/admin/surveys/${crypto.randomUUID()}`, 'as');
     expect(other.status).toBe(404);
     expect(missing.status).toBe(404);
     const withoutRequestId = (error: ReturnType<typeof errorOf>) => ({
@@ -249,25 +208,23 @@ describe('T15 — E22 e E23 (rotas-sonda de pesquisas)', () => {
       details: error.details,
     });
     expect(withoutRequestId(errorOf(other))).toEqual(withoutRequestId(errorOf(missing)));
-    expect((await get(probe, `/api/v1/admin/surveys/${scenario.fx.surveyA}`, 'as')).status).toBe(
-      200,
-    );
+    expect((await get(app, `/api/v1/admin/surveys/${scenario.fx.surveyA}`, 'as')).status).toBe(200);
   });
 
   it('GE (restrito ou global) não acessa pesquisas: 403 FORBIDDEN pela matriz', async () => {
     for (const key of ['geB', 'ge'] as const) {
-      const response = await get(probe, `/api/v1/admin/surveys/${scenario.fx.surveyB}`, key);
+      const response = await get(app, `/api/v1/admin/surveys/${scenario.fx.surveyB}`, key);
       expect(response.status).toBe(403);
       expect(errorOf(response).code).toBe('FORBIDDEN');
     }
   });
 
   it('escopo vazio: lista vazia e qualquer filtro → 403', async () => {
-    const list = await get(probe, '/api/v1/admin/surveys', 'asEmpty');
+    const list = await get(app, '/api/v1/admin/surveys', 'asEmpty');
     expect((list.body as { data: unknown[] }).data).toEqual([]);
     const before = (await deniedRowsOf(db, scenario.users.asEmpty.profileId)).length;
     await expectOutOfScope(
-      await get(probe, `/api/v1/admin/surveys?sectorIds=${scenario.fx.sectorA}`, 'asEmpty'),
+      await get(app, `/api/v1/admin/surveys?sectorId=${scenario.fx.sectorA}`, 'asEmpty'),
       'asEmpty',
       before,
     );

@@ -13,6 +13,8 @@ export interface E2EAccount {
 export interface E2EFixture {
   hospitalId: string;
   accounts: { sa: E2EAccount; vi: E2EAccount };
+  /** Pesquisas publicadas do Pronto Atendimento E2E (ET06): ativa e desativada. */
+  surveys: { active: string; inactive: string };
 }
 
 /** Executa backend/scripts/e2e/fixture.ts (banco de teste e Supabase Auth locais). */

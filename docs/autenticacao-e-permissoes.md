@@ -145,7 +145,7 @@ Sem corpo. 200 `{ data: { temporaryPassword } }` (no-store). 422 SELF_MODIFICATI
 
 ### E10 — `GET /admin/sectors` (todos os perfis; escopo)
 
-Antecipado da ET04 **somente para leitura**, pois a TL16 associa usuários a setores. Query `isActive`, `search`. 200 com os setores do escopo (inclusive inativos, para histórico) e as contagens `activeTeams` e `activeSurveys`. E11–E21 continuam na ET04.
+Antecipado da ET04 **somente para leitura**, pois a TL16 associa usuários a setores. Query `isActive`, `search`. 200 com os setores do escopo (inclusive inativos, para histórico) e as contagens `activeTeams` e `activeSurveys`. E11–E27, E01 e E02 foram implementados nas ET04–ET06: ver [`setores-escalas-e-pesquisas.md`](setores-escalas-e-pesquisas.md).
 
 ### E41 — `GET /admin/audit-logs` (SA)
 
