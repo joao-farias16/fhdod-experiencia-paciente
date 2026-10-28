@@ -3,29 +3,13 @@
  * Procedimento da Seção 12: AS e GE restritos em E10, E22, E28, E34 e E23 de outro setor → só o
  * escopo; 403 SECTOR_OUT_OF_SCOPE em filtro; 404 em recurso.
  *
- * E10, E22 e E23 são os endpoints reais (E22/E23 desde a ET05). E28 e E34 pertencem às ET08 e
- * ET09; aqui são verificados por rotas-sonda que usam a MESMA cadeia de produção (authenticate →
- * requirePasswordChanged → requirePermission → serviços de escopo → auditoria de negativas →
- * tratamento de erros) sobre a tabela real responses. Ao implementar esses endpoints, as etapas
- * seguintes devem repetir estes cenários contra as rotas definitivas.
+ * Todos os endpoints são os reais: E10 (ET03/ET04), E22/E23 (ET05), E28/E29 (ET08) e E34 (ET09).
+ * As rotas-sonda usadas até a ET06 para E28 e E34 foram substituídas pelas rotas definitivas.
  */
-import express, { type RequestHandler } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createLogger } from '../../src/lib/logger.js';
 import type { PrismaClient } from '../../src/lib/prisma.js';
-import { authenticate } from '../../src/middlewares/authenticate.js';
-import {
-  auditAuthorizationDenials,
-  requirePasswordChanged,
-  requirePermission,
-} from '../../src/middlewares/authorize.js';
-import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { notFoundHandler } from '../../src/middlewares/not-found.js';
-import { requestLogger } from '../../src/middlewares/request-logger.js';
-import { authOf } from '../../src/modules/auth/request-context.js';
-import { resolveSectorFilter, sectorWhere } from '../../src/services/scope.js';
 import { FakeSupabase } from '../fake-supabase.js';
 import { errorOf } from '../helpers.js';
 import {
@@ -34,7 +18,6 @@ import {
   createAuthScenario,
   deniedRowsOf,
   openConnections,
-  TEST_AUDIT_IP_SECRET,
   type UserKey,
 } from './auth-support.js';
 import { type Db, insertResponse } from './support.js';
@@ -44,54 +27,6 @@ let prisma: PrismaClient;
 let fake: FakeSupabase;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
-let probe: express.Express;
-
-function sectorIdsQuery(value: unknown): string[] | undefined {
-  if (typeof value !== 'string' || value === '') return undefined;
-  return value.split(',');
-}
-
-/** Rotas-sonda com a cadeia de produção (ver comentário do arquivo). */
-function buildProbeApp(): express.Express {
-  const probeApp = express();
-  probeApp.use(requestLogger(createLogger({ LOG_LEVEL: 'silent', NODE_ENV: 'test' })));
-  const chain: RequestHandler[] = [
-    authenticate({ verifier: fake.verifier, prisma }),
-    requirePasswordChanged,
-  ];
-
-  // E28 — total de respostas do recorte (interseção filtro × escopo).
-  probeApp.get(
-    '/api/v1/dashboard/summary',
-    ...chain,
-    requirePermission('E28'),
-    async (req, res) => {
-      const auth = authOf(req);
-      const total = await prisma.response.count({
-        where: {
-          ...sectorWhere(auth.scope, sectorIdsQuery(req.query.sectorIds)),
-          sector: { hospitalId: auth.hospitalId },
-        },
-      });
-      res.json({ data: { total } });
-    },
-  );
-  // E34 — exportação (somente a resolução de setores; o arquivo é da ET09).
-  probeApp.get(
-    '/api/v1/reports/export',
-    ...chain,
-    requirePermission('E34-respostas'),
-    (req, res) => {
-      const sectors = resolveSectorFilter(authOf(req).scope, sectorIdsQuery(req.query.sectorIds));
-      res.json({ data: { sectorIds: sectors ?? 'todos' } });
-    },
-  );
-
-  probeApp.use(notFoundHandler);
-  probeApp.use(auditAuthorizationDenials({ prisma, ipSecret: TEST_AUDIT_IP_SECRET }));
-  probeApp.use(errorHandler);
-  return probeApp;
-}
 
 beforeAll(async () => {
   ({ db, prisma } = await openConnections());
@@ -101,7 +36,6 @@ beforeAll(async () => {
   await insertResponse(db, { versionId: scenario.fx.versionB1, sectorId: scenario.fx.sectorB });
   await insertResponse(db, { versionId: scenario.fx.versionB1, sectorId: scenario.fx.sectorB });
   app = buildAuthApp(prisma, fake);
-  probe = buildProbeApp();
 });
 
 afterAll(async () => {
@@ -109,7 +43,7 @@ afterAll(async () => {
   await db.end();
 });
 
-const get = (target: express.Express, path: string, key: UserKey) =>
+const get = (target: typeof app, path: string, key: UserKey) =>
   request(target).get(path).set('Authorization', scenario.bearer(key));
 
 async function expectOutOfScope(response: request.Response, key: UserKey, deniedBefore: number) {
@@ -231,25 +165,37 @@ describe('T15 — E22 e E23 (endpoints reais de pesquisas)', () => {
   });
 });
 
-describe('T15 — E28 e E34 (rotas-sonda de indicadores e exportação)', () => {
-  const totalOf = (response: request.Response) =>
-    (response.body as { data: { total: number } }).data.total;
+describe('T15 — E28, E29 e E34 (endpoints reais desde a ET08 e a ET09)', () => {
+  const DAY = 'from=2026-09-01&to=2026-09-01';
+  const nOf = (response: request.Response) =>
+    (response.body as { data: { indicators: { n: number | null } } }).data.indicators.n;
 
   it('consultas devolvem apenas dados do escopo autorizado', async () => {
-    expect(totalOf(await get(probe, '/api/v1/dashboard/summary', 'as'))).toBe(1); // setor A
-    expect(totalOf(await get(probe, '/api/v1/dashboard/summary', 'geB'))).toBe(2); // setor B
-    expect(totalOf(await get(probe, '/api/v1/dashboard/summary', 'vi'))).toBe(1); // setor A
-    expect(totalOf(await get(probe, '/api/v1/dashboard/summary', 'ge'))).toBe(3); // global
+    expect(nOf(await get(app, `/api/v1/dashboard/summary?${DAY}`, 'as'))).toBe(1); // setor A
+    expect(nOf(await get(app, `/api/v1/dashboard/summary?${DAY}`, 'geB'))).toBe(2); // setor B
+    expect(nOf(await get(app, `/api/v1/dashboard/summary?${DAY}`, 'ge'))).toBe(3); // global
     expect(
-      totalOf(await get(probe, `/api/v1/dashboard/summary?sectorIds=${scenario.fx.sectorB}`, 'ge')),
+      nOf(
+        await get(app, `/api/v1/dashboard/summary?${DAY}&sectorIds=${scenario.fx.sectorB}`, 'ge'),
+      ),
     ).toBe(2);
-    expect(totalOf(await get(probe, '/api/v1/dashboard/summary', 'asEmpty'))).toBe(0);
+    expect(nOf(await get(app, `/api/v1/dashboard/summary?${DAY}`, 'asEmpty'))).toBe(0);
+    // VI restrito ao setor A: só o setor A no E29 (com 1 resposta, suprimido pela RN21).
+    const sectors = await get(app, `/api/v1/dashboard/sectors?${DAY}`, 'vi');
+    expect(
+      (sectors.body as { data: { id: string; indicators: { suppressed: boolean } }[] }).data,
+    ).toEqual([
+      expect.objectContaining({
+        id: scenario.fx.sectorA,
+        indicators: expect.objectContaining({ suppressed: true }) as unknown,
+      }),
+    ]);
   });
 
   it('GE restrito filtrando outro setor no E28 → 403 SECTOR_OUT_OF_SCOPE', async () => {
     const before = (await deniedRowsOf(db, scenario.users.geB.profileId)).length;
     await expectOutOfScope(
-      await get(probe, `/api/v1/dashboard/summary?sectorIds=${scenario.fx.sectorA}`, 'geB'),
+      await get(app, `/api/v1/dashboard/summary?sectorIds=${scenario.fx.sectorA}`, 'geB'),
       'geB',
       before,
     );
@@ -258,22 +204,34 @@ describe('T15 — E28 e E34 (rotas-sonda de indicadores e exportação)', () => 
   it('E34: GE e AS restritos filtrando outro setor → 403; sem filtro, só o escopo', async () => {
     const geBefore = (await deniedRowsOf(db, scenario.users.geB.profileId)).length;
     await expectOutOfScope(
-      await get(probe, `/api/v1/reports/export?sectorIds=${scenario.fx.sectorA}`, 'geB'),
+      await get(
+        app,
+        `/api/v1/reports/export?type=responses&sectorIds=${scenario.fx.sectorA}`,
+        'geB',
+      ),
       'geB',
       geBefore,
     );
     const asBefore = (await deniedRowsOf(db, scenario.users.as.profileId)).length;
     await expectOutOfScope(
-      await get(probe, `/api/v1/reports/export?sectorIds=${scenario.fx.sectorB}`, 'as'),
+      await get(
+        app,
+        `/api/v1/reports/export?type=responses&sectorIds=${scenario.fx.sectorB}`,
+        'as',
+      ),
       'as',
       asBefore,
     );
 
-    const own = await get(probe, '/api/v1/reports/export', 'geB');
-    expect((own.body as { data: { sectorIds: string[] } }).data.sectorIds).toEqual([
-      scenario.fx.sectorB,
-    ]);
-    const ou = await get(probe, '/api/v1/reports/export', 'ou');
+    const own = await get(app, `/api/v1/reports/export?type=responses&${DAY}`, 'geB');
+    expect(own.status).toBe(200);
+    const { rows } = await db.query<{ details: { sectorIds: string[]; rows: number } }>(
+      `SELECT details FROM audit_logs WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = $1
+       ORDER BY id DESC LIMIT 1`,
+      [scenario.users.geB.profileId],
+    );
+    expect(rows[0]?.details).toMatchObject({ sectorIds: [scenario.fx.sectorB], rows: 2 });
+    const ou = await get(app, '/api/v1/reports/export?type=responses', 'ou');
     expect(ou.status).toBe(403);
     expect(errorOf(ou).code).toBe('FORBIDDEN');
   });

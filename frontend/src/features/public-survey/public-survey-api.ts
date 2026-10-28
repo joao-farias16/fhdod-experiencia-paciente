@@ -51,18 +51,16 @@ const wait = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-/**
- * Envia a avaliação (RF37). A Idempotency-Key acompanha todas as tentativas da mesma submissão;
- * o sucesso só é devolvido depois da resposta 201 ou 200 do backend (gravação confirmada).
- */
-export async function submitResponse(
-  body: ResponseBody,
+/** POST público idempotente com até 3 reenvios automáticos usando a MESMA chave (Seção 4.3). */
+async function postIdempotent<T>(
+  path: string,
+  body: unknown,
   idempotencyKey: string,
-  sleep: (ms: number) => Promise<void> = wait,
-): Promise<SubmittedResponse> {
+  sleep: (ms: number) => Promise<void>,
+): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      const { data } = await apiRequest<SubmittedResponse>('/public/responses', {
+      const { data } = await apiRequest<T>(path, {
         method: 'POST',
         body,
         headers: { 'Idempotency-Key': idempotencyKey },
@@ -74,4 +72,51 @@ export async function submitResponse(
       await sleep(delay);
     }
   }
+}
+
+/**
+ * Envia a avaliação (RF37). A Idempotency-Key acompanha todas as tentativas da mesma submissão;
+ * o sucesso só é devolvido depois da resposta 201 ou 200 do backend (gravação confirmada).
+ */
+export function submitResponse(
+  body: ResponseBody,
+  idempotencyKey: string,
+  sleep: (ms: number) => Promise<void> = wait,
+): Promise<SubmittedResponse> {
+  return postIdempotent<SubmittedResponse>('/public/responses', body, idempotencyKey, sleep);
+}
+
+export type ManifestationType = 'compliment' | 'complaint' | 'suggestion';
+
+/** E03 — manifestação vinculada à resposta; contato somente se não anônima (RF41–RF43). */
+export interface ManifestationBody {
+  responseId: string;
+  manifestationToken: string;
+  type: ManifestationType;
+  description: string;
+  anonymous: boolean;
+  contact?: { fullName: string; phone?: string; email?: string; consent: true };
+}
+
+export interface CreatedManifestation {
+  protocol: string;
+  receivedAt: string;
+}
+
+/** Texto de finalidade do contato, versão v1 (Seção 4.3), exibido junto ao aceite. */
+export const CONTACT_PURPOSE_TEXT =
+  'Seus dados de contato serão usados somente pela Ouvidoria da Fundação Hospitalar Dr. Oswaldo ' +
+  'Diesel para dar retorno sobre esta manifestação. Eles não aparecem nos resultados da pesquisa.';
+
+export function submitManifestation(
+  body: ManifestationBody,
+  idempotencyKey: string,
+  sleep: (ms: number) => Promise<void> = wait,
+): Promise<CreatedManifestation> {
+  return postIdempotent<CreatedManifestation>(
+    '/public/manifestations',
+    body,
+    idempotencyKey,
+    sleep,
+  );
 }

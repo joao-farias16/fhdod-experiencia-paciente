@@ -36,7 +36,7 @@ export default defineConfig({
     {
       name: 'celular-360',
       // O fluxo administrativo grava dados; roda uma vez, no computador.
-      testIgnore: /(administracao|escalas-e-pesquisas)\.spec\.ts/,
+      testIgnore: /(administracao|escalas-e-pesquisas|manifestacoes-painel-relatorios)\.spec\.ts/,
       use: { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true },
     },
   ],

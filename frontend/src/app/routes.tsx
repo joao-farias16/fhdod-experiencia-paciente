@@ -46,7 +46,16 @@ export const routes: RouteObject[] = [
             lazy: admin((m) => m.AdminShell),
             children: [
               { path: 'trocar-senha', lazy: admin((m) => m.ChangePasswordPage) },
+              // ET08: dashboard geral (TL03) e por setor (TL04).
               { path: 'painel', lazy: admin((m) => m.PainelPage) },
+              { path: 'painel/setores/:sectorId', lazy: admin((m) => m.SectorPanelRoute) },
+              // ET07: Ouvidoria (TL12, TL13). ET09: relatórios Excel (TL14).
+              { path: 'ouvidoria/manifestacoes', lazy: admin((m) => m.ManifestationsRoute) },
+              {
+                path: 'ouvidoria/manifestacoes/:id',
+                lazy: admin((m) => m.ManifestationDetailRoute),
+              },
+              { path: 'relatorios', lazy: admin((m) => m.ReportsRoute) },
               { path: 'admin/usuarios', lazy: admin((m) => m.UsersRoute) },
               { path: 'admin/auditoria', lazy: admin((m) => m.AuditRoute) },
               // ET04: setores e equipes (TL05), escala (TL06) e importação (TL07).

@@ -8,6 +8,8 @@ import { can, homePathFor, ROLE_LABELS } from '../auth/auth-types';
 /** Itens do menu montados a partir das permissões do E04 (RF05); o backend continua decidindo. */
 const NAV_ITEMS = [
   { to: '/painel', label: 'Painel', permission: 'dashboard:read' },
+  { to: '/ouvidoria/manifestacoes', label: 'Ouvidoria', permission: 'manifestations:read' },
+  { to: '/relatorios', label: 'Relatórios', permission: 'reports:' },
   { to: '/admin/pesquisas', label: 'Pesquisas', permission: 'surveys:read' },
   { to: '/admin/setores', label: 'Setores e equipes', permission: 'teams:create' },
   { to: '/admin/turnos', label: 'Escalas', permission: 'shifts:read' },
@@ -21,7 +23,14 @@ export function AdminLayout() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const items = me.mustChangePassword ? [] : NAV_ITEMS.filter((item) => can(me, item.permission));
+  const items = me.mustChangePassword
+    ? []
+    : NAV_ITEMS.filter((item) =>
+        // "reports:" = qualquer permissão de exportação (tipo conforme o perfil, Tabela 13).
+        item.permission === 'reports:'
+          ? me.permissions.some((permission) => permission.startsWith('reports:'))
+          : can(me, item.permission),
+      );
 
   const onSignOut = () => {
     void signOut().then(() => navigate('/login', { replace: true }));

@@ -37,8 +37,8 @@ export interface Me {
 }
 
 /**
- * Tela inicial do perfil (RF01). Nesta etapa existem a administração de usuários (SA) e a página
- * inicial administrativa; o painel (TL03) e a Ouvidoria (TL12) chegam nas ET07 e ET08.
+ * Tela inicial do perfil (RF01): administração de usuários para o SA; painel de indicadores (TL03)
+ * para os demais perfis, que acessam a Ouvidoria (TL12) e os relatórios (TL14) pelo menu.
  */
 export function homePathFor(me: Me): string {
   return me.permissions.includes('users:read') ? '/admin/usuarios' : '/painel';

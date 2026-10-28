@@ -1,4 +1,4 @@
-# Arquitetura do backend (D03) — ET01 a ET06
+# Arquitetura do backend (D03) — ET01 a ET09
 
 Este documento descreve o que existe hoje na API e as convenções que as próximas etapas devem seguir. Ele será ampliado a cada etapa.
 
@@ -70,6 +70,8 @@ Módulos da ET03: `modules/auth` (tipos, matriz de permissões, política de sen
 | E41 | `GET /api/v1/admin/audit-logs`                | SA                  | 300/min/perfil  | 200 eventos em ordem decrescente, até 100 por página; 400 período inválido                                                                                       |
 
 Desde as ET04–ET06 também existem E01, E02 e E11–E27 (setores, equipes, etapas, turnos, importação de escala e pesquisas), com contratos em [`setores-escalas-e-pesquisas.md`](setores-escalas-e-pesquisas.md#contratos-prefixo-apiv1).
+
+Desde as ET07–ET09 existem E03 (manifestação pública), E35–E40 (Ouvidoria, montadas em `/ouvidoria`), E28–E33 (dashboard, em `/dashboard`) e E34 (relatórios Excel, em `/reports`), com contratos em [`manifestacoes-dashboard-relatorios.md`](manifestacoes-dashboard-relatorios.md). Os três grupos usam a mesma cadeia autenticada das rotas `/admin`; as consultas analíticas usam `$queryRaw` parametrizado (`Prisma.sql`), e os filtros de período ficam em `src/utils/period.ts`.
 
 Contratos completos da ET03: [`autenticacao-e-permissoes.md`](autenticacao-e-permissoes.md#contratos-prefixo-apiv1).
 

@@ -22,7 +22,7 @@ export function adjustableClock(start = new Date()): Clock & { set(date: Date | 
   };
 }
 
-type Method = 'get' | 'post' | 'patch';
+type Method = 'get' | 'post' | 'patch' | 'delete';
 
 /** Requisição autenticada com o token fictício do usuário do cenário. */
 export function call(

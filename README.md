@@ -16,43 +16,49 @@ Projeto integrado do curso **Técnico em Informática Integrado ao Ensino Médio
 O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada integralmente por um integrante e revisada pelo outro (Tabela 27 da especificação).
 
 - Quadro Kanban oficial: [GitHub Projects — FHDOD](https://github.com/users/joao-farias16/projects/1)
-- Links da aplicação publicada, da documentação da API (Swagger) e do Figma serão adicionados quando existirem (ET12 e ET13).
+- Figma (telas das etapas implementadas, na página Page 1): [sistema-hospital](https://www.figma.com/design/kcRMvRhHs8IYRfsZkv1BLZ/sistema-hospital)
+- Links da aplicação publicada e da documentação da API (Swagger) serão adicionados quando existirem (ET12 e ET13).
 
 ## Estado atual
 
 **ET01 — Repositório, ambiente e Kanban**: integrada em `develop`.
 **ET02 — Modelo de dados**: integrada em `develop`.
 **ET03 — Autenticação e permissões**: integrada em `develop`.
-**ET04, ET05 e ET06 — Setores e escalas, pesquisas e pesquisa pública**: implementadas localmente na branch `feature/ET04-ET06-escalas-pesquisas-publica` (aguardando commit, push, CI remota e revisão; ver [limitações](#limitações-conhecidas-e-pendências)).
+**ET04, ET05 e ET06 — Setores e escalas, pesquisas e pesquisa pública**: integradas em `develop`.
+**ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: implementadas localmente na branch `feature` (criada de `develop`; aguardando commit, push, CI remota e revisão; ver [limitações](#limitações-conhecidas-e-pendências)).
 
-| Implementado (ET01 a ET06)                                                                     | Reservado para etapas futuras                                      |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Monorepo com npm workspaces (`backend`, `frontend`)                                            | Manifestação após o envio, protocolo e Ouvidoria (E03, TL10, ET07) |
-| **ET03:** Supabase Auth, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                  | Indicadores do painel (TL03, TL04, ET08)                           |
-| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)        | Relatórios Excel (ET09); TV Wall (ET10)                            |
-| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)     | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12)           |
-| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                     | E2E com axe em todas as telas (ET11)                               |
-| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08) | Publicação na nuvem (ET12)                                         |
-| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)       |                                                                    |
-| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros               |                                                                    |
-| **ET02:** Prisma 7, 18 tabelas, 5 migrations, CHECK/EXCLUDE/gatilhos, RLS, seed e T32          |                                                                    |
-| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                        |                                                                    |
-| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)            |                                                                    |
-| Testes E2E com Playwright (T12, fluxo administrativo, pesquisa pública e escalas/pesquisas)    |                                                                    |
-| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas    |                                                                    |
+| Implementado (ET01 a ET09)                                                                     | Reservado para etapas futuras                            |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Monorepo com npm workspaces (`backend`, `frontend`)                                            | TV Wall (E42, TL15, ET10)                                |
+| **ET03:** Supabase Auth, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                  | Conferência das telas com o Figma (revisão)              |
+| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)        |                                                          |
+| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)     | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12) |
+| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                     | E2E com axe em todas as telas (ET11)                     |
+| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08) | Publicação na nuvem (ET12)                               |
+| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)       |                                                          |
+| **ET07:** manifestação após a avaliação, anonimato, contato e protocolo (E03; TL10)            |                                                          |
+| **ET07:** Ouvidoria: lista, detalhe, status, notas e contato auditado (E35–E40; TL12, TL13)    |                                                          |
+| **ET08:** painel geral e por setor com filtros, supressão e comparação (E28–E33; TL03, TL04)   |                                                          |
+| **ET09:** relatórios Excel de respostas, indicadores e manifestações (E34; TL14)               |                                                          |
+| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros               |                                                          |
+| **ET02:** Prisma 7, 18 tabelas, 5 migrations, CHECK/EXCLUDE/gatilhos, RLS, seed e T32          |                                                          |
+| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                        |                                                          |
+| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)            |                                                          |
+| Testes E2E com Playwright (T12, administração, pesquisa pública, escalas, Ouvidoria e painel)  |                                                          |
+| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas    |                                                          |
 
 Desde a ET02, a API conecta-se ao PostgreSQL pelo Prisma; a rota de saúde responde 503 se o banco não responder em 2 s.
 
 ## Tecnologias
 
-| Camada    | Tecnologias (versões instaladas)                                                                                                                                                     |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Frontend  | React 19.3, TypeScript 5.9, Vite 8, Tailwind CSS 4.3, React Router 8, TanStack Query 5, React Hook Form 7, supabase-js 2 (sessão), Lucide React, qrcode.react 4 (QR Code em SVG/PNG) |
-| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, supabase-js 2 (Supabase Auth), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV)    |
-| Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0                                 |
-| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, React Testing Library, Supertest, Playwright 1.63 (E2E), jsqr (T02), commitlint + husky                     |
-| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                         |
-| Previstas | Recharts, ExcelJS, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                     |
+| Camada    | Tecnologias (versões instaladas)                                                                                                                                                                                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend  | React 19.3, TypeScript 5.9, Vite 8, Tailwind CSS 4.3, React Router 8, TanStack Query 5, React Hook Form 7, supabase-js 2 (sessão), Lucide React, qrcode.react 4 (QR Code em SVG/PNG)                              |
+| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, supabase-js 2 (Supabase Auth), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV), ExcelJS 4.4 (relatórios .xlsx) |
+| Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0                                                              |
+| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, React Testing Library, Supertest, Playwright 1.63 (E2E), jsqr (T02), commitlint + husky                                                  |
+| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                                                      |
+| Previstas | Recharts, ExcelJS, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                  |
 
 As bibliotecas da linha "Previstas" fazem parte da especificação, mas só serão instaladas na etapa que as utilizar, para não manter dependências sem uso.
 
@@ -204,33 +210,37 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 
 ### Endpoints implementados
 
-| Grupo                         | Endpoints (prefixo `/api/v1`)                                                                            | Documentação                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura-backend.md`](docs/arquitetura-backend.md)                 |
-| Perfil, usuários e auditoria  | E04–E09, E41                                                                                             | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)     |
-| Setores, equipes e etapas     | E10–E12 `/admin/sectors`, E13–E15 `/admin/teams`, E16 `/admin/journey-stages`                            | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
-| Turnos e importação de escala | E17–E19 `/admin/shifts`, E20 `POST /admin/rosters/import`, E21 `POST /admin/rosters/imports/:id/confirm` | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
-| Pesquisas                     | E22–E25 `/admin/surveys`, E26 `POST /admin/surveys/:id/publish`, E27 `GET /admin/surveys/:id/qr`         | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
-| Pesquisa pública (sem login)  | E01 `GET /public/surveys/:slug`, E02 `POST /public/responses` (cabeçalho `Idempotency-Key` com UUID v4)  | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md) |
+| Grupo                         | Endpoints (prefixo `/api/v1`)                                                                            | Documentação                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura-backend.md`](docs/arquitetura-backend.md)                               |
+| Perfil, usuários e auditoria  | E04–E09, E41                                                                                             | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)                   |
+| Setores, equipes e etapas     | E10–E12 `/admin/sectors`, E13–E15 `/admin/teams`, E16 `/admin/journey-stages`                            | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
+| Turnos e importação de escala | E17–E19 `/admin/shifts`, E20 `POST /admin/rosters/import`, E21 `POST /admin/rosters/imports/:id/confirm` | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
+| Pesquisas                     | E22–E25 `/admin/surveys`, E26 `POST /admin/surveys/:id/publish`, E27 `GET /admin/surveys/:id/qr`         | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
+| Pesquisa pública (sem login)  | E01 `GET /public/surveys/:slug`, E02 `POST /public/responses` (cabeçalho `Idempotency-Key` com UUID v4)  | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
+| Manifestação (sem login)      | E03 `POST /public/manifestations` (`Idempotency-Key` e token devolvido por E02)                          | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
+| Ouvidoria                     | E35–E38 `/ouvidoria/manifestations[/:id[/notes]]`, E39–E40 `/ouvidoria/manifestations/:id/contact`       | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
+| Dashboard                     | E28–E33 `/dashboard/summary`, `/sectors`, `/shifts`, `/teams`, `/trends`, `/questions`                   | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
+| Relatórios Excel              | E34 `GET /reports/export?type=` `responses`, `indicators` ou `manifestations`                            | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
 
 A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para a ET11/ET12).
 
 ## Qualidade: lint, typecheck, testes e build
 
-| Comando                            | O que faz                                                                                                                  |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)                                                                   |
-| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige                                                                 |
-| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige                                                                    |
-| `npm run typecheck`                | TypeScript nos dois módulos                                                                                                |
-| `npm test`                         | testes dos dois módulos (Vitest)                                                                                           |
-| `npm run test -w backend`          | testes do backend: unidade, integração e banco real (T32, T12–T17, T22–T26, pesquisa pública)                              |
-| `npm run test:db -w backend`       | somente os testes com PostgreSQL (`TEST_DATABASE_URL`)                                                                     |
-| `npm run test:supabase -w backend` | T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                                           |
-| `npm run test:e2e -w frontend`     | Playwright com Chrome instalado (Supabase local; banco de teste): T12, administração, pesquisa pública e escalas/pesquisas |
-| `npm run test -w frontend`         | somente testes do frontend                                                                                                 |
-| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)                                                                       |
-| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`)                                                          |
+| Comando                            | O que faz                                                                                                                   |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)                                                                    |
+| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige                                                                  |
+| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige                                                                     |
+| `npm run typecheck`                | TypeScript nos dois módulos                                                                                                 |
+| `npm test`                         | testes dos dois módulos (Vitest)                                                                                            |
+| `npm run test -w backend`          | testes do backend: unidade, integração e banco real (T32, T12–T26, T07–T11, T18–T21, T36, T37)                              |
+| `npm run test:db -w backend`       | somente os testes com PostgreSQL (`TEST_DATABASE_URL`)                                                                      |
+| `npm run test:supabase -w backend` | T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                                            |
+| `npm run test:e2e -w frontend`     | Playwright com Chrome instalado (Supabase local; banco de teste): T12, administração, pesquisa pública, escalas e ET07–ET09 |
+| `npm run test -w frontend`         | somente testes do frontend                                                                                                  |
+| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)                                                                        |
+| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`)                                                           |
 
 Regras de lint relevantes para segurança: `any` explícito proibido (RNF20), `$queryRawUnsafe` proibido (RNF11), `dangerouslySetInnerHTML` proibido (Seção 10).
 
@@ -330,10 +340,44 @@ Critério de conclusão (Tabela 27): **E01, E02, TL09, TL11; T01, T03–T06, T10
 
 Detalhes das três etapas: [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md). Evidências: [`docs/evidencias/ET04-ET06/`](docs/evidencias/ET04-ET06/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
+## ET07 — Manifestações e Ouvidoria
+
+Critério de conclusão (Tabela 27): **E03, E35–E40, TL10, TL12, TL13; T07–T09, T18, T19**.
+
+- [x] E03: token HMAC de 60 min e uso único, idempotência, anonimato padrão, contato segregado com aceite, protocolo `FHD-AAAA-NNNNNN`
+- [x] E35–E40: lista com filtros e trecho, detalhe com linha do tempo (sem contato), transições da RN23, `updatedAt`, notas, contato auditado com `no-store` e eliminação com motivo
+- [x] TL10 (oferta após nota baixa ou ação secundária, formulário e protocolo), TL12 e TL13
+- [x] T07, T08, T09, T10 (E03), T18 e T19 aprovados (integração, componentes e E2E)
+- [ ] Conferência com o Figma; commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+
+## ET08 — Dashboard
+
+Critério de conclusão (Tabela 27): **E28–E33, TL03, TL04; T05, T11, T36, T37**.
+
+- [x] E28–E33 com filtros comuns, escopo, comparação, cobertura, série sem lacunas e supressão para o VI (RN21)
+- [x] TL03 (`/painel`) e TL04 (`/painel/setores/:sectorId`) com filtros na URL, n em todo indicador, tabela alternativa e atualização a cada 60 s
+- [x] T05, T11, T36 e T37 aprovados (integração, componentes e E2E); T15 repetido contra o E28 real
+- [ ] Conferência com o Figma; commit, push, Pull Request e CI remota; revisão do João (responsável da etapa: Felipe)
+
+## ET09 — Excel
+
+Critério de conclusão (Tabela 27): **E34, TL14; T20, T21**.
+
+- [x] E34 com ExcelJS: respostas, indicadores (iguais a E28/E29/E32/E33) e manifestações (`includeText` só para a Ouvidoria; contato nunca)
+- [x] Células tipadas, datas `dd/mm/aaaa hh:mm`, cabeçalho congelado, nome padronizado, arquivo vazio válido; 50.000 linhas (422), 10 em 10 min (429) e auditoria
+- [x] TL14 (`/relatorios`) e exportação pelo painel (RF62)
+- [x] T20 e T21 aprovados (arquivos abertos com ExcelJS na integração; download no E2E)
+- [ ] Abertura manual no Excel e no LibreOffice (RF63) — **não executada**; commit, push, Pull Request e CI remota; revisão do Felipe
+
+Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07/`](docs/evidencias/ET07/), [`ET08/`](docs/evidencias/ET08/), [`ET09/`](docs/evidencias/ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
+
 ## Limitações conhecidas e pendências
 
-- **E2E com Supabase Auth executado em 27/10/2026** depois da liberação das portas do Windows: 18/18 aprovados (`t12-autenticacao`, `administracao`, `escalas-e-pesquisas` e `pesquisa-publica`). Se `npm run db:start` voltar a acusar porta proibida, conferir `netsh interface ipv4 show excludedportrange protocol=tcp` e liberar a faixa (ver [banco local](#banco-de-dados-local-et02)).
-- **Manifestação após nota baixa, protocolo e TL10 são da ET07.** A TL11 já mostra o agradecimento da versão; o protocolo aparecerá quando houver manifestação. O E02 já devolve `lowScore` e o token de manifestação (validade de 60 minutos).
+- **E2E com Supabase Auth executado em 28/10/2026:** 23/23 aprovados (`t12-autenticacao`, `administracao`, `escalas-e-pesquisas`, `pesquisa-publica` e `manifestacoes-painel-relatorios`). Se `npm run db:start` acusar porta proibida, conferir `netsh interface ipv4 show excludedportrange protocol=tcp` e liberar a faixa (ver [banco local](#banco-de-dados-local-et02)). A execução sobrescreve as capturas versionadas das etapas anteriores em `docs/evidencias/`; restaure-as com `git restore` se não quiser atualizá-las.
+- **Supabase remoto vazio (verificado em 28/10/2026):** o projeto `mowxlbpwhcsurjpcrpra` tem 0 tabelas e 0 migrations; a publicação do esquema é da ET12 e exige autorização. Tudo foi desenvolvido e testado no Supabase local ([detalhes](docs/manifestacoes-dashboard-relatorios.md#supabase-e-figma)).
+- **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais do FHDOD e as telas de todas as etapas implementadas (ET01 a ET09): início, pesquisa pública, manifestação, confirmação, login, troca de senha, painel geral e por setor, setores e equipes, escalas, importação, pesquisas e cartaz, Ouvidoria, relatórios, usuários, auditoria e acesso não permitido. A TL15 (TV Wall, ET10) ainda não foi implementada e não tem tela. A revisão cruzada das telas faz parte da revisão de cada etapa. Detalhes em [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md#supabase-e-figma).
+- **`npm audit`:** o ExcelJS 4.4 depende do `uuid` 8, com aviso moderado (GHSA-w5hq-g745-h8pq) que só afeta `v3`/`v5`/`v6` com `buf`; o ExcelJS usa apenas `v4`. A CI falha somente em alta ou crítica.
+- **Banco de desenvolvimento local:** `npm run db:seed:verify` acusa 2.401 respostas (uma resposta manual de 27/10/2026) e 2 registros de auditoria (primeiro E2E da ET03); restaurar só com `npm run db:reset` autorizado.
 - **OpenAPI/Swagger, axe e T35/T39** continuam previstos para a ET11/ET12.
 - A matriz de testes completa e a execução contra a nuvem dependem das próximas etapas (ET11–ET12).
 

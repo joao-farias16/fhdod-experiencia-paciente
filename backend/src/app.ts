@@ -47,7 +47,7 @@ export function createApp({ env, logger, prisma, auth, clock = systemClock }: Ap
       origin: env.CORS_ORIGIN,
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'],
-      exposedHeaders: ['X-Request-Id', 'Retry-After', 'Idempotent-Replayed'],
+      exposedHeaders: ['X-Request-Id', 'Retry-After', 'Idempotent-Replayed', 'Content-Disposition'],
       maxAge: 600,
     }),
   );

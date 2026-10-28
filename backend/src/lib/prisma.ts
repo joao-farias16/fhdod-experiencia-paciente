@@ -5,6 +5,10 @@ import { Prisma, PrismaClient } from '../generated/prisma/client.js';
 export { Prisma, PrismaClient };
 export type {
   AttributionStatus,
+  ManifestationEventKind,
+  ManifestationPriority,
+  ManifestationStatus,
+  ManifestationType,
   QuestionType,
   ResponseOrigin,
   ShiftPeriod,

@@ -27,6 +27,12 @@ export const ACTION_LABELS: Record<string, string> = {
   SURVEY_DEACTIVATED: 'Pesquisa desativada',
   SURVEY_REACTIVATED: 'Pesquisa reativada',
   SURVEY_PUBLISHED: 'Versão da pesquisa publicada',
+  MANIFESTATION_VIEWED: 'Manifestação consultada',
+  MANIFESTATION_UPDATED: 'Manifestação atualizada',
+  MANIFESTATION_NOTE_ADDED: 'Nota interna registrada',
+  MANIFESTATION_CONTACT_VIEWED: 'Contato da manifestação consultado',
+  MANIFESTATION_CONTACT_DELETED: 'Contato da manifestação eliminado',
+  REPORT_EXPORTED: 'Relatório exportado',
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
@@ -37,6 +43,8 @@ export const ENTITY_LABELS: Record<string, string> = {
   shift: 'Turno',
   shift_import: 'Importação de escala',
   survey_config: 'Pesquisa',
+  manifestation: 'Manifestação',
+  report: 'Relatório',
 };
 
 const FIELD_LABELS: Record<string, string> = {

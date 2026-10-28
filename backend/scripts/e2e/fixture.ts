@@ -30,7 +30,8 @@ interface Account {
 
 interface FixtureFile {
   hospitalId: string;
-  accounts: { sa: Account; vi: Account };
+  /** ET07–ET09: Ouvidoria (ou) e Gestão (ge), ambos com escopo global. */
+  accounts: { sa: Account; vi: Account; ou: Account; ge: Account };
   /** Slugs das pesquisas publicadas (ET06): ativa e desativada. */
   surveys: { active: string; inactive: string };
 }
@@ -144,6 +145,8 @@ async function setup(path: string): Promise<void> {
     for (const [key, role, fullName] of [
       ['sa', 'superadmin', 'Superadministrador E2E'],
       ['vi', 'viewer', 'Visualizador E2E'],
+      ['ou', 'ombudsman', 'Ouvidoria E2E'],
+      ['ge', 'management', 'Gestão E2E'],
     ] as const) {
       const account = { email: `e2e-${key}.${suffix}@example.com`, password: password() };
       const { data, error } = await admin.auth.admin.createUser({

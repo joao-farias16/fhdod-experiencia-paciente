@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, CircleCheck, RotateCw, Send } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleCheck,
+  MessageSquareText,
+  RotateCw,
+  Send,
+} from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
@@ -14,8 +21,10 @@ import {
   type PublicSurvey,
   type ResponseBody,
   type ResponseOrigin,
+  type SubmittedResponse,
   submitResponse,
 } from './public-survey-api';
+import { ManifestationForm } from './ManifestationForm';
 import { ScoreScale } from './ScoreScale';
 import {
   clearSurveyStorage,
@@ -89,6 +98,11 @@ function SurveyFlow({ survey, slug, origin, onReload }: SurveyFlowProps) {
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<unknown>(null);
   const [done, setDone] = useState(false);
+  // TL10: avaliação registrada (token da manifestação só em memória), etapa e protocolo.
+  const [submitted, setSubmitted] = useState<SubmittedResponse | null>(null);
+  const [writing, setWriting] = useState(false);
+  const [offerDeclined, setOfferDeclined] = useState(false);
+  const [protocol, setProtocol] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const npsGroupRef = useRef<HTMLDivElement>(null);
@@ -113,26 +127,34 @@ function SurveyFlow({ survey, slug, origin, onReload }: SurveyFlowProps) {
       setFailure(null);
       setNpsError(false);
       setDone(false);
+      setSubmitted(null);
+      setWriting(false);
+      setOfferDeclined(false);
+      setProtocol(null);
       setNotice(message);
     },
     [survey.surveyVersionId, origin],
   );
 
-  // RF39: 3 min + 60 s sem interação apagam as respostas.
-  const inactivity = useInactivity(!done && !submitting && hasContent(progress), () => {
-    restart('Por segurança, as respostas foram apagadas depois de um tempo sem uso.');
-  });
+  // RF39: 3 min + 60 s sem interação apagam as respostas (e a manifestação em andamento).
+  const inactivity = useInactivity(
+    (!done && !submitting && hasContent(progress)) || (done && writing),
+    () => {
+      restart('Por segurança, as respostas foram apagadas depois de um tempo sem uso.');
+    },
+  );
 
-  // RF38: depois da confirmação, volta ao início em 30 segundos.
+  // RF38: depois da confirmação, volta ao início em 30 segundos (pausado enquanto a pessoa
+  // escreve a manifestação).
   useEffect(() => {
-    if (!done) return undefined;
+    if (!done || writing) return undefined;
     const timer = setTimeout(() => {
       restart(null);
     }, CONFIRMATION_RETURN_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [done, restart]);
+  }, [done, writing, protocol, restart]);
 
   const update = (patch: Partial<SurveyProgress>) => {
     setNotice(null);
@@ -170,10 +192,11 @@ function SurveyFlow({ survey, slug, origin, onReload }: SurveyFlowProps) {
     setSubmitting(true);
     setFailure(null);
     try {
-      await submitResponse(body, idempotencyKey);
+      const result = await submitResponse(body, idempotencyKey);
       // RF39: sucesso confirmado pelo backend → apaga as respostas da memória e do armazenamento.
       clearSurveyStorage();
       setProgress(freshProgress(survey.surveyVersionId, origin));
+      setSubmitted(result);
       setDone(true);
     } catch (error) {
       setFailure(error);
@@ -183,6 +206,37 @@ function SurveyFlow({ survey, slug, origin, onReload }: SurveyFlowProps) {
   };
 
   if (done) {
+    if (writing && submitted !== null) {
+      return (
+        <section aria-label="Manifestação" className="space-y-6">
+          <ManifestationForm
+            submitted={submitted}
+            onCreated={(created) => {
+              setProtocol(created.protocol);
+              setWriting(false);
+            }}
+            onCancel={() => {
+              setWriting(false);
+              setOfferDeclined(true);
+            }}
+          />
+          <Dialog
+            open={inactivity.warning}
+            title="Você ainda está aí?"
+            description={`Por segurança, o texto será apagado em ${inactivity.secondsLeft} segundos.`}
+            onClose={inactivity.stillHere}
+          >
+            <div className="flex justify-end">
+              <Button className="min-h-12" onClick={inactivity.stillHere} data-autofocus>
+                Continuar escrevendo
+              </Button>
+            </div>
+          </Dialog>
+        </section>
+      );
+    }
+    // RN05: com nota baixa a oferta aparece em destaque; sem nota baixa, como ação secundária.
+    const canManifest = submitted !== null && protocol === null && !offerDeclined;
     return (
       <section aria-labelledby={`${ids}-fim`} className="space-y-6 text-center">
         <CircleCheck aria-hidden="true" className="mx-auto size-14 text-green-700" />
@@ -192,18 +246,65 @@ function SurveyFlow({ survey, slug, origin, onReload }: SurveyFlowProps) {
           tabIndex={-1}
           className="text-2xl font-bold tracking-tight"
         >
-          Resposta enviada
+          {protocol === null ? 'Resposta enviada' : 'Manifestação registrada'}
         </h1>
         <p className="text-lg text-slate-800">{survey.thankYouMessage}</p>
+        {protocol === null ? null : (
+          <div role="status" className="rounded-xl border border-green-700 bg-green-50 p-4">
+            <p className="text-slate-800">Guarde o número do protocolo:</p>
+            <p className="text-2xl font-bold tracking-wide">{protocol}</p>
+          </div>
+        )}
+        {canManifest && submitted.lowScore ? (
+          <div className="space-y-4 rounded-xl border-2 border-brand-700 bg-brand-50 p-5 text-left">
+            <h2 className="text-[22px] font-semibold">Quer contar o que aconteceu?</h2>
+            <p className="text-lg text-slate-800">
+              Sua avaliação já foi registrada. Se quiser, envie uma manifestação para a Ouvidoria.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                className="min-h-12"
+                onClick={() => {
+                  setWriting(true);
+                }}
+              >
+                <MessageSquareText aria-hidden="true" className="size-5" />
+                Registrar manifestação
+              </Button>
+              <Button
+                variant="secondary"
+                className="min-h-12"
+                onClick={() => {
+                  setOfferDeclined(true);
+                }}
+              >
+                Não, obrigado
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <p className="text-sm text-slate-700">A tela volta ao início em 30 segundos.</p>
-        <Button
-          className="min-h-12 w-full sm:w-auto"
-          onClick={() => {
-            restart(null);
-          }}
-        >
-          Concluir
-        </Button>
+        <div className="flex flex-col items-center gap-3">
+          <Button
+            className="min-h-12 w-full sm:w-auto"
+            onClick={() => {
+              restart(null);
+            }}
+          >
+            Concluir
+          </Button>
+          {canManifest && !submitted.lowScore ? (
+            <Button
+              variant="ghost"
+              className="min-h-12"
+              onClick={() => {
+                setWriting(true);
+              }}
+            >
+              Deixar um elogio, sugestão ou reclamação
+            </Button>
+          ) : null}
+        </div>
       </section>
     );
   }
