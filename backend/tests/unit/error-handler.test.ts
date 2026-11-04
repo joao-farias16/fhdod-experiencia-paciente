@@ -2,11 +2,11 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
+import { createLogger } from '../../src/lib/logger.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { requestLogger } from '../../src/middlewares/request-logger.js';
-import { createLogger } from '../../src/lib/logger.js';
-import { HttpError } from '../../src/utils/http-error.js';
-import { errorOf } from '../helpers.js';
+import { HttpError } from '../../src/utils/errors.js';
+import { errorOf } from '../support/app.js';
 
 function appThatThrows(error: unknown) {
   const app = express();

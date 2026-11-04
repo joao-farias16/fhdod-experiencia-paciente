@@ -10,15 +10,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../src/lib/prisma.js';
 import { AuthServiceUnavailableError } from '../../src/modules/auth/auth.types.js';
 import { permissionsFor } from '../../src/modules/auth/permissions.js';
-import { FakeSupabase } from '../fake-supabase.js';
-import { errorOf } from '../helpers.js';
+import { FakeSupabase } from '../support/fake-supabase.js';
+import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
   buildAuthApp,
   createAuthScenario,
   openConnections,
-} from './auth-support.js';
-import type { Db } from './support.js';
+} from '../support/auth-scenario.js';
+import type { Db } from '../support/db.js';
 
 let db: Db;
 let prisma: PrismaClient;

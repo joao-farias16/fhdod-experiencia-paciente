@@ -1,9 +1,9 @@
 import { type RequestHandler, Router } from 'express';
 
-import { requirePermission } from '../../middlewares/authorize.js';
 import { ipRateLimit } from '../../middlewares/rate-limit.js';
-import { parseIdempotencyKey } from '../../services/idempotency.js';
+import { parseIdempotencyKey } from '../../utils/idempotency.js';
 import { parseInput } from '../../utils/validation.js';
+import { requirePermission } from '../auth/auth.middleware.js';
 import { isPublicSlug, submitResponseSchema } from './public-survey.schemas.js';
 import {
   getPublicSurvey,

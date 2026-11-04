@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { PageMeta } from '../../lib/api-client';
-import { toQueryString } from '../../lib/format';
+import type { TagTone } from '../../components/ui/Tag';
+import { type PageMeta, toQueryString } from '../../lib/api-client';
 import { useAuth } from '../auth/auth-context';
 
 export type SurveyStatus = 'draft' | 'active' | 'inactive';
@@ -10,6 +10,12 @@ export const STATUS_LABELS: Record<SurveyStatus, string> = {
   draft: 'Rascunho',
   active: 'Publicada',
   inactive: 'Desativada',
+};
+
+export const STATUS_TONES: Record<SurveyStatus, TagTone> = {
+  draft: 'info',
+  active: 'success',
+  inactive: 'neutral',
 };
 
 /** RN27: limite de perguntas específicas ativas. */

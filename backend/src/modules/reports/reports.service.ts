@@ -1,23 +1,25 @@
 import type ExcelJS from 'exceljs';
 
 import { Prisma, type PrismaClient, type UserRole } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import { classifyNps } from '../../services/nps.js';
-import { sectorWhere } from '../../services/scope.js';
 import { addDays, localDateOf, localTimeOf, startOfLocalDay } from '../../utils/dates.js';
-import { HttpError } from '../../utils/http-error.js';
+import { HttpError } from '../../utils/errors.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
+import { sectorWhere } from '../auth/scope.js';
+import {
+  type ResolvedFilters,
+  resolveFilters,
+  responseConditions,
+  RESPONSES_FROM,
+} from '../dashboard/dashboard.filters.js';
 import {
   getQuestions,
   getSectors,
   getSummary,
   getTrends,
   type NpsIndicator,
-  type ResolvedFilters,
-  RESPONSES_FROM,
-  responseConditions,
-  resolveFilters,
 } from '../dashboard/dashboard.service.js';
+import { classifyNps } from '../dashboard/nps.js';
 import { type ExportQuery, MAX_ROWS_PER_SHEET, type ReportType } from './reports.schemas.js';
 import {
   addKeyValueSheet,

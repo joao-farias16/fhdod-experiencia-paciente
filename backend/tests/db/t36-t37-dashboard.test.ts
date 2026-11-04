@@ -20,18 +20,18 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { PrismaClient } from '../../src/lib/prisma.js';
-import { computeNps } from '../../src/services/nps.js';
-import { FakeSupabase } from '../fake-supabase.js';
-import { errorOf } from '../helpers.js';
+import { computeNps } from '../../src/modules/dashboard/nps.js';
+import { FakeSupabase } from '../support/fake-supabase.js';
+import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
   buildAuthApp,
   createAuthScenario,
   openConnections,
   type UserKey,
-} from './auth-support.js';
-import { type App, dataOf, submitResponse } from './et04-et06-support.js';
-import { type Db, HASH } from './support.js';
+} from '../support/auth-scenario.js';
+import { type App, dataOf, submitResponse } from '../support/api.js';
+import { type Db, HASH } from '../support/db.js';
 
 let db: Db;
 let prisma: PrismaClient;

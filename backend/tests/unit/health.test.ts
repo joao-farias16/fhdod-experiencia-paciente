@@ -6,7 +6,7 @@ import { createLogger } from '../../src/lib/logger.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { requestLogger } from '../../src/middlewares/request-logger.js';
 import { healthRouter } from '../../src/modules/health/health.routes.js';
-import { databaseStub, errorOf, fixedClock } from '../helpers.js';
+import { databaseStub, errorOf, fixedClock } from '../support/app.js';
 
 describe('healthRouter (E43)', () => {
   it('responde 503 quando o banco não responde dentro do limite (2 s em produção)', async () => {

@@ -1,17 +1,15 @@
 import { type RequestHandler, Router } from 'express';
 
 import type { PrismaClient } from '../../lib/prisma.js';
-import { requirePermission } from '../../middlewares/authorize.js';
 import { ipRateLimit } from '../../middlewares/rate-limit.js';
-import { parseIdempotencyKey } from '../../services/idempotency.js';
-import type { Clock } from '../../utils/clock.js';
-import { parseInput } from '../../utils/validation.js';
-import { auditContextOf, authOf } from '../auth/request-context.js';
+import type { Clock } from '../../utils/dates.js';
+import { parseIdempotencyKey } from '../../utils/idempotency.js';
+import { idParamsSchema, parseInput } from '../../utils/validation.js';
+import { auditContextOf, authOf, requirePermission } from '../auth/auth.middleware.js';
 import {
   createManifestationSchema,
   createNoteSchema,
   deleteContactSchema,
-  idParamsSchema,
   listManifestationsQuerySchema,
   updateManifestationSchema,
 } from './manifestations.schemas.js';

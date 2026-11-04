@@ -1,15 +1,14 @@
 import type { PrismaClient } from '../../lib/prisma.js';
-import { attributeResponse } from '../../services/attribution.service.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import {
   canonicalHash,
   idempotencyKeyReused,
   manifestationToken,
-} from '../../services/idempotency.js';
-import { isLowScore } from '../../services/nps.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isUniqueViolation } from '../../utils/prisma-errors.js';
-import { VALIDATION_MESSAGE } from '../../utils/validation.js';
+} from '../../utils/idempotency.js';
+import { invalidField } from '../../utils/validation.js';
+import { isLowScore } from '../dashboard/nps.js';
+import { attributeResponse } from './attribution.js';
 import type { SubmitResponseInput } from './public-survey.schemas.js';
 
 /** RN26: versão substituída aceita respostas por 24 horas. */
@@ -230,12 +229,10 @@ export async function submitResponse(
       (item) => item.questionId === answer.questionId && item.type === 'scale_1_5',
     );
     if (question === undefined) {
-      throw new HttpError(400, 'VALIDATION_ERROR', VALIDATION_MESSAGE, [
-        {
-          field: `answers.${index}.questionId`,
-          message: 'A pergunta não pertence a esta versão da pesquisa.',
-        },
-      ]);
+      throw invalidField(
+        `answers.${index}.questionId`,
+        'A pergunta não pertence a esta versão da pesquisa.',
+      );
     }
     return { surveyVersionQuestionId: question.id, score: answer.score };
   });

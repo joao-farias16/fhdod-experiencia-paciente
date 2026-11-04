@@ -6,7 +6,7 @@ import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createPrismaClient } from '../../src/lib/prisma.js';
-import { buildTestApp, errorOf } from '../helpers.js';
+import { buildTestApp, errorOf } from '../support/app.js';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL ?? '';
 const prisma = createPrismaClient(testDatabaseUrl);

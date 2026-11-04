@@ -1,15 +1,10 @@
 import type { PrismaClient, TransactionClient } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import {
-  isSectorInScope,
-  resourceNotFound,
-  sectorOutOfScope,
-  sectorWhere,
-} from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isUniqueViolation } from '../../utils/prisma-errors.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
+import { isSectorInScope, resourceNotFound, sectorOutOfScope, sectorWhere } from '../auth/scope.js';
+import { sectorInactive } from '../sectors/sectors.service.js';
 import type { CreateTeamInput, ListTeamsQuery, UpdateTeamInput } from './teams.schemas.js';
 
 export interface TeamDto {
@@ -50,14 +45,6 @@ function toTeamDto(team: TeamRecord): TeamDto {
     isActive: team.isActive,
     deactivatedAt: team.deactivatedAt?.toISOString() ?? null,
   };
-}
-
-export function sectorInactive(): HttpError {
-  return new HttpError(
-    422,
-    'SECTOR_INACTIVE',
-    'O setor está desativado. Reative o setor antes de continuar.',
-  );
 }
 
 function codeConflict(): HttpError {

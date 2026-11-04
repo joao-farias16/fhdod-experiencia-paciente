@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
-import { daysInclusive, isValidLocalDate, isValidLocalTime } from '../../utils/dates.js';
-import { queryBoolean, uuidSchema } from '../../utils/validation.js';
+import { daysInclusive, isValidLocalTime } from '../../utils/dates.js';
+import { localDateSchema as localDate, queryBoolean, uuidSchema } from '../../utils/validation.js';
 import { SHIFT_PERIODS } from './shift-rules.js';
 
 /** RF20: escala consultada em intervalos de até 62 dias. */
 export const SHIFTS_MAX_RANGE_DAYS = 62;
 
-const localDate = z.string().refine(isValidLocalDate, 'Use uma data válida no formato AAAA-MM-DD.');
 const localTime = z
   .string({ error: 'Informe a hora.' })
   .refine(isValidLocalTime, 'Use uma hora válida no formato HH:MM.');

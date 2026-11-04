@@ -2,8 +2,8 @@ import { Router } from 'express';
 
 import type { PrismaClient } from '../../lib/prisma.js';
 import { ipRateLimit } from '../../middlewares/rate-limit.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
+import type { Clock } from '../../utils/dates.js';
+import { serviceUnavailable } from '../../utils/errors.js';
 
 /** Tempo máximo de resposta do `SELECT 1` na verificação de saúde (E43). */
 export const DATABASE_CHECK_TIMEOUT_MS = 2_000;
@@ -51,11 +51,7 @@ export function healthRouter({
     try {
       await checkDatabase(prisma, databaseTimeoutMs);
     } catch {
-      throw new HttpError(
-        503,
-        'SERVICE_UNAVAILABLE',
-        'O serviço está temporariamente indisponível.',
-      );
+      throw serviceUnavailable();
     }
 
     const body: { data: HealthStatus } = {

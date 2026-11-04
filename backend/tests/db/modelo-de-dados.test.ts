@@ -15,7 +15,7 @@ import {
   inRollback,
   insertManifestation,
   insertResponse,
-} from './support.js';
+} from '../support/db.js';
 
 const TABLES = [
   'audit_logs',

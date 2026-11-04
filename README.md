@@ -25,7 +25,8 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 **ET02 — Modelo de dados**: integrada em `develop`.
 **ET03 — Autenticação e permissões**: integrada em `develop`.
 **ET04, ET05 e ET06 — Setores e escalas, pesquisas e pesquisa pública**: integradas em `develop`.
-**ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: implementadas localmente na branch `feature` (criada de `develop`; aguardando commit, push, CI remota e revisão; ver [limitações](#limitações-conhecidas-e-pendências)).
+**ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: integradas em `develop`.
+**Etapa 1 do novo cronograma — Revisão e reorganização do projeto**: na branch `refactor/reorganizacao-projeto` (issue #32), sem mudança de funcionalidades.
 
 | Implementado (ET01 a ET09)                                                                     | Reservado para etapas futuras                            |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -58,7 +59,7 @@ Desde a ET02, a API conecta-se ao PostgreSQL pelo Prisma; a rota de saúde respo
 | Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0                                                              |
 | Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, React Testing Library, Supertest, Playwright 1.63 (E2E), jsqr (T02), commitlint + husky                                                  |
 | CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                                                      |
-| Previstas | Recharts, ExcelJS, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                  |
+| Previstas | Recharts, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                           |
 
 As bibliotecas da linha "Previstas" fazem parte da especificação, mas só serão instaladas na etapa que as utilizar, para não manter dependências sem uso.
 
@@ -71,44 +72,46 @@ As bibliotecas da linha "Previstas" fazem parte da especificação, mas só ser�
 
 ## Estrutura de pastas
 
+Monorepo com npm workspaces. Backend e frontend são organizados **por domínio**, com os mesmos nomes dos dois lados (`auth`, `users`, `audit`, `sectors`, `shifts`, `surveys`, `public-survey`, `manifestations`, `dashboard`, `reports`), e uma camada pequena de código compartilhado. Detalhes e convenções: [`docs/arquitetura.md`](docs/arquitetura.md).
+
 ```text
 fhdod-experiencia-paciente/
-├── backend/                     API REST (Express 5 + TypeScript)
+├── backend/                     API REST (Express 5 + TypeScript + Prisma)
 │   ├── src/
-│   │   ├── app.ts               createApp(deps): middlewares, rotas e erros
-│   │   ├── server.ts            inicialização, leitura do .env e encerramento gracioso
-│   │   ├── config/env.ts        validação das variáveis de ambiente (Zod)
-│   │   ├── lib/                 logger JSON (pino), Prisma e Supabase Auth (chave secreta)
-│   │   ├── middlewares/         requestId/logs, rate limit, autenticação, autorização, 404 e erros
-│   │   ├── modules/             health (E43), auth, me (E04–E05), users (E06–E09), audit-logs (E41),
-│   │   │                        sectors (E10–E12), teams (E13–E16), shifts (E17–E19), rosters (E20–E21),
-│   │   │                        surveys (E22–E27) e public-survey (E01–E02)
-│   │   ├── services/            auditoria, escopo de setores, atribuição a turno, idempotência e NPS
-│   │   ├── routes/v1.ts         agregador das rotas /api/v1
-│   │   └── utils/               HttpError, relógio, validação e datas
-│   ├── prisma/                  schema.prisma, migrations/ (5) e seed.ts
-│   ├── scripts/                 db/ (seed, reset local, proteção contra banco remoto) e e2e/ (dados dos testes E2E)
-│   ├── tests/                   unit/, integration/, db/ (PostgreSQL real: T05, T12–T17, T22–T26, T32 e pesquisa pública) e supabase/ (Auth local)
-│   ├── prisma.config.ts         configuração do Prisma CLI (DIRECT_URL)
+│   │   ├── server.ts            inicialização do processo (.env, ambiente, Prisma, Supabase, HTTP)
+│   │   ├── app.ts               createApp(deps): middlewares globais, /api/v1, 404 e erros
+│   │   ├── routes.ts            agregador de /api/v1 (cadeias pública, autenticada e /admin)
+│   │   ├── lib/                 infraestrutura: env, logger, prisma, supabase
+│   │   ├── middlewares/         request-logger, rate-limit e error-handler (inclui o 404)
+│   │   ├── modules/<domínio>/   *.routes.ts (rotas e controladores), *.schemas.ts (Zod),
+│   │   │                        *.service.ts (regras, Prisma, transações) e auxiliares do domínio
+│   │   └── utils/               funções puras: errors, validation, dates, idempotency
+│   ├── prisma/                  schema.prisma, migrations/ e seed.ts
+│   ├── scripts/                 db/ (verificação do seed, reset local, trava de banco remoto), e2e/
+│   ├── tests/                   unit/, integration/, db/ (PostgreSQL real), supabase/ e support/
+│   ├── prisma.config.ts · vitest.config.ts · tsconfig*.json
 │   └── .env.example
-├── frontend/                    Interface (React 19 + Vite)
+├── frontend/                    Interface (React 19 + Vite + Tailwind)
 │   ├── src/
-│   │   ├── app/                 provedores, roteador e rotas
-│   │   ├── components/          layout comum e componentes de interface (ui/)
-│   │   ├── features/            home, health, not-found, auth (TL01, TL02), users (TL16), audit (TL17), admin,
-│   │   │                        structure (TL05–TL07), surveys (TL08) e public-survey (TL09, TL11)
-│   │   ├── lib/                 env, cliente HTTP e formatação pt-BR
+│   │   ├── main.tsx             ponto de entrada
+│   │   ├── app/                 provedores, rotas, layouts (público e administrativo) e página 404
+│   │   ├── components/ui/       componentes reutilizáveis (botão, campos, diálogos, estados, etiqueta)
+│   │   ├── features/<domínio>/  páginas, componentes da área e <domínio>-api.ts (tipos e hooks)
+│   │   ├── lib/                 env, cliente HTTP, Supabase, formatação pt-BR, erros de formulário
 │   │   ├── styles/              Tailwind e tokens visuais
-│   │   └── test/                configuração e apoio dos testes
+│   │   └── test/                setup do Vitest e helpers dos testes de componentes
 │   ├── e2e/                     testes ponta a ponta (Playwright)
+│   ├── vite.config.ts · playwright.config.ts · tsconfig*.json
 │   └── .env.example
 ├── supabase/config.toml         ambiente local (PostgreSQL 54322, Auth 54321, Data API desligada)
-├── docs/                        documentação técnica e evidencias/
+├── docs/                        documentação técnica e evidencias/ (por etapa)
 ├── .github/                     CI e modelo de Pull Request
-├── eslint.config.js             ESLint único para os dois módulos
+├── eslint.config.js             ESLint único (inclui as regras de camadas do backend)
 ├── tsconfig.base.json           opções TypeScript compartilhadas
 └── package.json                 workspaces e scripts gerais
 ```
+
+`dist/` (builds), `coverage/`, `playwright-report/` e `backend/src/generated/` (Prisma Client) são gerados e não versionados.
 
 ## Instalação local
 
@@ -212,7 +215,7 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 
 | Grupo                         | Endpoints (prefixo `/api/v1`)                                                                            | Documentação                                                                               |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura-backend.md`](docs/arquitetura-backend.md)                               |
+| Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura.md`](docs/arquitetura.md)                                               |
 | Perfil, usuários e auditoria  | E04–E09, E41                                                                                             | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)                   |
 | Setores, equipes e etapas     | E10–E12 `/admin/sectors`, E13–E15 `/admin/teams`, E16 `/admin/journey-stages`                            | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
 | Turnos e importação de escala | E17–E19 `/admin/shifts`, E20 `POST /admin/rosters/import`, E21 `POST /admin/rosters/imports/:id/confirm` | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
@@ -227,20 +230,20 @@ A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para
 
 ## Qualidade: lint, typecheck, testes e build
 
-| Comando                            | O que faz                                                                                                                   |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)                                                                    |
-| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige                                                                  |
-| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige                                                                     |
-| `npm run typecheck`                | TypeScript nos dois módulos                                                                                                 |
-| `npm test`                         | testes dos dois módulos (Vitest)                                                                                            |
-| `npm run test -w backend`          | testes do backend: unidade, integração e banco real (T32, T12–T26, T07–T11, T18–T21, T36, T37)                              |
-| `npm run test:db -w backend`       | somente os testes com PostgreSQL (`TEST_DATABASE_URL`)                                                                      |
-| `npm run test:supabase -w backend` | T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                                            |
-| `npm run test:e2e -w frontend`     | Playwright com Chrome instalado (Supabase local; banco de teste): T12, administração, pesquisa pública, escalas e ET07–ET09 |
-| `npm run test -w frontend`         | somente testes do frontend                                                                                                  |
-| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)                                                                        |
-| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`)                                                           |
+| Comando                            | O que faz                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run check`                    | executa todos os passos abaixo em sequência (igual à CI)                                                                                   |
+| `npm run format:check`             | verifica a formatação (Prettier); `npm run format` corrige                                                                                 |
+| `npm run lint`                     | ESLint sem avisos tolerados; `npm run lint:fix` corrige                                                                                    |
+| `npm run typecheck`                | TypeScript nos dois módulos                                                                                                                |
+| `npm test`                         | testes dos dois módulos (Vitest)                                                                                                           |
+| `npm run test -w backend`          | testes do backend (projetos `unidade-e-integracao` e `banco`): unidade, integração e banco real (T32, T12–T26, T07–T11, T18–T21, T36, T37) |
+| `npm run test:db -w backend`       | somente o projeto `banco` (PostgreSQL, `TEST_DATABASE_URL`)                                                                                |
+| `npm run test:supabase -w backend` | projeto `supabase`: T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                                       |
+| `npm run test:e2e -w frontend`     | Playwright com Chrome instalado (Supabase local; banco de teste): T12, administração, pesquisa pública, escalas e ET07–ET09                |
+| `npm run test -w frontend`         | somente testes do frontend                                                                                                                 |
+| `npm run test:coverage -w backend` | cobertura do backend (também disponível no frontend)                                                                                       |
+| `npm run build`                    | build do backend (`backend/dist`) e do frontend (`frontend/dist`)                                                                          |
 
 Regras de lint relevantes para segurança: `any` explícito proibido (RNF20), `$queryRawUnsafe` proibido (RNF11), `dangerouslySetInnerHTML` proibido (Seção 10).
 
@@ -369,7 +372,7 @@ Critério de conclusão (Tabela 27): **E34, TL14; T20, T21**.
 - [x] T20 e T21 aprovados (arquivos abertos com ExcelJS na integração; download no E2E)
 - [ ] Abertura manual no Excel e no LibreOffice (RF63) — **não executada**; commit, push, Pull Request e CI remota; revisão do Felipe
 
-Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07/`](docs/evidencias/ET07/), [`ET08/`](docs/evidencias/ET08/), [`ET09/`](docs/evidencias/ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
+Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07-ET09/`](docs/evidencias/ET07-ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
 ## Limitações conhecidas e pendências
 
@@ -388,4 +391,4 @@ Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/m
 - Commits no padrão **Conventional Commits** em português (`feat`, `fix`, `docs`, `test`, `refactor`, `style`, `chore`, `ci`, `build`, `perf`), validados pelo commitlint.
 - No quadro, no máximo **2 itens "Em andamento" por pessoa**.
 
-Detalhes e passo a passo das proteções: [`docs/padroes-git.md`](docs/padroes-git.md). Arquitetura da API: [`docs/arquitetura-backend.md`](docs/arquitetura-backend.md).
+Detalhes e passo a passo das proteções: [`docs/padroes-git.md`](docs/padroes-git.md). Arquitetura da API: [`docs/arquitetura.md`](docs/arquitetura.md).

@@ -6,7 +6,7 @@ import { ApiError } from '../../lib/api-client';
 import { useMe } from '../auth/auth-context';
 import { type DashboardFilters, defaultPeriod } from '../dashboard/dashboard-api';
 import { DashboardFiltersForm } from '../dashboard/DashboardFiltersForm';
-import { STATUS_LABELS, TYPE_LABELS } from '../ombudsman/ombudsman-api';
+import { STATUS_LABELS, TYPE_LABELS } from '../manifestations/manifestations-api';
 import { allowedReports, REPORT_LABELS, type ReportType, useExport } from './reports-api';
 
 const DESCRIPTIONS: Record<ReportType, string> = {

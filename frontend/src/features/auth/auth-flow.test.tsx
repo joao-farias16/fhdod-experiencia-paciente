@@ -15,7 +15,7 @@ import {
   mockApi,
   renderApp,
   VIEWER,
-} from '../../test/admin-helpers';
+} from '../../test/helpers';
 import { GENERIC_LOGIN_ERROR } from './AuthProvider';
 
 const SA = meOf();

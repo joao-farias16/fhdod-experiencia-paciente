@@ -1,12 +1,10 @@
 import { type RequestHandler, Router } from 'express';
 
 import type { PrismaClient } from '../../lib/prisma.js';
-import { requirePermission } from '../../middlewares/authorize.js';
 import { profileRateLimit } from '../../middlewares/rate-limit.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { parseInput, VALIDATION_MESSAGE } from '../../utils/validation.js';
-import { auditContextOf, authOf } from '../auth/request-context.js';
+import type { Clock } from '../../utils/dates.js';
+import { invalidField, parseInput } from '../../utils/validation.js';
+import { auditContextOf, authOf, requirePermission } from '../auth/auth.middleware.js';
 import {
   exportQuerySchema,
   REPORT_ENDPOINTS,
@@ -34,9 +32,7 @@ function isReportType(value: unknown): value is ReportType {
 const requireReportPermission: RequestHandler = (req, res, next) => {
   const { type } = req.query;
   if (!isReportType(type)) {
-    throw new HttpError(400, 'VALIDATION_ERROR', VALIDATION_MESSAGE, [
-      { field: 'type', message: 'Use responses, indicators ou manifestations.' },
-    ]);
+    throw invalidField('type', 'Use responses, indicators ou manifestations.');
   }
   requirePermission(REPORT_ENDPOINTS[type])(req, res, next);
 };

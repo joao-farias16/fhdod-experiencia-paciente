@@ -17,8 +17,8 @@ import {
   PERMISSIONS,
   permissionsFor,
 } from '../../src/modules/auth/permissions.js';
-import { FakeSupabase } from '../fake-supabase.js';
-import { errorOf } from '../helpers.js';
+import { FakeSupabase } from '../support/fake-supabase.js';
+import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
   buildAuthApp,
@@ -26,8 +26,8 @@ import {
   deniedRowsOf,
   openConnections,
   type UserKey,
-} from './auth-support.js';
-import type { Db } from './support.js';
+} from '../support/auth-scenario.js';
+import type { Db } from '../support/db.js';
 
 type Role = 'superadmin' | 'sector_admin' | 'management' | 'ombudsman' | 'viewer';
 const ROLES: Role[] = ['superadmin', 'sector_admin', 'management', 'ombudsman', 'viewer'];

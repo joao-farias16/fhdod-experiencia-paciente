@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { ALLOWED_ORIGIN, buildTestApp, databaseStub, errorOf, FIXED_NOW } from '../helpers.js';
+import { ALLOWED_ORIGIN, buildTestApp, databaseStub, errorOf, FIXED_NOW } from '../support/app.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

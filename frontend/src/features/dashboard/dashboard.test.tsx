@@ -17,7 +17,7 @@ import {
   mockApi,
   renderApp,
   VIEWER,
-} from '../../test/admin-helpers';
+} from '../../test/helpers';
 import type { Me } from '../auth/auth-types';
 import type { NpsIndicator, Summary } from './dashboard-api';
 

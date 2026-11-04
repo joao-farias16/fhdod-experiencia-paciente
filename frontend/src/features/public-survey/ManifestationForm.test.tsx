@@ -16,7 +16,7 @@ import {
   json,
   mockApi,
   renderApp,
-} from '../../test/admin-helpers';
+} from '../../test/helpers';
 import type { PublicSurvey } from './public-survey-api';
 
 const SURVEY: PublicSurvey = {

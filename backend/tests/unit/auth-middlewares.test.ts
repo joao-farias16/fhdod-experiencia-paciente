@@ -9,15 +9,18 @@ import { describe, expect, it } from 'vitest';
 
 import { createLogger } from '../../src/lib/logger.js';
 import { Prisma, type PrismaClient } from '../../src/lib/prisma.js';
-import { auditAuthorizationDenials, requirePermission } from '../../src/middlewares/authorize.js';
+import {
+  auditAuthorizationDenials,
+  requirePermission,
+  authOf,
+} from '../../src/modules/auth/auth.middleware.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { requestLogger } from '../../src/middlewares/request-logger.js';
-import { listAuditLogsQuerySchema } from '../../src/modules/audit-logs/audit-logs.schemas.js';
-import { resolvePeriod } from '../../src/modules/audit-logs/audit-logs.service.js';
+import { listAuditLogsQuerySchema } from '../../src/modules/audit/audit.schemas.js';
 import { AuthServiceUnavailableError } from '../../src/modules/auth/auth.types.js';
-import { authOf } from '../../src/modules/auth/request-context.js';
-import { AuthorizationDeniedError } from '../../src/utils/http-error.js';
-import { errorOf } from '../helpers.js';
+import { AuthorizationDeniedError } from '../../src/utils/errors.js';
+import { resolvePeriod } from '../../src/utils/validation.js';
+import { errorOf } from '../support/app.js';
 
 function appThatThrows(error: unknown) {
   const app = express();

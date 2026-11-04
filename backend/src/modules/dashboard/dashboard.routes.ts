@@ -1,10 +1,10 @@
 import { type RequestHandler, Router } from 'express';
 
 import type { PrismaClient } from '../../lib/prisma.js';
-import { requirePermission } from '../../middlewares/authorize.js';
-import type { Clock } from '../../utils/clock.js';
+import type { Clock } from '../../utils/dates.js';
 import { parseInput } from '../../utils/validation.js';
-import { authOf } from '../auth/request-context.js';
+import { authOf, requirePermission } from '../auth/auth.middleware.js';
+import { resolveFilters } from './dashboard.filters.js';
 import {
   filtersQuerySchema,
   questionsQuerySchema,
@@ -18,7 +18,6 @@ import {
   getSummary,
   getTeams,
   getTrends,
-  resolveFilters,
 } from './dashboard.service.js';
 
 export interface DashboardRoutesDeps {

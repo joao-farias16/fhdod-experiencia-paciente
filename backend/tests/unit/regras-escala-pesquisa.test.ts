@@ -5,8 +5,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { computeShiftWindow } from '../../src/modules/shifts/shift-rules.js';
-import { canonicalHash, parseIdempotencyKey } from '../../src/services/idempotency.js';
-import { classifyNps, computeNps, isLowScore } from '../../src/services/nps.js';
+import { canonicalHash, parseIdempotencyKey } from '../../src/utils/idempotency.js';
+import { classifyNps, computeNps, isLowScore } from '../../src/modules/dashboard/nps.js';
 import { localDateTimeToInstant, parseBrazilianDate } from '../../src/utils/dates.js';
 
 describe('T05 — computeNps (unitário)', () => {

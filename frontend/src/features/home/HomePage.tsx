@@ -1,4 +1,4 @@
-import { ApiStatusCard } from '../health/ApiStatusCard';
+import { ApiStatusCard } from './ApiStatusCard';
 
 /** Página inicial da base técnica (ET01): identifica o sistema e mostra a situação da API. */
 export function HomePage() {

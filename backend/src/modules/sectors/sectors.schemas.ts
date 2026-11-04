@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { queryBoolean, uuidSchema } from '../../utils/validation.js';
+import { queryBoolean } from '../../utils/validation.js';
 
 /** Código de setor e de equipe: A–Z, 0–9, _ e -, com 2 a 20 caracteres (RF12, RF16). */
 export const STRUCTURE_CODE_PATTERN = /^[A-Z0-9_-]{2,20}$/;
@@ -50,5 +50,3 @@ export const updateSectorSchema = z
   });
 
 export type UpdateSectorInput = z.output<typeof updateSectorSchema>;
-
-export const idParamsSchema = z.strictObject({ id: uuidSchema });

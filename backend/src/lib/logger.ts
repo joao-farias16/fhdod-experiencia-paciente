@@ -1,6 +1,6 @@
-import { pino, type Logger, type LoggerOptions } from 'pino';
+import { type Logger, type LoggerOptions, pino } from 'pino';
 
-import type { Env } from '../config/env.js';
+import type { Env } from './env.js';
 
 /**
  * Logs JSON estruturados (RNF19). Cabeçalhos sensíveis são removidos e nenhum corpo,

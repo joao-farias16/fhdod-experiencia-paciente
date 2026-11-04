@@ -1,9 +1,7 @@
 import { type RequestHandler, Router } from 'express';
 
-import { requirePermission } from '../../middlewares/authorize.js';
-import { parseInput } from '../../utils/validation.js';
-import { auditContextOf, authOf } from '../auth/request-context.js';
-import { idParamsSchema } from '../sectors/sectors.schemas.js';
+import { idParamsSchema, parseInput } from '../../utils/validation.js';
+import { auditContextOf, authOf, requirePermission } from '../auth/auth.middleware.js';
 import {
   createSurveySchema,
   listSurveysQuerySchema,

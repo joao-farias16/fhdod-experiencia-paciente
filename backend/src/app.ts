@@ -5,15 +5,14 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 
-import type { Env } from './config/env.js';
+import type { Env } from './lib/env.js';
 import type { PrismaClient } from './lib/prisma.js';
-import { auditAuthorizationDenials } from './middlewares/authorize.js';
-import { errorHandler } from './middlewares/error-handler.js';
-import { notFoundHandler } from './middlewares/not-found.js';
+import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { requestLogger } from './middlewares/request-logger.js';
+import { auditAuthorizationDenials } from './modules/auth/auth.middleware.js';
 import type { AuthAdmin, TokenVerifier } from './modules/auth/auth.types.js';
-import { v1Router } from './routes/v1.js';
-import { systemClock, type Clock } from './utils/clock.js';
+import { v1Router } from './routes.js';
+import { type Clock, systemClock } from './utils/dates.js';
 
 /** Limite do corpo JSON (RNF11). */
 export const JSON_BODY_LIMIT = '32kb';

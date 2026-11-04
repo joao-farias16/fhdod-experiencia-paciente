@@ -216,7 +216,7 @@ Quantidade (dado complementar): 7 arquivos de teste novos no backend (6 de banco
 - **Executor:** Claude Code (agente), a pedido de João Vitor Farias da Silva.
 - **Commit:** nenhum — alterações não commitadas na branch local `feature` (criada de `develop` em `215ca70`, com ET04–ET06 integradas). Repetir e registrar o hash após o commit.
 - **Ambiente:** Windows 11; Node.js 22.22.3; Docker Desktop; Supabase CLI 2.121 (`npm run db:start`: PostgreSQL 54322, Auth 54321); Prisma 7.10.1; ExcelJS 4.4.0; Playwright 1.63 com o Chrome instalado. Testes de banco em `fhdod_test`; E2E no banco de teste com contas criadas e removidas do Auth local.
-- **Evidências:** [`docs/evidencias/ET07-ET09/`](evidencias/ET07-ET09/) (saídas e JUnit) e capturas em [`ET07/telas`](evidencias/ET07/telas/), [`ET08/telas`](evidencias/ET08/telas/) e [`ET09/telas`](evidencias/ET09/telas/).
+- **Evidências:** [`docs/evidencias/ET07-ET09/`](evidencias/ET07-ET09/) (saídas, JUnit e capturas em [`telas/`](evidencias/ET07-ET09/telas/)).
 - **Linha de base antes das alterações:** backend 23 arquivos/610 testes e frontend 13 arquivos/88 testes, todos aprovados.
 - **Supabase remoto:** somente leitura (listagem de projetos, tabelas e migrations: 0 e 0); nada alterado.
 
@@ -259,3 +259,38 @@ Quantidade (dado complementar): 7 arquivos de teste novos no backend (6 de banco
 - Abrir os três relatórios no Excel e no LibreOffice (parte manual do RF63).
 - Figma: as telas das etapas implementadas (ET01 a ET09) estão no arquivo `sistema-hospital`, na página Page 1; falta a revisão cruzada das telas na revisão de cada etapa. Isso não substitui os testes manuais pendentes acima (abertura dos relatórios no Excel e no LibreOffice).
 - Commit, push, Pull Request e execução da CI remota; revisão cruzada da Tabela 27 (ET07 e ET09: revisor Felipe; ET08: responsável Felipe, revisor João).
+
+## Etapa 1 (novo cronograma) — Revisão e reorganização do projeto
+
+- **Data:** 04/11/2026. **Branch:** `refactor/reorganizacao-projeto` (criada de `develop` em `d6d7b84`), sem commit. **Issue:** #32.
+- **Escopo:** reorganização de pastas e código sem mudança de comportamento: nenhuma regra de negócio, contrato da API, mensagem, migration, permissão ou tela foi alterada. Os mesmos testes da linha de base foram executados antes e depois.
+
+| Verificação                                       | Antes (linha de base) | Depois    |
+| ------------------------------------------------- | --------------------- | --------- |
+| `npm run format:check`, `npm run lint`            | aprovados             | aprovados |
+| `npm run typecheck` (backend e frontend)          | aprovado              | aprovado  |
+| Backend: unidade, integração e PostgreSQL real    | 712/712               | 712/712   |
+| Backend: Supabase Auth local (`test:supabase`)    | 7/7                   | 7/7       |
+| Frontend: componentes (Vitest, `--maxWorkers=2`)  | 105/105               | 105/105   |
+| E2E Playwright com Supabase local                 | —                     | 23/23     |
+| `npm run build` (backend e frontend)              | aprovado              | aprovado  |
+| Build do backend iniciado + saúde, E01, 401 e 404 | —                     | aprovado  |
+| Frontend (Vite) → backend pelo proxy `/api`       | —                     | aprovado  |
+
+- **Observação pré-existente:** com o paralelismo padrão e a máquina carregada, 6 testes de componentes do frontend falham por tempo esgotado; com `--maxWorkers=2` todos passam (já registrado no README).
+
+### Revisão da Etapa 1 — reestruturação (2ª rodada, 04/11/2026)
+
+Reestruturação por domínio no backend e no frontend (detalhes em [`arquitetura.md`](arquitetura.md)): `src/services/`, `modules/me`, `modules/rosters`, `modules/audit-logs`, `routes/` e `config/` incorporados aos módulos de domínio, a `lib/` e a `src/routes.ts`; repositórios parciais absorvidos pelos serviços; apoio dos testes em `tests/support/` e uma única configuração do Vitest com três projetos; no frontend, `features/admin` em `app/`, `structure` dividida em `sectors` e `shifts`, `ombudsman` → `manifestations`, páginas grandes divididas e duplicações de erro e etiqueta removidas. Nenhum contrato, mensagem ou regra foi alterado.
+
+| Verificação                                         | Linha de base | 1ª rodada | 2ª rodada |
+| --------------------------------------------------- | ------------- | --------- | --------- |
+| Formatação, lint, typecheck e build                 | aprovados     | aprovados | aprovados |
+| Backend: unidade, integração e PostgreSQL real      | 712/712       | 712/712   | 712/712   |
+| Backend: Supabase Auth local (`test:supabase`)      | 7/7           | 7/7       | 7/7       |
+| Frontend: componentes (`--maxWorkers=2`)            | 105/105       | 105/105   | 105/105   |
+| E2E Playwright com Supabase local                   | —             | 23/23     | 23/23     |
+| Build iniciado + saúde, E01, E04/E20 sem token, 404 | —             | aprovado  | aprovado  |
+| Frontend (Vite) → backend pelo proxy `/api`         | —             | aprovado  | aprovado  |
+
+Os testes de componentes passaram a ocupar 18 arquivos (eram 16): o teste de estrutura foi dividido entre `sectors` e `shifts`, e o da senha temporária foi para junto do componente em `users`. O total de casos é o mesmo.

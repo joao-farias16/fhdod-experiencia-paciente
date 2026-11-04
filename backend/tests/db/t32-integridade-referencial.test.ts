@@ -22,7 +22,7 @@ import {
   insertResponse,
   recordEvidence,
   writeEvidence,
-} from './support.js';
+} from '../support/db.js';
 
 let db: Db;
 

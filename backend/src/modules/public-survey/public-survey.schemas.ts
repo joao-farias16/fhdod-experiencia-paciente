@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
+import type { ResponseOrigin } from '../../lib/prisma.js';
 import { uuidSchema } from '../../utils/validation.js';
 import { MAX_ACTIVE_SPECIFIC_QUESTIONS, SLUG_PATTERN } from '../surveys/surveys.schemas.js';
+
+/** Origem da resposta (RF24): QR Code do cartaz ou link. */
+export const RESPONSE_ORIGINS = ['qr_code', 'link'] as const satisfies ResponseOrigin[];
 
 /** E01 — slug kebab-case até 80 caracteres; fora do formato é tratado como inexistente (404). */
 export function isPublicSlug(value: string): boolean {
@@ -14,7 +18,7 @@ export function isPublicSlug(value: string): boolean {
  */
 export const submitResponseSchema = z.strictObject({
   surveyVersionId: uuidSchema,
-  origin: z.enum(['qr_code', 'link'], { error: 'Origem inválida.' }),
+  origin: z.enum(RESPONSE_ORIGINS, { error: 'Origem inválida.' }),
   npsScore: z
     .number({ error: 'Escolha uma nota de 0 a 10.' })
     .int('A nota deve ser um número inteiro.')

@@ -5,23 +5,23 @@ import { useLocation } from 'react-router';
 
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { SelectField, TextField } from '../../components/ui/Field';
 import { EmptyState, ErrorState, Loading, Pagination } from '../../components/ui/States';
-import { ApiError } from '../../lib/api-client';
+import { failureOf } from '../../lib/errors';
 import { formatDateTime } from '../../lib/format';
 import { noticeOf } from '../../lib/route-state';
 import { useMe } from '../auth/auth-context';
 import { ROLE_LABELS, type UserRole } from '../auth/auth-types';
-import { ConfirmDialog } from './ConfirmDialog';
+import { useSectors } from '../sectors/sectors-api';
 import { TemporaryPasswordDialog } from './TemporaryPasswordDialog';
 import { UserFormDialog } from './UserFormDialog';
 import {
   type AdminUser,
-  type UserInput,
-  type UsersFilters,
   useCreateUser,
   useResetPassword,
-  useSectors,
+  type UserInput,
+  type UsersFilters,
   useUpdateUser,
   useUsers,
 } from './users-api';
@@ -49,12 +49,6 @@ function scopeText(user: AdminUser): string {
   return user.sectors
     .map((sector) => `${sector.name}${sector.isActive ? '' : ' (desativado)'}`)
     .join(', ');
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof ApiError
-    ? error.message
-    : 'Não foi possível concluir a ação. Tente novamente.';
 }
 
 /** TL16 — Gestão de usuários (/admin/usuarios, SA): cadastro, edição, desativação e senha. */
@@ -109,7 +103,7 @@ export function UsersPage() {
       );
       setPending(null);
     } catch (error) {
-      setActionError(messageOf(error));
+      setActionError(failureOf(error).text);
     }
   };
 
@@ -123,7 +117,7 @@ export function UsersPage() {
         `Senha de ${user.fullName} redefinida. A troca será obrigatória no próximo acesso.`,
       );
     } catch (error) {
-      setActionError(messageOf(error));
+      setActionError(failureOf(error).text);
     }
   };
 

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
 import { createApp } from './app.js';
-import { EnvValidationError, loadEnv } from './config/env.js';
+import { EnvValidationError, loadEnv } from './lib/env.js';
 import { createLogger } from './lib/logger.js';
 import { createPrismaClient } from './lib/prisma.js';
 import { createSupabaseAuth } from './lib/supabase.js';

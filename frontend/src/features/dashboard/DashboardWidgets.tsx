@@ -1,9 +1,23 @@
 import { type ReactNode, useId, useState } from 'react';
 import { Link } from 'react-router';
 
+import { Button } from '../../components/ui/Button';
 import { formatLocalDate } from '../../lib/format';
-import { formatNumber, type NpsIndicator, type Summary, type TrendPoint } from './dashboard-api';
-import { nText, npsText, SUPPRESSED_TEXT } from './dashboard-format';
+import type { NpsIndicator, Summary, TrendPoint } from './dashboard-api';
+import { formatNumber, npsText, nText, SUPPRESSED_TEXT } from './dashboard-format';
+
+/** RF60: estado sem dados com mensagem e Limpar filtros (NPS nunca exibido como 0). */
+export function NoData({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="space-y-3 rounded-xl border border-dashed border-neutral-border bg-white p-6 text-center">
+      <p className="font-semibold">Nenhuma resposta para os filtros escolhidos.</p>
+      <p className="text-slate-700">Amplie o período ou limpe os filtros.</p>
+      <Button variant="secondary" onClick={onClear}>
+        Limpar filtros
+      </Button>
+    </div>
+  );
+}
 
 interface StatCardProps {
   label: string;

@@ -5,7 +5,6 @@ import {
   isAuthSessionMissingError,
 } from '@supabase/supabase-js';
 
-import type { Env } from '../config/env.js';
 import {
   type AuthAdmin,
   AuthEmailAlreadyRegisteredError,
@@ -14,6 +13,7 @@ import {
   type TokenVerification,
   type TokenVerifier,
 } from '../modules/auth/auth.types.js';
+import type { Env } from './env.js';
 
 /** Duração do bloqueio na desativação (RF09): 100 anos, revertida com 'none' na reativação. */
 export const BAN_DURATION = '876000h';

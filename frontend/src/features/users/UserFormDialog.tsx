@@ -8,7 +8,8 @@ import { SelectField, TextField } from '../../components/ui/Field';
 import { Loading } from '../../components/ui/States';
 import { ApiError } from '../../lib/api-client';
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, type UserRole } from '../auth/auth-types';
-import { type AdminSector, type AdminUser, type UserInput, useSectors } from './users-api';
+import { type AdminSector, useSectors } from '../sectors/sectors-api';
+import type { AdminUser, UserInput } from './users-api';
 
 interface UserForm {
   fullName: string;
