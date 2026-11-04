@@ -59,8 +59,8 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
-    // RNF21: serviços não dependem do Express.
-    files: ['backend/src/**/*.service.ts', 'backend/src/services/**/*.ts'],
+    // RNF21: serviços e regras de domínio não dependem do Express.
+    files: ['backend/src/**/*.service.ts', 'backend/src/**/*.filters.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

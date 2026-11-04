@@ -2,23 +2,18 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { addDays, daysInclusive, localDateOf, toQueryString } from '../../lib/format';
+import { toQueryString } from '../../lib/api-client';
+import { addDays, daysInclusive, localDateOf } from '../../lib/format';
 import { useAuth } from '../auth/auth-context';
+import type { ResponseOrigin } from '../public-survey/public-survey-api';
+import type { ShiftPeriod } from '../shifts/shifts-api';
 
 /** RF61: atualização a cada 60 s com a aba visível (TanStack Query pausa em segundo plano). */
 export const REFRESH_INTERVAL_MS = 60_000;
 /** RN25: até 366 dias; padrão, últimos 30 dias. */
 export const MAX_RANGE_DAYS = 366;
 
-export type ShiftPeriod = 'morning' | 'afternoon' | 'night';
-export type Origin = 'qr_code' | 'link';
-
-export const PERIOD_LABELS: Record<ShiftPeriod, string> = {
-  morning: 'Manhã',
-  afternoon: 'Tarde',
-  night: 'Noite',
-};
-export const ORIGIN_LABELS: Record<Origin, string> = { qr_code: 'QR Code', link: 'Link' };
+export const ORIGIN_LABELS: Record<ResponseOrigin, string> = { qr_code: 'QR Code', link: 'Link' };
 
 /** Filtros comuns do dashboard e dos relatórios (Seção 4.3), espelhados na URL (RF56). */
 export interface DashboardFilters {
@@ -28,7 +23,7 @@ export interface DashboardFilters {
   surveyId: string;
   period: ShiftPeriod | '';
   teamIds: string;
-  origin: Origin | '';
+  origin: ResponseOrigin | '';
 }
 
 export const FILTER_KEYS = [
@@ -227,15 +222,6 @@ export function useQuestionResults(filters: DashboardFilters) {
     'questions',
     `/dashboard/questions${filterQuery(filters)}`,
   );
-}
-
-/** Número em pt-BR com vírgula decimal (RNF29); nulo → travessão. */
-export function formatNumber(value: number | null, digits = 1): string {
-  if (value === null) return '—';
-  return value.toLocaleString('pt-BR', {
-    minimumFractionDigits: Number.isInteger(value) ? 0 : digits,
-    maximumFractionDigits: digits,
-  });
 }
 
 /** Valida o período como o backend (RN25): from ≤ to e até 366 dias. */

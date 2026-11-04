@@ -1,17 +1,11 @@
 import type { Prisma, PrismaClient, TransactionClient } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import {
-  isSectorInScope,
-  resourceNotFound,
-  sectorOutOfScope,
-  sectorWhere,
-} from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isUniqueViolation } from '../../utils/prisma-errors.js';
-import { VALIDATION_MESSAGE } from '../../utils/validation.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
+import { invalidField } from '../../utils/validation.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { sectorInactive } from '../teams/teams.service.js';
+import { isSectorInScope, resourceNotFound, sectorOutOfScope, sectorWhere } from '../auth/scope.js';
+import { sectorInactive } from '../sectors/sectors.service.js';
 import {
   type CreateSurveyInput,
   DEFAULT_NPS_TEXT,
@@ -245,10 +239,6 @@ function questionLocked(field: string): HttpError {
     'Pergunta já publicada não muda de texto ou etapa. Desative-a e crie outra.',
     [{ field, message: 'Pergunta bloqueada após a publicação.' }],
   );
-}
-
-function invalidField(field: string, message: string): HttpError {
-  return new HttpError(400, 'VALIDATION_ERROR', VALIDATION_MESSAGE, [{ field, message }]);
 }
 
 /** Pesquisa do hospital e do escopo; fora do escopo ou inexistente → 404 (RN10). */

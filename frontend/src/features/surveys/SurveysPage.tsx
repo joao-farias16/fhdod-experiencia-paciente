@@ -8,12 +8,13 @@ import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import { SelectField, TextField } from '../../components/ui/Field';
 import { EmptyState, ErrorState, Loading, Pagination } from '../../components/ui/States';
+import { Tag } from '../../components/ui/Tag';
+import { applyApiError, type Failure } from '../../lib/errors';
 import { formatDateTime } from '../../lib/format';
-import { applyApiError, type Failure } from '../structure/form-errors';
-import { slugify } from './slug';
-import { useSectors } from '../users/users-api';
+import { useSectors } from '../sectors/sectors-api';
 import {
   STATUS_LABELS,
+  STATUS_TONES,
   type SurveyCreate,
   type SurveysFilters,
   type SurveyStatus,
@@ -21,21 +22,19 @@ import {
   useSurveys,
 } from './surveys-api';
 
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-export function StatusTag({ status }: { status: SurveyStatus }) {
-  const style =
-    status === 'active'
-      ? 'border-green-700 text-green-800'
-      : status === 'draft'
-        ? 'border-brand-700 text-brand-800'
-        : 'border-slate-500 text-slate-700';
-  return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-sm font-medium ${style}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
+/** Sugestão de endereço a partir do título: minúsculas, sem acentos, com hífens. */
+function slugify(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+    .replace(/-+$/, '');
 }
+
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function CreateSurveyDialog({ onClose }: { onClose: () => void }) {
   const sectors = useSectors();
@@ -248,7 +247,7 @@ export function SurveysPage() {
                 className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusTag status={survey.status} />
+                  <Tag tone={STATUS_TONES[survey.status]}>{STATUS_LABELS[survey.status]}</Tag>
                   {survey.hasUnpublishedChanges && survey.currentVersion !== null ? (
                     <span className="text-sm text-slate-700">Alterações não publicadas</span>
                   ) : null}

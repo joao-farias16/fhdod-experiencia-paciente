@@ -7,13 +7,12 @@ import type {
   PrismaClient,
   TransactionClient,
 } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import { resourceNotFound, sectorWhere } from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { addDays, startOfLocalDay } from '../../utils/dates.js';
-import { HttpError } from '../../utils/http-error.js';
-import { resolvePeriod } from '../../utils/period.js';
+import { addDays, type Clock, startOfLocalDay } from '../../utils/dates.js';
+import { HttpError } from '../../utils/errors.js';
+import { resolvePeriod } from '../../utils/validation.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
+import { resourceNotFound, sectorWhere } from '../auth/scope.js';
 import {
   ACTIONS_MIN,
   canTransition,

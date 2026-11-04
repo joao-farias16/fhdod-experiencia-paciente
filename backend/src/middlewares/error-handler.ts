@@ -1,15 +1,11 @@
-import type { ErrorRequestHandler } from 'express';
+import type { ErrorRequestHandler, RequestHandler } from 'express';
 
 import { Prisma } from '../lib/prisma.js';
 import { AuthServiceUnavailableError } from '../modules/auth/auth.types.js';
-import { HttpError } from '../utils/http-error.js';
+import { HttpError, serviceUnavailable } from '../utils/errors.js';
 
 /** Códigos do Prisma para banco inacessível, tempo esgotado ou conexão encerrada. */
 const PRISMA_UNAVAILABLE_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
-
-function serviceUnavailable(): HttpError {
-  return new HttpError(503, 'SERVICE_UNAVAILABLE', 'O serviço está temporariamente indisponível.');
-}
 
 /** Converte erros conhecidos (inclusive os do body-parser do Express) para o padrão da API. */
 function normalizeError(error: unknown): HttpError {
@@ -62,4 +58,8 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, req, res, next
       requestId: typeof req.id === 'string' ? req.id : '',
     },
   });
+};
+
+export const notFoundHandler: RequestHandler = (_req, _res, next) => {
+  next(new HttpError(404, 'ROUTE_NOT_FOUND', 'O recurso solicitado não existe.'));
 };

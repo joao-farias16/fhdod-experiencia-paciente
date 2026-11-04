@@ -3,14 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import {
-  apiError,
-  FakeAuthClient,
-  json,
-  mockApi,
-  renderApp,
-  VIEWER,
-} from '../../test/admin-helpers';
+import { apiError, FakeAuthClient, json, mockApi, renderApp, VIEWER } from '../../test/helpers';
 
 const PENDING = { ...VIEWER, mustChangePassword: true };
 

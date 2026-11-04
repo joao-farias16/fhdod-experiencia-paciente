@@ -6,7 +6,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { FakeAuthClient, json, meOf, mockApi, renderApp } from '../../test/admin-helpers';
+import { FakeAuthClient, json, meOf, mockApi, renderApp } from '../../test/helpers';
 import type { SurveyDetail } from './surveys-api';
 
 const AS = meOf({

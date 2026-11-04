@@ -1,10 +1,9 @@
 import type { PrismaClient, TransactionClient } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import { resourceNotFound } from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isUniqueViolation } from '../../utils/prisma-errors.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
+import { resourceNotFound } from '../auth/scope.js';
 import type { CreateSectorInput, UpdateSectorInput } from './sectors.schemas.js';
 
 export interface SectorDto {
@@ -55,6 +54,15 @@ function toSectorDto(sector: SectorRecord): SectorDto {
     activeTeams: sector._count.teams,
     activeSurveys: sector._count.surveyConfigs,
   };
+}
+
+/** Operação que exige setor ativo (equipes, turnos e pesquisas). */
+export function sectorInactive(): HttpError {
+  return new HttpError(
+    422,
+    'SECTOR_INACTIVE',
+    'O setor está desativado. Reative o setor antes de continuar.',
+  );
 }
 
 function codeConflict(): HttpError {

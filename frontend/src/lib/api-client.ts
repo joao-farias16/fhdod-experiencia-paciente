@@ -51,6 +51,29 @@ function errorOf(status: number, body: unknown): ApiError {
   return new ApiError(status, 'UNEXPECTED_RESPONSE', 'Resposta inesperada do servidor.');
 }
 
+/**
+ * fetch na API sem cache. Cancelamento (AbortError) é repassado; qualquer outra falha de rede vira
+ * ApiError NETWORK_ERROR.
+ */
+async function send(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${env.apiBaseUrl}${path}`, { ...init, cache: 'no-store' });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
+    throw new ApiError(0, 'NETWORK_ERROR', 'Não foi possível conectar ao servidor.');
+  }
+}
+
+/** Monta a query string ignorando valores vazios. */
+export function toQueryString(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text === '' ? '' : `?${text}`;
+}
+
 /** Metadados das listas paginadas (Seção 7). */
 export interface PageMeta {
   page: number;
@@ -88,21 +111,14 @@ export async function apiRequest<T, M = undefined>(
   const isForm = init.body instanceof FormData;
   if (init.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
-  let response: Response;
-  try {
-    response = await fetch(`${env.apiBaseUrl}${path}`, {
-      method: init.method ?? 'GET',
-      headers,
-      cache: 'no-store',
-      ...(init.body === undefined
-        ? {}
-        : { body: isForm ? (init.body as FormData) : JSON.stringify(init.body) }),
-      ...(init.signal ? { signal: init.signal } : {}),
-    });
-  } catch (cause) {
-    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
-    throw new ApiError(0, 'NETWORK_ERROR', 'Não foi possível conectar ao servidor.');
-  }
+  const response = await send(path, {
+    method: init.method ?? 'GET',
+    headers,
+    ...(init.body === undefined
+      ? {}
+      : { body: isForm ? (init.body as FormData) : JSON.stringify(init.body) }),
+    ...(init.signal ? { signal: init.signal } : {}),
+  });
 
   if (response.status === 204) return { data: undefined as T, meta: undefined as M };
 
@@ -143,17 +159,10 @@ export async function apiDownload(
   path: string,
   init: { token: string; signal?: AbortSignal | undefined; fallbackName: string },
 ): Promise<DownloadedFile> {
-  let response: Response;
-  try {
-    response = await fetch(`${env.apiBaseUrl}${path}`, {
-      headers: { Authorization: `Bearer ${init.token}` },
-      cache: 'no-store',
-      ...(init.signal ? { signal: init.signal } : {}),
-    });
-  } catch (cause) {
-    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
-    throw new ApiError(0, 'NETWORK_ERROR', 'Não foi possível conectar ao servidor.');
-  }
+  const response = await send(path, {
+    headers: { Authorization: `Bearer ${init.token}` },
+    ...(init.signal ? { signal: init.signal } : {}),
+  });
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     throw errorOf(response.status, body);

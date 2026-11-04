@@ -6,8 +6,14 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { readFixture } from './fixture';
-import { capture, expectNoHorizontalScroll, GENERIC_ERROR, login, logout } from './support';
+import {
+  readFixture,
+  capture,
+  expectNoHorizontalScroll,
+  GENERIC_ERROR,
+  login,
+  logout,
+} from './support';
 
 const { accounts } = readFixture();
 

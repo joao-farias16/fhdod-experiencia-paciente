@@ -9,17 +9,17 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../fake-supabase.js';
-import { errorOf } from '../helpers.js';
+import { FakeSupabase } from '../support/fake-supabase.js';
+import { errorOf } from '../support/app.js';
 import {
   auditRowsFor,
   type AuthScenario,
   buildAuthApp,
   createAuthScenario,
   openConnections,
-} from './auth-support.js';
-import { type App, call, dataOf, submitResponse } from './et04-et06-support.js';
-import type { Db } from './support.js';
+} from '../support/auth-scenario.js';
+import { type App, call, dataOf, submitResponse } from '../support/api.js';
+import type { Db } from '../support/db.js';
 
 let db: Db;
 let prisma: PrismaClient;

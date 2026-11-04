@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, FakeAuthClient, json, meOf, mockApi, renderApp } from '../../test/admin-helpers';
+import { apiError, FakeAuthClient, json, meOf, mockApi, renderApp } from '../../test/helpers';
 import type { AdminUser } from './users-api';
 
 const SA = meOf();

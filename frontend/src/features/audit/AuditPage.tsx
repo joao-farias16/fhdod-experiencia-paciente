@@ -5,18 +5,18 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/Field';
 import { EmptyState, ErrorState, Loading, Pagination } from '../../components/ui/States';
-import type { PageMeta } from '../../lib/api-client';
+import { type PageMeta, toQueryString } from '../../lib/api-client';
 import {
   addDays,
   daysInclusive,
   formatDateTime,
   formatLocalDate,
   localDateOf,
-  toQueryString,
 } from '../../lib/format';
 import { useAuth } from '../auth/auth-context';
 import { ROLE_LABELS, type UserRole } from '../auth/auth-types';
-import { type AdminUser, useSectors } from '../users/users-api';
+import { useSectors } from '../sectors/sectors-api';
+import type { AdminUser } from '../users/users-api';
 import { ACTION_LABELS, describeDetails, ENTITY_LABELS } from './audit-labels';
 
 interface AuditLog {

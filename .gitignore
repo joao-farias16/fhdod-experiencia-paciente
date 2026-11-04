@@ -56,7 +56,7 @@ supabase/.branches/
 supabase/.temp/
 supabase/.env
 
-# Backups do banco gerados localmente (npm run db:backup, etapas futuras)
+# Backups do banco gerados localmente (nunca versionados)
 backups/
 *.dump
 *.sql.gz
@@ -111,7 +111,7 @@ CLAUDE.local.md
 .mcp.local.json
 
 # ------------------------------------------------------------------
-# Implantação (configuração local das CLIs; nada é publicado na ET01)
+# Implantação (configuração local das CLIs)
 # ------------------------------------------------------------------
 .vercel/
 .render/

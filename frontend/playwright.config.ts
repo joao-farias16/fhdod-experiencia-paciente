@@ -11,7 +11,7 @@ const FRONTEND_PORT = '5174';
 /**
  * Testes ponta a ponta (Seção 12) com Supabase Auth local, backend e frontend reais. Portas
  * próprias (3334 e 5174) para não reutilizar servidores de desenvolvimento: o backend dos testes
- * usa TEST_DATABASE_URL, e as contas fictícias são criadas e excluídas pelo global-setup/teardown.
+ * usa TEST_DATABASE_URL, e as contas fictícias são criadas e excluídas pelo global-setup.
  * Usa o Chrome instalado (channel: 'chrome'), sem baixar navegadores. Exige `npm run db:start`.
  */
 export default defineConfig({
@@ -21,7 +21,6 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   globalSetup: './e2e/global-setup.ts',
-  globalTeardown: './e2e/global-teardown.ts',
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
     baseURL: `http://localhost:${FRONTEND_PORT}`,

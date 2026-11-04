@@ -1,11 +1,9 @@
 import { type RequestHandler, Router } from 'express';
 
 import type { PrismaClient } from '../../lib/prisma.js';
-import { requirePermission } from '../../middlewares/authorize.js';
-import type { Clock } from '../../utils/clock.js';
-import { parseInput } from '../../utils/validation.js';
-import { auditContextOf, authOf } from '../auth/request-context.js';
-import { idParamsSchema } from '../sectors/sectors.schemas.js';
+import type { Clock } from '../../utils/dates.js';
+import { idParamsSchema, parseInput } from '../../utils/validation.js';
+import { auditContextOf, authOf, requirePermission } from '../auth/auth.middleware.js';
 import { createTeamSchema, listTeamsQuerySchema, updateTeamSchema } from './teams.schemas.js';
 import { createTeam, listJourneyStages, listTeams, updateTeam } from './teams.service.js';
 

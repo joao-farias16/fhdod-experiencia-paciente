@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EnvValidationError, loadEnv } from '../../src/config/env.js';
+import { EnvValidationError, loadEnv } from '../../src/lib/env.js';
 
 const DATABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 // Valores fictícios do Supabase Auth local (ET03).

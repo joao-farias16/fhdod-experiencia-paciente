@@ -1,7 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { PageMeta } from '../../lib/api-client';
-import { toQueryString } from '../../lib/format';
+import { type PageMeta, toQueryString } from '../../lib/api-client';
 import { useAuth } from '../auth/auth-context';
 import type { SectorSummary, UserRole } from '../auth/auth-types';
 
@@ -18,13 +17,6 @@ export interface AdminUser {
   deactivatedAt: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-/** Setor do E10 (escopo do usuário autenticado). */
-export interface AdminSector extends SectorSummary {
-  description: string | null;
-  activeTeams: number;
-  activeSurveys: number;
 }
 
 export interface UsersFilters {
@@ -54,15 +46,6 @@ export function useUsers(filters: UsersFilters) {
     queryKey: [...usersKey, filters],
     queryFn: () => request<AdminUser[], PageMeta>(`/admin/users${toQueryString({ ...filters })}`),
     placeholderData: keepPreviousData,
-  });
-}
-
-/** E10 — setores do escopo (para associar usuários e filtrar). */
-export function useSectors() {
-  const { request } = useAuth();
-  return useQuery({
-    queryKey: ['admin', 'sectors'],
-    queryFn: async () => (await request<AdminSector[]>('/admin/sectors')).data,
   });
 }
 

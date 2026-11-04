@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
-import { csvList, localDateSchema, refinePeriod } from '../../utils/period.js';
-import { paginationSchema, queryBoolean, uuidSchema } from '../../utils/validation.js';
+import {
+  csvList,
+  localDateSchema,
+  paginationSchema,
+  queryBoolean,
+  refinePeriod,
+  uuidSchema,
+} from '../../utils/validation.js';
 
 /** RF41: descrição de 10 a 2.000 caracteres; RF47: nota interna de 1 a 2.000. */
 export const DESCRIPTION_MIN = 10;
@@ -152,8 +158,6 @@ export const listManifestationsQuerySchema = z
   .superRefine(refinePeriod);
 
 export type ListManifestationsQuery = z.output<typeof listManifestationsQuerySchema>;
-
-export const idParamsSchema = z.strictObject({ id: uuidSchema });
 
 /** E37 — status (RN23), prioridade e providências com controle de concorrência (RF46). */
 export const updateManifestationSchema = z

@@ -1,13 +1,17 @@
 import type { Prisma, PrismaClient, ShiftPeriod, TransactionClient } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import { isSectorInScope, resourceNotFound, sectorOutOfScope } from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { addDays, localDateOf, localTimeOf, startOfLocalDay } from '../../utils/dates.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isConstraintViolation } from '../../utils/prisma-errors.js';
-import { VALIDATION_MESSAGE } from '../../utils/validation.js';
+import {
+  addDays,
+  type Clock,
+  localDateOf,
+  localTimeOf,
+  startOfLocalDay,
+} from '../../utils/dates.js';
+import { HttpError, isConstraintViolation } from '../../utils/errors.js';
+import { invalidField } from '../../utils/validation.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { sectorInactive } from '../teams/teams.service.js';
+import { isSectorInScope, resourceNotFound, sectorOutOfScope } from '../auth/scope.js';
+import { sectorInactive } from '../sectors/sectors.service.js';
 import { computeShiftWindow, isDateInShiftWindow, shiftDateWindow } from './shift-rules.js';
 import type { CancelShiftInput, CreateShiftInput, ListShiftsQuery } from './shifts.schemas.js';
 
@@ -144,9 +148,7 @@ export async function createShift(
 ): Promise<ShiftDto> {
   const window = computeShiftWindow(input.date, input.startTime, input.endTime);
   if (!window.ok) {
-    throw new HttpError(400, 'VALIDATION_ERROR', VALIDATION_MESSAGE, [
-      { field: 'endTime', message: 'O turno deve durar de 1 a 24 horas.' },
-    ]);
+    throw invalidField('endTime', 'O turno deve durar de 1 a 24 horas.');
   }
   try {
     return await prisma.$transaction(async (tx) => {

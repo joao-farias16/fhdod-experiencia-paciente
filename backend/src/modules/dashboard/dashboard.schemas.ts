@@ -1,11 +1,10 @@
 import { z } from 'zod';
 
 import { daysInclusive } from '../../utils/dates.js';
-import { csvList, localDateSchema, refinePeriod } from '../../utils/period.js';
-import { uuidSchema } from '../../utils/validation.js';
+import { csvList, localDateSchema, refinePeriod, uuidSchema } from '../../utils/validation.js';
+import { RESPONSE_ORIGINS } from '../public-survey/public-survey.schemas.js';
+import { SHIFT_PERIODS } from '../shifts/shift-rules.js';
 
-export const SHIFT_PERIODS = ['morning', 'afternoon', 'night'] as const;
-export const RESPONSE_ORIGINS = ['qr_code', 'link'] as const;
 export const GRANULARITIES = ['day', 'week', 'month'] as const;
 export type Granularity = (typeof GRANULARITIES)[number];
 

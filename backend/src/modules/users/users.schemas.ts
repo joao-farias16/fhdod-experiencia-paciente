@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { UserRole } from '../../lib/prisma.js';
-import type { ErrorDetail } from '../../utils/http-error.js';
+import type { ErrorDetail } from '../../utils/errors.js';
 import { paginationSchema, queryBoolean, uuidSchema } from '../../utils/validation.js';
 
 export const USER_ROLES = [
@@ -118,5 +118,3 @@ export const listUsersQuerySchema = z.strictObject({
 });
 
 export type ListUsersQuery = z.output<typeof listUsersQuerySchema>;
-
-export const userIdParamsSchema = z.strictObject({ id: uuidSchema });

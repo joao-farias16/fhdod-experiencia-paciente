@@ -1,4 +1,13 @@
-import { formatNumber, type NpsIndicator } from './dashboard-api';
+import type { NpsIndicator } from './dashboard-api';
+
+/** Número em pt-BR com vírgula decimal (RNF29); nulo → travessão. */
+export function formatNumber(value: number | null, digits = 1): string {
+  if (value === null) return '—';
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : digits,
+    maximumFractionDigits: digits,
+  });
+}
 
 /** RN21: texto do estado suprimido (Tabela 22). */
 export const SUPPRESSED_TEXT = 'menos de 5 respostas';

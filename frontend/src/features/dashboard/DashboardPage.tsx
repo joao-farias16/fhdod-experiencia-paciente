@@ -1,7 +1,6 @@
 import { useLocation } from 'react-router';
 
 import { Alert } from '../../components/ui/Alert';
-import { Button } from '../../components/ui/Button';
 import { ErrorState, Loading } from '../../components/ui/States';
 import { formatLocalDate } from '../../lib/format';
 import { noticeOf } from '../../lib/route-state';
@@ -16,20 +15,14 @@ import {
   useTrends,
 } from './dashboard-api';
 import { DashboardFiltersForm } from './DashboardFiltersForm';
-import { DistributionChart, GroupTable, Panel, SummaryCards, TrendChart } from './DashboardWidgets';
-
-/** RF60: estado sem dados com mensagem e Limpar filtros (NPS nunca exibido como 0). */
-export function NoData({ onClear }: { onClear: () => void }) {
-  return (
-    <div className="space-y-3 rounded-xl border border-dashed border-neutral-border bg-white p-6 text-center">
-      <p className="font-semibold">Nenhuma resposta para os filtros escolhidos.</p>
-      <p className="text-slate-700">Amplie o período ou limpe os filtros.</p>
-      <Button variant="secondary" onClick={onClear}>
-        Limpar filtros
-      </Button>
-    </div>
-  );
-}
+import {
+  DistributionChart,
+  GroupTable,
+  NoData,
+  Panel,
+  SummaryCards,
+  TrendChart,
+} from './DashboardWidgets';
 
 function periodTitle(filters: DashboardFilters): string {
   return `${formatLocalDate(filters.from)} a ${formatLocalDate(filters.to)}`;

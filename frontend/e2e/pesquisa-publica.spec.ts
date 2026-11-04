@@ -7,8 +7,7 @@
  */
 import { expect, type Page, test } from '@playwright/test';
 
-import { readFixture } from './fixture';
-import { capture, expectNoHorizontalScroll } from './support';
+import { readFixture, capture, expectNoHorizontalScroll } from './support';
 
 const { surveys } = readFixture();
 const QR_PATH = `/p/${surveys.active}?origem=qr`;

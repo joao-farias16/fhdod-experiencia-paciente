@@ -9,8 +9,7 @@
  */
 import { expect, type Page, test } from '@playwright/test';
 
-import { readFixture } from './fixture';
-import { capture, expectNoHorizontalScroll, login, logout } from './support';
+import { readFixture, capture, expectNoHorizontalScroll, login, logout } from './support';
 
 const { surveys, accounts } = readFixture();
 const QR_PATH = `/p/${surveys.active}?origem=qr`;
@@ -46,18 +45,18 @@ test('T07/T08 — nota baixa pelo QR Code: oferta, manifestação anônima e pro
   test.skip(testInfo.project.name !== 'computador-1440', 'Grava dados: roda uma vez.');
   await evaluate(page, '3');
   await expect(page.getByRole('heading', { name: 'Quer contar o que aconteceu?' })).toBeVisible();
-  await capture(page, testInfo, 'TL11-oferta-nota-baixa', 'ET07');
+  await capture(page, testInfo, 'TL11-oferta-nota-baixa', 'ET07-ET09');
 
   await manifest(page, 'Reclamação', DESCRIPTION);
   const form = page.getByRole('form', { name: 'Registrar manifestação' });
   await expect(form.getByRole('radio', { name: 'Enviar sem me identificar' })).toBeChecked();
-  await capture(page, testInfo, 'TL10-manifestacao', 'ET07');
+  await capture(page, testInfo, 'TL10-manifestacao', 'ET07-ET09');
   await form.getByRole('button', { name: /Enviar manifestação/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Manifestação registrada' })).toBeVisible();
   anonymousProtocol = (await page.getByText(/^FHD-\d{4}-\d{6}$/).textContent()) ?? '';
   expect(anonymousProtocol).toMatch(/^FHD-\d{4}-\d{6}$/);
-  await capture(page, testInfo, 'TL11-protocolo', 'ET07');
+  await capture(page, testInfo, 'TL11-protocolo', 'ET07-ET09');
   // RF39: nada da avaliação nem da manifestação fica no sessionStorage.
   expect(
     await page.evaluate(() =>
@@ -89,7 +88,7 @@ test('T09 — contato só com e-mail e aceite; formulário sem rolagem horizonta
   await form.getByRole('button', { name: /Enviar manifestação/ }).click();
   await expect(form.getByText('Marque o aceite para informar seu contato.')).toBeVisible();
   await expectNoHorizontalScroll(page);
-  await capture(page, testInfo, 'TL10-contato-celular', 'ET07');
+  await capture(page, testInfo, 'TL10-contato-celular', 'ET07-ET09');
   await form.getByRole('checkbox', { name: /Li e aceito/ }).check();
   await form.getByRole('button', { name: /Enviar manifestação/ }).click();
   await expect(page.getByRole('heading', { name: 'Manifestação registrada' })).toBeVisible();
@@ -105,7 +104,7 @@ test('T18/T19 — Ouvidoria: status, nota, contato auditado e eliminação', asy
   await expect(page.getByRole('heading', { name: 'Manifestações' })).toBeVisible();
   const table = page.getByRole('region', { name: 'Tabela de manifestações' });
   await expect(table.getByRole('link', { name: anonymousProtocol })).toBeVisible();
-  await capture(page, testInfo, 'TL12-lista', 'ET07');
+  await capture(page, testInfo, 'TL12-lista', 'ET07-ET09');
 
   await table.getByRole('link', { name: anonymousProtocol }).click();
   await expect(
@@ -123,7 +122,7 @@ test('T18/T19 — Ouvidoria: status, nota, contato auditado e eliminação', asy
   await expect(
     page.getByText('Nota interna: Contato feito com a coordenação da recepção.'),
   ).toBeVisible();
-  await capture(page, testInfo, 'TL13-detalhe', 'ET07');
+  await capture(page, testInfo, 'TL13-detalhe', 'ET07-ET09');
 
   await page.getByRole('link', { name: 'Voltar para a lista' }).click();
   await table.getByRole('link', { name: contactProtocol }).click();
@@ -154,7 +153,7 @@ test('T11 e T20 — painel atualiza com nova resposta e exporta .xlsx', async ({
         .textContent()) ?? '',
     )?.[1],
   );
-  await capture(page, testInfo, 'TL03-painel', 'ET08');
+  await capture(page, testInfo, 'TL03-painel', 'ET07-ET09');
 
   const visitor = await browser.newPage();
   await evaluate(visitor, '9');
@@ -172,10 +171,10 @@ test('T11 e T20 — painel atualiza com nova resposta e exporta .xlsx', async ({
   await page.getByRole('link', { name: 'Pronto Atendimento E2E' }).click();
   await expect(page.getByRole('heading', { name: 'Pronto Atendimento E2E' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Perguntas por etapa da jornada' })).toBeVisible();
-  await capture(page, testInfo, 'TL04-painel-setor', 'ET08');
+  await capture(page, testInfo, 'TL04-painel-setor', 'ET07-ET09');
 
   await page.getByRole('link', { name: 'Relatórios' }).click();
   await expect(page.getByLabel('Relatório', { exact: true })).toBeVisible();
-  await capture(page, testInfo, 'TL14-relatorios', 'ET09');
+  await capture(page, testInfo, 'TL14-relatorios', 'ET07-ET09');
   await logout(page);
 });

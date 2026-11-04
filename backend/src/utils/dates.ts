@@ -119,3 +119,12 @@ export function parseBrazilianDate(value: string): string | undefined {
   const iso = `${match[3] ?? ''}-${match[2] ?? ''}-${match[1] ?? ''}`;
   return isValidLocalDate(iso) ? iso : undefined;
 }
+
+/** Relógio injetável, para que regras dependentes de data sejam testáveis (Seção 7). */
+export interface Clock {
+  now(): Date;
+}
+
+export const systemClock: Clock = {
+  now: () => new Date(),
+};

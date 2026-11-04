@@ -1,14 +1,13 @@
 import { timingSafeEqual } from 'node:crypto';
 
 import type { PrismaClient } from '../../lib/prisma.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import {
   canonicalHash,
   idempotencyKeyReused,
   manifestationToken,
-} from '../../services/idempotency.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { isUniqueViolation } from '../../utils/prisma-errors.js';
+} from '../../utils/idempotency.js';
 import { type CreateManifestationInput, PURPOSE_TEXT_VERSION } from './manifestations.schemas.js';
 
 export interface PublicManifestationDeps {

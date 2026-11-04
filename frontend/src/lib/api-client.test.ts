@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, apiGet, apiRequest } from './api-client';
+import { ApiError, apiGet, apiRequest, toQueryString } from './api-client';
+
+describe('toQueryString', () => {
+  it('monta a query string sem valores vazios', () => {
+    expect(toQueryString({ a: 'x y', b: '', c: undefined, d: 2 })).toBe('?a=x+y&d=2');
+    expect(toQueryString({ a: '' })).toBe('');
+  });
+});
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

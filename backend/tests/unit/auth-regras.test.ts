@@ -16,13 +16,13 @@ import {
   hashIp,
   recordAudit,
   UnsafeAuditDetailsError,
-} from '../../src/services/audit.service.js';
+} from '../../src/modules/audit/audit.service.js';
 import {
   assertResourceInScope,
   isSectorInScope,
   resolveSectorFilter,
   sectorWhere,
-} from '../../src/services/scope.js';
+} from '../../src/modules/auth/scope.js';
 import {
   addDays,
   daysInclusive,
@@ -30,7 +30,7 @@ import {
   localDateOf,
   startOfLocalDay,
 } from '../../src/utils/dates.js';
-import { AuthorizationDeniedError, HttpError } from '../../src/utils/http-error.js';
+import { AuthorizationDeniedError, HttpError } from '../../src/utils/errors.js';
 import { parseInput } from '../../src/utils/validation.js';
 
 describe('RN28 — política de senhas', () => {

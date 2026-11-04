@@ -5,10 +5,9 @@ import { Link, useParams, useSearchParams } from 'react-router';
 import { ErrorState, Loading } from '../../components/ui/States';
 import { formatLocalDate } from '../../lib/format';
 import { ExportButtons } from '../reports/ExportButtons';
-import { useSectors } from '../users/users-api';
+import { useSectors } from '../sectors/sectors-api';
+import { PERIOD_LABELS } from '../shifts/shifts-api';
 import {
-  formatNumber,
-  PERIOD_LABELS,
   type QuestionResult,
   useDashboardFilters,
   useQuestionResults,
@@ -17,10 +16,16 @@ import {
   useTeamResults,
   useTrends,
 } from './dashboard-api';
+import { formatNumber, nText, SUPPRESSED_TEXT } from './dashboard-format';
 import { DashboardFiltersForm } from './DashboardFiltersForm';
-import { nText, SUPPRESSED_TEXT } from './dashboard-format';
-import { NoData } from './DashboardPage';
-import { DistributionChart, GroupTable, Panel, SummaryCards, TrendChart } from './DashboardWidgets';
+import {
+  DistributionChart,
+  GroupTable,
+  NoData,
+  Panel,
+  SummaryCards,
+  TrendChart,
+} from './DashboardWidgets';
 
 /** Perguntas agrupadas pela etapa da jornada, na ordem das etapas (TL04). */
 function byStage(items: QuestionResult[]): { stage: string; items: QuestionResult[] }[] {

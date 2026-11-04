@@ -1,30 +1,23 @@
 import type { Logger } from 'pino';
 
 import {
-  Prisma,
+  AUTH_TRANSACTION_OPTIONS,
+  type Prisma,
   type PrismaClient,
   type TransactionClient,
   type UserRole,
 } from '../../lib/prisma.js';
-import { type AuditContext, recordAudit } from '../../services/audit.service.js';
-import { resourceNotFound } from '../../services/scope.js';
-import type { Clock } from '../../utils/clock.js';
-import { HttpError } from '../../utils/http-error.js';
-import { VALIDATION_MESSAGE } from '../../utils/validation.js';
+import type { Clock } from '../../utils/dates.js';
+import { HttpError, isUniqueViolation } from '../../utils/errors.js';
+import { validationError } from '../../utils/validation.js';
+import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import {
   type AuthAdmin,
   type AuthContext,
   AuthEmailAlreadyRegisteredError,
 } from '../auth/auth.types.js';
 import { generateTemporaryPassword } from '../auth/password-policy.js';
-import {
-  findUserById,
-  listUsers as listUserRecords,
-  toUserDto,
-  type UserDto,
-  type UserRecord,
-  userSelect,
-} from './users.repository.js';
+import { resourceNotFound } from '../auth/scope.js';
 import {
   type CreateUserInput,
   type ListUsersQuery,
@@ -39,9 +32,6 @@ export interface UsersServiceDeps {
   clock: Clock;
 }
 
-/** Transações que incluem uma chamada ao Supabase Auth podem demorar mais que o padrão (5 s). */
-const TRANSACTION_OPTIONS = { timeout: 15_000, maxWait: 5_000 } as const;
-
 function emailConflict(): HttpError {
   return new HttpError(409, 'CONFLICT', 'Já existe um usuário com este e-mail.');
 }
@@ -52,10 +42,6 @@ function selfModification(): HttpError {
     'SELF_MODIFICATION_FORBIDDEN',
     'Você não pode alterar o próprio perfil, escopo, situação ou senha por esta tela.',
   );
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
 /**
@@ -160,7 +146,7 @@ export async function createUser(
         details: { role: input.role, allSectors: input.allSectors, sectorIds: input.sectorIds },
       });
       return profile;
-    }, TRANSACTION_OPTIONS);
+    }, AUTH_TRANSACTION_OPTIONS);
     return { user: toUserDto(created), temporaryPassword };
   } catch (error) {
     await compensate(logger, 'deleteUser', () => authAdmin.deleteUser(authUserId));
@@ -278,7 +264,7 @@ export async function updateUser(
 
       const violations = scopeViolations(next.role, next.allSectors, next.sectorIds);
       if (violations.length > 0) {
-        throw new HttpError(400, 'VALIDATION_ERROR', VALIDATION_MESSAGE, violations);
+        throw validationError(violations);
       }
       await assertAssignableSectors(tx, actor.hospitalId, next.sectorIds, next.currentSectorIds);
 
@@ -343,7 +329,7 @@ export async function updateUser(
         banChangedTo = !next.isActive;
       }
       return toUserDto(updated);
-    }, TRANSACTION_OPTIONS);
+    }, AUTH_TRANSACTION_OPTIONS);
   } catch (error) {
     // Falha depois do bloqueio/liberação no Auth (por exemplo, no COMMIT): desfaz no Auth.
     if (banChangedTo !== undefined && authUserIdForCompensation !== undefined) {
@@ -383,5 +369,106 @@ export async function resetUserPassword(
     const temporaryPassword = generateTemporaryPassword();
     await authAdmin.updatePassword(target.authUserId, temporaryPassword);
     return { temporaryPassword };
-  }, TRANSACTION_OPTIONS);
+  }, AUTH_TRANSACTION_OPTIONS);
+}
+
+/** Campos de um usuário administrativo devolvidos pela API (sem identificadores do Auth). */
+export const userSelect = {
+  id: true,
+  fullName: true,
+  email: true,
+  role: true,
+  allSectors: true,
+  isActive: true,
+  mustChangePassword: true,
+  deactivatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  sectorLinks: {
+    select: { sector: { select: { id: true, code: true, name: true, isActive: true } } },
+    orderBy: { sector: { name: 'asc' } },
+  },
+} as const satisfies Prisma.ProfileSelect;
+
+export type UserRecord = Prisma.ProfileGetPayload<{ select: typeof userSelect }>;
+
+export interface SectorSummary {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface UserDto {
+  id: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  allSectors: boolean;
+  sectors: SectorSummary[];
+  isActive: boolean;
+  mustChangePassword: boolean;
+  deactivatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function toUserDto(record: UserRecord): UserDto {
+  return {
+    id: record.id,
+    fullName: record.fullName,
+    email: record.email,
+    role: record.role,
+    allSectors: record.allSectors,
+    sectors: record.sectorLinks.map((link) => link.sector),
+    isActive: record.isActive,
+    mustChangePassword: record.mustChangePassword,
+    deactivatedAt: record.deactivatedAt?.toISOString() ?? null,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+type Reader = Pick<PrismaClient, 'profile'> | Pick<TransactionClient, 'profile'>;
+
+function listWhere(hospitalId: string, filters: ListUsersQuery): Prisma.ProfileWhereInput {
+  return {
+    hospitalId,
+    ...(filters.role === undefined ? {} : { role: filters.role }),
+    ...(filters.isActive === undefined ? {} : { isActive: filters.isActive }),
+    ...(filters.sectorId === undefined
+      ? {}
+      : { sectorLinks: { some: { sectorId: filters.sectorId } } }),
+    ...(filters.search === undefined
+      ? {}
+      : {
+          OR: [
+            { fullName: { contains: filters.search, mode: 'insensitive' } },
+            { email: { contains: filters.search.toLowerCase() } },
+          ],
+        }),
+  };
+}
+
+export async function listUserRecords(
+  prisma: Reader,
+  hospitalId: string,
+  filters: ListUsersQuery,
+): Promise<{ items: UserRecord[]; total: number }> {
+  const where = listWhere(hospitalId, filters);
+  const [items, total] = await Promise.all([
+    prisma.profile.findMany({
+      where,
+      select: userSelect,
+      orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+      skip: (filters.page - 1) * filters.pageSize,
+      take: filters.pageSize,
+    }),
+    prisma.profile.count({ where }),
+  ]);
+  return { items, total };
+}
+
+export function findUserById(prisma: Reader, id: string): Promise<UserRecord | null> {
+  return prisma.profile.findUnique({ where: { id }, select: userSelect });
 }

@@ -1,18 +1,18 @@
 import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
 
-import type * as AdminAreaModule from '../features/admin/admin-area';
-import { AppLayout } from '../components/AppLayout';
 import { Loading } from '../components/ui/States';
 import { HomePage } from '../features/home/HomePage';
-import { NotFoundPage } from '../features/not-found/NotFoundPage';
+import type * as AdminAreaModule from './AdminArea';
+import { AppLayout } from './AppLayout';
+import { NotFoundPage } from './NotFoundPage';
 
 type AdminArea = typeof AdminAreaModule;
 
 /** Carrega um componente da área administrativa (um único pedaço de JavaScript sob demanda). */
 function admin(pick: (module: AdminArea) => ComponentType) {
   return async () => {
-    const module = await import('../features/admin/admin-area');
+    const module = await import('./AdminArea');
     return { Component: pick(module) };
   };
 }
@@ -47,7 +47,7 @@ export const routes: RouteObject[] = [
             children: [
               { path: 'trocar-senha', lazy: admin((m) => m.ChangePasswordPage) },
               // ET08: dashboard geral (TL03) e por setor (TL04).
-              { path: 'painel', lazy: admin((m) => m.PainelPage) },
+              { path: 'painel', lazy: admin((m) => m.DashboardRoute) },
               { path: 'painel/setores/:sectorId', lazy: admin((m) => m.SectorPanelRoute) },
               // ET07: Ouvidoria (TL12, TL13). ET09: relatórios Excel (TL14).
               { path: 'ouvidoria/manifestacoes', lazy: admin((m) => m.ManifestationsRoute) },

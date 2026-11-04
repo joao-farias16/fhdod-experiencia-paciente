@@ -10,8 +10,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import jsQR from 'jsqr';
 
-import { readFixture } from './fixture';
-import { capture, expectNoHorizontalScroll, login } from './support';
+import { readFixture, capture, expectNoHorizontalScroll, login } from './support';
 
 const { accounts } = readFixture();
 

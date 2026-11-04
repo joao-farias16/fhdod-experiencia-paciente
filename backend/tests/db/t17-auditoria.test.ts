@@ -8,10 +8,10 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { PrismaClient } from '../../src/lib/prisma.js';
-import { ACCESS_AUDIT_ACTIONS } from '../../src/services/audit.service.js';
+import { ACCESS_AUDIT_ACTIONS } from '../../src/modules/audit/audit.service.js';
 import { localDateOf } from '../../src/utils/dates.js';
-import { FakeSupabase } from '../fake-supabase.js';
-import { errorOf } from '../helpers.js';
+import { FakeSupabase } from '../support/fake-supabase.js';
+import { errorOf } from '../support/app.js';
 import {
   type AuditRow,
   type AuthScenario,
@@ -19,8 +19,8 @@ import {
   buildAuthApp,
   createAuthScenario,
   openConnections,
-} from './auth-support.js';
-import { type Db, expectDbError } from './support.js';
+} from '../support/auth-scenario.js';
+import { type Db, expectDbError } from '../support/db.js';
 
 let db: Db;
 let prisma: PrismaClient;

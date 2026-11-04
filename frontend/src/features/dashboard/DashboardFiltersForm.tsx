@@ -1,17 +1,17 @@
+import { useQuery } from '@tanstack/react-query';
 import { RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/Field';
-import { useQuery } from '@tanstack/react-query';
 import type { PageMeta } from '../../lib/api-client';
 import { addDays, localDateOf } from '../../lib/format';
 import { useAuth, useMe } from '../auth/auth-context';
 import { can } from '../auth/auth-types';
-import { useTeams } from '../structure/structure-api';
+import { useSectors, useTeams } from '../sectors/sectors-api';
+import { PERIOD_LABELS } from '../shifts/shifts-api';
 import type { SurveySummary } from '../surveys/surveys-api';
-import { useSectors } from '../users/users-api';
-import { type DashboardFilters, ORIGIN_LABELS, PERIOD_LABELS, periodError } from './dashboard-api';
+import { type DashboardFilters, ORIGIN_LABELS, periodError } from './dashboard-api';
 
 type Shortcut = '7' | '30' | '90' | 'mes' | 'personalizado';
 

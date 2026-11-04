@@ -13,8 +13,8 @@ import { createApp } from '../../src/app.js';
 import { createLogger } from '../../src/lib/logger.js';
 import { createPrismaClient, type PrismaClient } from '../../src/lib/prisma.js';
 import { createSupabaseAuth } from '../../src/lib/supabase.js';
-import { ALLOWED_ORIGIN, errorOf } from '../helpers.js';
-import { connect, createFixture, type Db, type Fixture } from '../db/support.js';
+import { ALLOWED_ORIGIN, errorOf } from '../support/app.js';
+import { connect, createFixture, type Db, type Fixture } from '../support/db.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY ?? '';
