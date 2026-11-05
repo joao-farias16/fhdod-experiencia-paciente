@@ -1,6 +1,6 @@
 # Ambiente local do FHDOD (Supabase CLI) — ET02.
 # PostgreSQL na porta 54322 e Auth (via gateway) na 54321, conforme a Tabela 26 da especificação.
-# O esquema do banco é criado SOMENTE pelas migrations do Prisma (backend/prisma/migrations):
+# O esquema do banco é criado SOMENTE pelas migrations do Prisma (prisma/migrations):
 # as migrations e o seed do Supabase CLI ficam desligados para não haver duas fontes de verdade.
 # Nenhum segredo é versionado aqui; os valores locais são os padrões públicos do Supabase CLI.
 # For detailed configuration reference documentation, visit:
@@ -72,7 +72,7 @@ enabled = false
 schema_paths = []
 
 [db.seed]
-# Desligado: o seed determinístico é o backend/prisma/seed.ts (npm run db:seed).
+# Desligado: o seed determinístico é o prisma/seed.ts (npm run db:seed).
 enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"

@@ -105,20 +105,20 @@ Não foi adicionada biblioteca de gráficos.
 
 ## Testes
 
-| Teste | Nível e arquivo                                                                                                  |
-| ----- | ---------------------------------------------------------------------------------------------------------------- |
-| T07   | integração `backend/tests/db/t07-t10-manifestacao-publica.test.ts`; componente `ManifestationForm.test.tsx`; E2E |
-| T08   | integração (padrão anônimo; anônima com contato → 400); componente; E2E                                          |
-| T09   | integração (só e-mail, só telefone, sem aceite, 9 dígitos); componente; E2E                                      |
-| T10   | integração do E03 (mesma chave, corpo diferente, 5 concorrentes)                                                 |
-| T18   | integração `t18-t19-ouvidoria.test.ts`; componente `ombudsman.test.tsx`; E2E                                     |
-| T19   | integração; componente; E2E                                                                                      |
-| T05   | integração `t36-t37-dashboard.test.ts` (E28 = `computeNps` com (4,3,3) e (1,15,0)); unidade da ET06              |
-| T11   | integração (E02 → E28 + 1); componente `dashboard.test.tsx` (60 s e Atualizar); E2E                              |
-| T36   | integração (E28, E29, E32, E33, comparação, filtro vazio, VI com 4 e 5 respostas)                                |
-| T37   | integração (00:00 e 23:59:59 locais, 366/367 dias, from > to, turno e equipe, escopo)                            |
-| T20   | integração `t20-t21-exportacao.test.ts` (três tipos e vazio abertos com ExcelJS); E2E (download do `.xlsx`)      |
-| T21   | integração (matriz por perfil, auditoria, 11ª exportação → 429, 50.001 linhas → 422)                             |
+| Teste | Nível e arquivo                                                                                             |
+| ----- | ----------------------------------------------------------------------------------------------------------- |
+| T07   | integração `tests/db/t07-t10-manifestacao-publica.test.ts`; componente `ManifestationForm.test.tsx`; E2E    |
+| T08   | integração (padrão anônimo; anônima com contato → 400); componente; E2E                                     |
+| T09   | integração (só e-mail, só telefone, sem aceite, 9 dígitos); componente; E2E                                 |
+| T10   | integração do E03 (mesma chave, corpo diferente, 5 concorrentes)                                            |
+| T18   | integração `t18-t19-ouvidoria.test.ts`; componente `ombudsman.test.tsx`; E2E                                |
+| T19   | integração; componente; E2E                                                                                 |
+| T05   | integração `t36-t37-dashboard.test.ts` (E28 = `computeNps` com (4,3,3) e (1,15,0)); unidade da ET06         |
+| T11   | integração (E02 → E28 + 1); componente `dashboard.test.tsx` (60 s e Atualizar); E2E                         |
+| T36   | integração (E28, E29, E32, E33, comparação, filtro vazio, VI com 4 e 5 respostas)                           |
+| T37   | integração (00:00 e 23:59:59 locais, 366/367 dias, from > to, turno e equipe, escopo)                       |
+| T20   | integração `t20-t21-exportacao.test.ts` (três tipos e vazio abertos com ExcelJS); E2E (download do `.xlsx`) |
+| T21   | integração (matriz por perfil, auditoria, 11ª exportação → 429, 50.001 linhas → 422)                        |
 
 T14 e T15 também passaram a chamar as rotas reais de E28, E29, E33, E34 e E35 (as rotas-sonda da
 ET03 foram removidas).
