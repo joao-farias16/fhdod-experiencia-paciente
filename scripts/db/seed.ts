@@ -1,57 +1,60 @@
 /**
- * Seed determinístico do FHDOD (ET02 — Seção 8 da especificação).
+ * Seed determinístico de DEMONSTRAÇÃO do FHDOD (ET02, migrado para MySQL na Etapa 3).
  *
  * Gera SOMENTE dados fictícios com faker.seed(2026) e localização pt_BR:
  * 1 hospital, 6 setores, 18 equipes, 4 etapas, 6 pesquisas (a do Pronto Atendimento com v1 e v2),
  * turnos de 150 dias com reforço ambíguo no PA, 2.400 respostas, 180 manifestações (40% com
  * contato fictício) e 6 usuários de demonstração @example.com.
  *
- * Reprodutibilidade: com o mesmo SEED_REFERENCE_DATE (AAAA-MM-DD; padrão: hoje no fuso
- * America/Sao_Paulo) e um banco recém-migrado, todos os identificadores e valores são idênticos.
- * Idempotência: se o hospital de demonstração já existir, nada é gravado. Para recriar os dados,
- * use `npm run db:reset` (somente em banco local).
+ * Uso:
+ *   npm run db:seed              grava no banco DB_NAME (MySQL), numa única transação
+ *   npm run db:seed:export       gera database/seeds/gerado/002_demonstracao.sql para o Workbench
  *
- * Segurança: recusa banco ou Supabase remotos, salvo SEED_ALLOW_REMOTE=true. A senha dos usuários de
- * demonstração vem de SEED_DEMO_PASSWORD (nunca versionada) e só é usada quando SUPABASE_URL e
- * SUPABASE_SECRET_KEY estão definidos (criação das contas no Supabase Auth local).
+ * Reprodutibilidade: com o mesmo SEED_REFERENCE_DATE (AAAA-MM-DD; padrão: hoje no fuso
+ * America/Sao_Paulo) e um banco recém-migrado, todos os identificadores e valores são idênticos
+ * (exceto o hash bcrypt da senha, que usa sal aleatório). Idempotência: se o hospital de
+ * demonstração já existir, nada é gravado. Para recriar, use `npm run db:reset` (somente local).
+ *
+ * Segurança: recusa servidor MySQL remoto, salvo SEED_ALLOW_REMOTE=true. A senha dos usuários de
+ * demonstração vem de SEED_DEMO_PASSWORD (nunca versionada) e é gravada somente como hash bcrypt.
  */
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import { fakerPT_BR as faker } from '@faker-js/faker';
+import { format } from 'mysql2';
 import { z } from 'zod';
 
-import { assertLocalTargets, describeUrl } from '../scripts/db/guard.js';
-import type { Prisma } from '../src/generated/prisma/client.js';
-import { createPrismaClient } from '../src/lib/prisma.js';
+import { loadDatabaseEnv } from '../../src/lib/env.js';
+import { hashPassword } from '../../src/modules/auth/passwords.js';
+import { connect, describeEnv, loadDotEnv } from './connection.js';
+import { assertLocalTargets } from './guard.js';
 
 // -------------------------------------------------------------------------------------------
 // Configuração
 // -------------------------------------------------------------------------------------------
 
-if (existsSync('.env')) {
-  process.loadEnvFile('.env');
-}
+loadDotEnv();
 
 /** Variável vazia no .env equivale a ausente. */
 const optional = <T extends z.ZodType>(schema: T) =>
   z.preprocess((value) => (value === '' ? undefined : value), schema.optional());
 
 const seedEnvSchema = z.object({
-  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   SEED_ALLOW_REMOTE: z.enum(['true', 'false']).default('false'),
   // Política da RN28: 10 ou mais caracteres, com letras e números.
-  SEED_DEMO_PASSWORD: optional(
-    z
-      .string()
-      .min(10)
-      .regex(/[A-Za-z]/)
-      .regex(/[0-9]/),
-  ),
+  SEED_DEMO_PASSWORD: z
+    .string({ error: 'Defina SEED_DEMO_PASSWORD (10+ caracteres, letras e números).' })
+    .min(10)
+    .regex(/[A-Za-z]/)
+    .regex(/[0-9]/),
   SEED_REFERENCE_DATE: optional(z.iso.date()),
-  SUPABASE_URL: optional(z.url()),
-  SUPABASE_SECRET_KEY: optional(z.string()),
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
 });
+
+/** Linha a gravar: chaves em camelCase, convertidas para as colunas em snake_case. */
+type Row = Record<string, unknown>;
 
 const FAKER_SEED = 2026;
 const SEED_HOSPITAL_SHORT_NAME = 'FHDOD-DEMO';
@@ -313,56 +316,6 @@ function canonicalHash(value: unknown): string {
     .digest('hex');
 }
 
-/** Remove a lista de notas específicas, gravada à parte em response_answers. */
-function withoutAnswers<T extends { answers: unknown }>(row: T): Omit<T, 'answers'> {
-  const copy: Partial<T> = { ...row };
-  delete copy.answers;
-  return copy as Omit<T, 'answers'>;
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
-  return chunks;
-}
-
-// -------------------------------------------------------------------------------------------
-// Supabase Auth (opcional): contas de demonstração no ambiente local
-// -------------------------------------------------------------------------------------------
-
-interface AuthAdminConfig {
-  url: string;
-  secretKey: string;
-  password: string;
-}
-
-async function ensureAuthUser(config: AuthAdminConfig, email: string): Promise<string> {
-  const headers = { apikey: config.secretKey, 'Content-Type': 'application/json' };
-  const base = `${config.url.replace(/\/$/, '')}/auth/v1/admin/users`;
-
-  const created = await fetch(base, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ email, password: config.password, email_confirm: true }),
-  });
-  if (created.ok) {
-    const user = (await created.json()) as { id: string };
-    return user.id;
-  }
-  if (created.status !== 422) {
-    throw new Error(`Supabase Auth recusou a criação de ${email} (HTTP ${created.status}).`);
-  }
-
-  // Já existe (seed repetido): localiza pelo e-mail.
-  const listed = await fetch(`${base}?page=1&per_page=1000`, { headers });
-  if (!listed.ok)
-    throw new Error(`Falha ao listar usuários do Supabase Auth (HTTP ${listed.status}).`);
-  const body = (await listed.json()) as { users: { id: string; email?: string }[] };
-  const existing = body.users.find((user) => user.email?.toLowerCase() === email);
-  if (existing === undefined) throw new Error(`Usuário ${email} não encontrado no Supabase Auth.`);
-  return existing.id;
-}
-
 // -------------------------------------------------------------------------------------------
 // Geração do conjunto de dados (somente memória; nenhuma escrita)
 // -------------------------------------------------------------------------------------------
@@ -395,7 +348,7 @@ function buildDataset(referenceDate: string) {
   const stamps = { createdAt: setupAt, updatedAt: setupAt };
 
   // Hospital e etapas ---------------------------------------------------------------------
-  const hospital: Prisma.HospitalCreateManyInput = {
+  const hospital: Row = {
     id: uuid(),
     name: 'Hospital Fictício de Demonstração',
     shortName: SEED_HOSPITAL_SHORT_NAME,
@@ -425,12 +378,13 @@ function buildDataset(referenceDate: string) {
     })),
   );
 
-  // Usuários de demonstração (auth_user_id substituído se o Supabase Auth estiver configurado)
-  const profiles = USERS.map((user) => ({
-    user,
-    id: uuid(),
-    fallbackAuthUserId: uuid(),
-  }));
+  // Usuários de demonstração. O segundo uuid() (antes, o id fictício da conta de autenticação) é mantido
+  // apenas para preservar a sequência determinística do faker e, com ela, todo o conjunto.
+  const profiles = USERS.map((user) => {
+    const id = uuid();
+    uuid();
+    return { user, id };
+  });
   const profileByKey = new Map(profiles.map((profile) => [profile.user.key, profile]));
   const sa = profileByKey.get('sa');
   const as = profileByKey.get('as');
@@ -441,10 +395,10 @@ function buildDataset(referenceDate: string) {
     (as.user.sectors as readonly string[]).includes(sectorCode) ? as.id : sa.id;
 
   // Pesquisas, perguntas e versões ---------------------------------------------------------
-  const surveyConfigs: Prisma.SurveyConfigCreateManyInput[] = [];
-  const questions: Prisma.QuestionCreateManyInput[] = [];
-  const versions: Prisma.SurveyVersionCreateManyInput[] = [];
-  const versionQuestions: Prisma.SurveyVersionQuestionCreateManyInput[] = [];
+  const surveyConfigs: Row[] = [];
+  const questions: Row[] = [];
+  const versions: (Row & { id: string; publishedAt: Date })[] = [];
+  const versionQuestions: Row[] = [];
   const currentVersionBySurvey = new Map<string, string>();
   const deactivatedQuestionIds: string[] = [];
   /** Versões por setor, em ordem de publicação, com as perguntas específicas de cada uma. */
@@ -772,12 +726,9 @@ function buildDataset(referenceDate: string) {
     faker.helpers.shuffle(chosen.map((response) => response.id)).slice(0, CONTACTS_TOTAL),
   );
 
-  const manifestations: (Omit<Prisma.ManifestationCreateManyInput, 'protocol'> & {
-    id: string;
-    receivedAt: Date;
-  })[] = [];
-  const contacts: Prisma.ManifestationContactCreateManyInput[] = [];
-  const notes: Prisma.ManifestationNoteCreateManyInput[] = [];
+  const manifestations: (Row & { id: string; receivedAt: Date })[] = [];
+  const contacts: Row[] = [];
+  const notes: Row[] = [];
 
   chosen.forEach((response, index) => {
     const type: 'complaint' | 'compliment' | 'suggestion' = response.lowScore
@@ -935,31 +886,211 @@ function buildDataset(referenceDate: string) {
 }
 
 // -------------------------------------------------------------------------------------------
-// Gravação
+// Gravação (MySQL, SQL parametrizado) e exportação para o MySQL Workbench
 // -------------------------------------------------------------------------------------------
+
+/** Colunas cujo nome não é a simples conversão para snake_case (chaves estrangeiras "*_by"). */
+function columnOf(key: string): string {
+  const base = key.endsWith('ById') ? key.slice(0, -2) : key;
+  return base.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+}
+
+interface Statement {
+  text: string;
+  values: unknown[];
+}
+
+/** INSERT de várias linhas, em lotes; chave ausente numa linha vira NULL. */
+function insertStatements(table: string, rows: readonly Row[], batch = 500): Statement[] {
+  if (rows.length === 0) return [];
+  const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const columns = keys.map(columnOf).join(', ');
+  const statements: Statement[] = [];
+  for (let start = 0; start < rows.length; start += batch) {
+    const part = rows.slice(start, start + batch);
+    const placeholders = part.map(() => `(${keys.map(() => '?').join(', ')})`).join(',\n  ');
+    statements.push({
+      text: `INSERT INTO ${table} (${columns}) VALUES\n  ${placeholders}`,
+      values: part.flatMap((row) => keys.map((key) => row[key] ?? null)),
+    });
+  }
+  return statements;
+}
+
+/** Todos os comandos do seed, na ordem exigida pelas chaves estrangeiras e pelos gatilhos. */
+async function buildStatements(
+  data: ReturnType<typeof buildDataset>,
+  password: string,
+  rounds: number,
+): Promise<Statement[]> {
+  const passwordHash = await hashPassword(password, rounds);
+  const profileRows = data.profiles.map(({ user, id }) => ({
+    id,
+    hospitalId: data.hospital.id,
+    fullName: `Demonstração — ${ROLE_LABEL[user.role]}${user.allSectors ? '' : ' (setores)'}`,
+    email: user.email,
+    passwordHash,
+    role: user.role,
+    allSectors: user.allSectors,
+    mustChangePassword: false,
+    createdById: user.key === 'sa' ? null : data.sa.id,
+    createdAt: data.setupAt,
+    updatedAt: data.setupAt,
+  }));
+  const answers = data.responses.flatMap((response) =>
+    response.answers.map((answer) => ({
+      id: answer.id,
+      responseId: response.id,
+      surveyVersionId: response.surveyVersionId,
+      surveyVersionQuestionId: answer.svqId,
+      questionType: 'scale_1_5',
+      score: answer.score,
+    })),
+  );
+  const statements: Statement[] = [
+    ...insertStatements('hospitals', [data.hospital]),
+    ...insertStatements('journey_stages', data.stages),
+    ...insertStatements(
+      'sectors',
+      data.sectors.map(({ spec, id }) => ({
+        id,
+        hospitalId: data.hospital.id,
+        code: spec.code,
+        name: spec.name,
+        description: spec.description,
+        createdAt: data.setupAt,
+        updatedAt: data.setupAt,
+      })),
+    ),
+    ...insertStatements(
+      'profiles',
+      profileRows.filter((row) => row.createdById === null),
+    ),
+    ...insertStatements(
+      'profiles',
+      profileRows.filter((row) => row.createdById !== null),
+    ),
+    ...insertStatements(
+      'profile_sectors',
+      data.profiles.flatMap(({ user, id }) =>
+        user.sectors.map((code) => ({
+          profileId: id,
+          sectorId: data.sectorByCode.get(code)?.id ?? '',
+          createdById: data.sa.id,
+          createdAt: data.setupAt,
+        })),
+      ),
+    ),
+    ...insertStatements('teams', data.teams),
+    ...insertStatements('survey_configs', data.surveyConfigs),
+    ...insertStatements('questions', data.questions),
+    ...insertStatements('survey_versions', data.versions),
+    ...insertStatements('survey_version_questions', data.versionQuestions),
+  ];
+  for (const [surveyId, versionId] of data.currentVersionBySurvey) {
+    const publishedAt =
+      data.versions.find((version) => version.id === versionId)?.publishedAt ?? data.setupAt;
+    statements.push({
+      text: 'UPDATE survey_configs SET current_version_id = ?, updated_at = ? WHERE id = ?',
+      values: [versionId, publishedAt, surveyId],
+    });
+  }
+  if (data.deactivatedQuestionIds.length > 0) {
+    statements.push({
+      text: `UPDATE questions SET is_active = FALSE, updated_at = ? WHERE id IN (${data.deactivatedQuestionIds.map(() => '?').join(', ')})`,
+      values: [data.paV2PublishedAt, ...data.deactivatedQuestionIds],
+    });
+  }
+  statements.push(
+    ...insertStatements(
+      'shifts',
+      data.shifts.map((shift) => ({ ...shift, source: 'manual' })),
+    ),
+    ...insertStatements(
+      'responses',
+      data.responses.map((response) => {
+        const row: Row = { ...response };
+        delete row.answers;
+        return row;
+      }),
+    ),
+    ...insertStatements('response_answers', answers, 1000),
+    // Protocolos FHD-AAAA-NNNNNN gerados pelo gatilho, em ordem cronológica (ano local).
+    ...insertStatements(
+      'manifestations',
+      [...data.manifestations].sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()),
+    ),
+    ...insertStatements('manifestation_contacts', data.contacts),
+    ...insertStatements('manifestation_notes', data.notes),
+  );
+  return statements;
+}
+
+/** Arquivo .sql equivalente (valores já formatados em UTC), para importar no MySQL Workbench. */
+function renderSql(statements: Statement[], referenceDate: string): string {
+  const body = statements
+    .map(
+      (statement) =>
+        `${format(statement.text, statement.values as Parameters<typeof format>[1], false, 'Z')};`,
+    )
+    .join('\n\n');
+  return `-- FHDOD — dados FICTÍCIOS de demonstração (ARQUIVO GERADO por \`npm run db:seed:export\`).
+-- Referência: ${referenceDate}. NÃO versione este arquivo e NÃO use em produção.
+-- Importe em um banco recém-migrado (schema.sql) e SEM dados: o script para no primeiro erro.
+-- As contas @example.com usam a senha definida em SEED_DEMO_PASSWORD (gravada como hash bcrypt).
+
+SET NAMES utf8mb4;
+SET time_zone = '+00:00';
+START TRANSACTION;
+
+${body}
+
+COMMIT;
+`;
+}
+
+function sqlOutputPath(): string | undefined {
+  const index = process.argv.indexOf('--sql');
+  if (index === -1) return undefined;
+  const path = process.argv[index + 1];
+  if (path === undefined || path.startsWith('--'))
+    throw new Error('Informe o arquivo: --sql caminho.sql');
+  return path;
+}
 
 async function main(): Promise<void> {
   const parsed = seedEnvSchema.safeParse(process.env);
   if (!parsed.success) {
     const names = [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))];
-    throw new Error(`Variáveis inválidas para o seed: ${names.join(', ')}.`);
+    throw new Error(
+      `Variáveis inválidas para o seed: ${names.join(', ')}. ` +
+        'SEED_DEMO_PASSWORD precisa de 10+ caracteres, com letras e números.',
+    );
   }
   const env = parsed.data;
-  const allowRemote = env.SEED_ALLOW_REMOTE === 'true';
-  if (!allowRemote) {
-    assertLocalTargets({ DATABASE_URL: env.DATABASE_URL, SUPABASE_URL: env.SUPABASE_URL }, 'Seed');
-  }
-
   const referenceDate = env.SEED_REFERENCE_DATE ?? todayInSaoPaulo();
   if (referenceDate > todayInSaoPaulo()) {
     throw new Error('SEED_REFERENCE_DATE não pode estar no futuro.');
   }
+  const data = buildDataset(referenceDate);
+  const statements = await buildStatements(data, env.SEED_DEMO_PASSWORD, env.BCRYPT_ROUNDS);
 
-  const prisma = createPrismaClient(env.DATABASE_URL);
+  const output = sqlOutputPath();
+  if (output !== undefined) {
+    mkdirSync(dirname(output), { recursive: true });
+    writeFileSync(output, renderSql(statements, referenceDate), 'utf8');
+    console.info(`Arquivo gerado: ${output} (${statements.length} comandos).`);
+    return;
+  }
+
+  const dbEnv = loadDatabaseEnv();
+  if (env.SEED_ALLOW_REMOTE !== 'true') assertLocalTargets({ DB_HOST: dbEnv.DB_HOST }, 'Seed');
+  const connection = await connect(dbEnv);
   try {
-    const existing = await prisma.hospital.findMany({ select: { shortName: true } });
-    if (existing.length > 0) {
-      if (existing.some((hospital) => hospital.shortName === SEED_HOSPITAL_SHORT_NAME)) {
+    const [existing] = await connection.query('SELECT short_name FROM hospitals');
+    const hospitals = existing as { short_name: string }[];
+    if (hospitals.length > 0) {
+      if (hospitals.some((hospital) => hospital.short_name === SEED_HOSPITAL_SHORT_NAME)) {
         console.info(
           'Seed já aplicado neste banco: nada foi gravado. Para recriar, use `npm run db:reset` (somente local).',
         );
@@ -968,145 +1099,23 @@ async function main(): Promise<void> {
       throw new Error('O banco já possui dados que não são do seed; nada foi gravado.');
     }
 
-    const data = buildDataset(referenceDate);
-
-    // Contas no Supabase Auth local (opcional). Sem elas, auth_user_id recebe UUIDs fictícios.
-    const authUserIds = new Map<string, string>();
-    if (env.SUPABASE_URL !== undefined && env.SUPABASE_SECRET_KEY !== undefined) {
-      if (env.SEED_DEMO_PASSWORD === undefined) {
-        throw new Error(
-          'Defina SEED_DEMO_PASSWORD (10+ caracteres, letras e números) para criar as contas de demonstração.',
-        );
+    console.info(`Gravando seed (referência ${referenceDate}) em ${describeEnv(dbEnv)}...`);
+    await connection.query('START TRANSACTION');
+    try {
+      for (const statement of statements) {
+        await connection.query(statement.text, statement.values);
       }
-      const config = {
-        url: env.SUPABASE_URL,
-        secretKey: env.SUPABASE_SECRET_KEY,
-        password: env.SEED_DEMO_PASSWORD,
-      };
-      for (const profile of data.profiles) {
-        authUserIds.set(profile.user.key, await ensureAuthUser(config, profile.user.email));
-      }
-    } else {
-      console.warn(
-        'SUPABASE_URL/SUPABASE_SECRET_KEY ausentes: perfis criados sem contas no Supabase Auth.',
-      );
+      await connection.query('COMMIT');
+    } catch (error) {
+      await connection.query('ROLLBACK');
+      throw error;
     }
-
-    console.info(
-      `Gravando seed (referência ${referenceDate}) em ${describeUrl(env.DATABASE_URL)}...`,
-    );
-
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.hospital.create({ data: data.hospital });
-        await tx.journeyStage.createMany({ data: data.stages });
-        await tx.sector.createMany({
-          data: data.sectors.map(({ spec, id }) => ({
-            id,
-            hospitalId: data.hospital.id as string,
-            code: spec.code,
-            name: spec.name,
-            description: spec.description,
-            createdAt: data.setupAt,
-            updatedAt: data.setupAt,
-          })),
-        });
-
-        const profileRows = data.profiles.map(({ user, id, fallbackAuthUserId }) => ({
-          id,
-          hospitalId: data.hospital.id as string,
-          authUserId: authUserIds.get(user.key) ?? fallbackAuthUserId,
-          fullName: `Demonstração — ${ROLE_LABEL[user.role]}${user.allSectors ? '' : ' (setores)'}`,
-          email: user.email,
-          role: user.role,
-          allSectors: user.allSectors,
-          mustChangePassword: false,
-          createdById: user.key === 'sa' ? null : data.sa.id,
-          createdAt: data.setupAt,
-          updatedAt: data.setupAt,
-        }));
-        await tx.profile.createMany({
-          data: profileRows.filter((row) => row.createdById === null),
-        });
-        await tx.profile.createMany({
-          data: profileRows.filter((row) => row.createdById !== null),
-        });
-        await tx.profileSector.createMany({
-          data: data.profiles.flatMap(({ user, id }) =>
-            user.sectors.map((code) => ({
-              profileId: id,
-              sectorId: data.sectorByCode.get(code)?.id ?? '',
-              createdById: data.sa.id,
-              createdAt: data.setupAt,
-            })),
-          ),
-        });
-        await tx.team.createMany({ data: data.teams });
-
-        await tx.surveyConfig.createMany({ data: data.surveyConfigs });
-        await tx.question.createMany({ data: data.questions });
-        await tx.surveyVersion.createMany({ data: data.versions });
-        await tx.surveyVersionQuestion.createMany({ data: data.versionQuestions });
-        for (const [surveyId, versionId] of data.currentVersionBySurvey) {
-          const publishedAt = data.versions.find(
-            (version) => version.id === versionId,
-          )?.publishedAt;
-          await tx.surveyConfig.update({
-            where: { id: surveyId },
-            data: {
-              currentVersionId: versionId,
-              ...(publishedAt ? { updatedAt: publishedAt } : {}),
-            },
-          });
-        }
-        await tx.question.updateMany({
-          where: { id: { in: data.deactivatedQuestionIds } },
-          data: { isActive: false, updatedAt: data.paV2PublishedAt },
-        });
-
-        for (const part of chunk(data.shifts, 1000)) {
-          await tx.shift.createMany({
-            data: part.map((shift) => ({ ...shift, source: 'manual' as const })),
-          });
-        }
-        for (const part of chunk(data.responses, 500)) {
-          await tx.response.createMany({ data: part.map(withoutAnswers) });
-        }
-        const answers = data.responses.flatMap((response) =>
-          response.answers.map((answer) => ({
-            id: answer.id,
-            responseId: response.id,
-            surveyVersionId: response.surveyVersionId,
-            surveyVersionQuestionId: answer.svqId,
-            questionType: 'scale_1_5' as const,
-            score: answer.score,
-          })),
-        );
-        for (const part of chunk(answers, 1000)) {
-          await tx.responseAnswer.createMany({ data: part });
-        }
-
-        // Protocolos gerados pela sequência do banco, em ordem cronológica (ano local do registro).
-        const manifestationRows: Prisma.ManifestationCreateManyInput[] = [];
-        for (const manifestation of data.manifestations) {
-          const [row] = await tx.$queryRaw<{ protocol: string }[]>`
-            SELECT public.next_manifestation_protocol(${manifestation.receivedAt}::timestamptz) AS protocol`;
-          if (row === undefined) throw new Error('Protocolo não gerado');
-          manifestationRows.push({ ...manifestation, protocol: row.protocol });
-        }
-        await tx.manifestation.createMany({ data: manifestationRows });
-        await tx.manifestationContact.createMany({ data: data.contacts });
-        await tx.manifestationNote.createMany({ data: data.notes });
-      },
-      { maxWait: 10_000, timeout: 300_000 },
-    );
-
     console.info(
       `Seed concluído: ${data.responses.length} respostas, ${data.manifestations.length} manifestações, ` +
         `${data.contacts.length} contatos e ${data.shifts.length} turnos. Confira com \`npm run db:seed:verify\`.`,
     );
   } finally {
-    await prisma.$disconnect();
+    await connection.end();
   }
 }
 

@@ -1,4 +1,4 @@
-import type { UserRole } from '../../lib/prisma.js';
+import type { UserRole } from '../../lib/domain-types.js';
 
 /**
  * Permissões da matriz da Seção 6 (Tabela 13). Cada endpoint autenticado exige exatamente uma
@@ -275,6 +275,12 @@ export const ENDPOINTS = {
   E41: { method: 'GET', path: '/admin/audit-logs', access: 'audit_logs:read', implemented: true },
   E42: { method: 'GET', path: '/tv-wall/summary', access: 'public', implemented: false },
   E43: { method: 'GET', path: '/health', access: 'public', implemented: true },
+  // Etapa 3: autenticação própria, que substitui o login feito no Supabase Auth pelo frontend.
+  // Não alteram a matriz de perfis: login e renovação são públicos (limitados por IP) e o logout
+  // vale para qualquer perfil autenticado (mesma permissão de E04).
+  E44: { method: 'POST', path: '/auth/login', access: 'public', implemented: true },
+  E45: { method: 'POST', path: '/auth/refresh', access: 'public', implemented: true },
+  E46: { method: 'POST', path: '/auth/logout', access: 'profile:read', implemented: true },
 } as const satisfies Record<string, EndpointDefinition>;
 
 export type EndpointId = keyof typeof ENDPOINTS;

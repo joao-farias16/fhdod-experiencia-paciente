@@ -1,5 +1,5 @@
 /**
- * Manifestação pública — E03 com PostgreSQL real (ET07):
+ * Manifestação pública — E03 com MySQL real (ET07):
  * T07 (parte de API): NPS 3 e NPS 8 com específica 2 → lowScore e protocolo após o envio; NPS 10 →
  * sem nota baixa e nenhuma manifestação criada sem a ação do respondente (RN04, RN05).
  * T08: manifestação na opção padrão → is_anonymous sem contato; anonymous: true com contato → 400.
@@ -12,8 +12,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -25,8 +24,7 @@ import { adjustableClock, type App, countRows, dataOf, submitResponse } from '..
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 const clock = adjustableClock();
@@ -42,18 +40,17 @@ interface Created {
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
 });
 
 // Limites por IP (E02 30/min, E03 10/min) ficam na memória de cada aplicação: uma por teste.
 beforeEach(() => {
-  app = buildAuthApp(prisma, fake, clock);
+  app = buildAuthApp(database, clock);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -83,12 +80,12 @@ const bodyFor = (submitted: Submitted, extra: object = {}) => ({
 });
 
 const manifestationsOf = (responseId: string) =>
-  countRows(db, 'SELECT 1 FROM manifestations WHERE response_id = $1', [responseId]);
+  countRows(db, 'SELECT 1 FROM manifestations WHERE response_id = ?', [responseId]);
 const contactsOf = (responseId: string) =>
   countRows(
     db,
     `SELECT 1 FROM manifestation_contacts c JOIN manifestations m ON m.id = c.manifestation_id
-     WHERE m.response_id = $1`,
+     WHERE m.response_id = ?`,
     [responseId],
   );
 
@@ -108,7 +105,7 @@ describe('T07 — manifestação após nota baixa (API)', () => {
       is_anonymous: boolean;
       sector_id: string;
     }>(
-      'SELECT status, triggered_by_low_score, is_anonymous, sector_id FROM manifestations WHERE protocol = $1',
+      'SELECT status, triggered_by_low_score, is_anonymous, sector_id FROM manifestations WHERE protocol = ?',
       [created.protocol],
     );
     expect(rows).toEqual([
@@ -122,7 +119,7 @@ describe('T07 — manifestação após nota baixa (API)', () => {
     // Linha do tempo começa com o evento "created" sem autor.
     const events = await db.query<{ kind: string; author_id: string | null; to_value: string }>(
       `SELECT n.kind, n.author_id, n.to_value FROM manifestation_notes n
-       JOIN manifestations m ON m.id = n.manifestation_id WHERE m.protocol = $1`,
+       JOIN manifestations m ON m.id = n.manifestation_id WHERE m.protocol = ?`,
       [created.protocol],
     );
     expect(events.rows).toEqual([{ kind: 'created', author_id: null, to_value: 'received' }]);
@@ -146,7 +143,7 @@ describe('T07 — manifestação após nota baixa (API)', () => {
     );
     expect(response.status).toBe(201);
     const { rows } = await db.query<{ triggered_by_low_score: boolean; type: string }>(
-      'SELECT triggered_by_low_score, type FROM manifestations WHERE response_id = $1',
+      'SELECT triggered_by_low_score, type FROM manifestations WHERE response_id = ?',
       [high.responseId],
     );
     expect(rows).toEqual([{ triggered_by_low_score: false, type: 'compliment' }]);
@@ -174,7 +171,7 @@ describe('T08 — avaliação e manifestação anônimas', () => {
     const submitted = await evaluate(4);
     expect((await manifest(bodyFor(submitted))).status).toBe(201);
     const { rows } = await db.query<{ is_anonymous: boolean }>(
-      'SELECT is_anonymous FROM manifestations WHERE response_id = $1',
+      'SELECT is_anonymous FROM manifestations WHERE response_id = ?',
       [submitted.responseId],
     );
     expect(rows).toEqual([{ is_anonymous: true }]);
@@ -214,7 +211,7 @@ describe('T09 — contato opcional', () => {
     }>(
       `SELECT c.email, c.phone, c.purpose_text_version, m.is_anonymous
        FROM manifestation_contacts c JOIN manifestations m ON m.id = c.manifestation_id
-       WHERE m.response_id = $1`,
+       WHERE m.response_id = ?`,
       [submitted.responseId],
     );
     expect(rows).toEqual([
@@ -229,7 +226,7 @@ describe('T09 — contato opcional', () => {
     );
     const { rows } = await db.query<{ phone: string; email: string | null }>(
       `SELECT c.phone, c.email FROM manifestation_contacts c
-       JOIN manifestations m ON m.id = c.manifestation_id WHERE m.response_id = $1`,
+       JOIN manifestations m ON m.id = c.manifestation_id WHERE m.response_id = ?`,
       [submitted.responseId],
     );
     expect(rows).toEqual([{ phone: '51900000901', email: null }]);
@@ -302,7 +299,7 @@ describe('T10 e RF41 — idempotência, uso único e validade do token', () => {
     expect(errorOf(response).code).toBe('MANIFESTATION_TOKEN_EXPIRED');
     expect(await manifestationsOf(submitted.responseId)).toBe(0);
     const { rows } = await db.query<{ used: Date | null }>(
-      'SELECT manifestation_token_used_at AS used FROM responses WHERE id = $1',
+      'SELECT manifestation_token_used_at AS used FROM responses WHERE id = ?',
       [submitted.responseId],
     );
     expect(rows[0]?.used).toBeNull();
@@ -338,7 +335,7 @@ describe('T10 e RF41 — idempotência, uso único e validade do token', () => {
     const description = "<script>alert('x')</script> ' OR 1=1 --";
     expect((await manifest(bodyFor(submitted, { description }))).status).toBe(201);
     const { rows } = await db.query<{ description: string }>(
-      'SELECT description FROM manifestations WHERE response_id = $1',
+      'SELECT description FROM manifestations WHERE response_id = ?',
       [submitted.responseId],
     );
     expect(rows[0]?.description).toBe(description);

@@ -1,5 +1,5 @@
 /**
- * T17 — Auditoria de operações sensíveis (RF10, RF11, RN16), integração com PostgreSQL real.
+ * T17 — Auditoria de operações sensíveis (RF10, RF11, RN16), integração com MySQL real.
  * Procedimento da Seção 12: cada ação do catálogo → um registro; UPDATE e DELETE em audit_logs
  * falham; nenhum dado pessoal. Também: atomicidade (falha da auditoria desfaz a operação),
  * consulta E41 somente pelo SA, filtros, período e página de no máximo 100 itens.
@@ -7,10 +7,9 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database, Queryable } from '../../src/lib/database.js';
 import { ACCESS_AUDIT_ACTIONS } from '../../src/modules/audit/audit.service.js';
 import { localDateOf } from '../../src/utils/dates.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuditRow,
@@ -23,20 +22,18 @@ import {
 import { type Db, expectDbError } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -156,7 +153,7 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
       .set('Authorization', scenario.bearer('ge'));
     expect(response.status).toBe(403);
     const rows = await db.query<AuditRow>(
-      "SELECT request_id::text, ip_hash, details FROM audit_logs WHERE action = 'AUTHORIZATION_DENIED' AND request_id = $1",
+      "SELECT request_id, ip_hash, details FROM audit_logs WHERE action = 'AUTHORIZATION_DENIED' AND request_id = ?",
       [response.headers['x-request-id']],
     );
     expectSingleRecord(rows.rows, response.headers['x-request-id']);
@@ -165,7 +162,7 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
   it('o catálogo da ET03 foi exercitado por completo', async () => {
     const { rows } = await db.query<{ action: string }>(
       `SELECT DISTINCT action FROM audit_logs a JOIN profiles p ON p.id = a.actor_profile_id
-       WHERE p.hospital_id = $1 ORDER BY action`,
+       WHERE p.hospital_id = ? ORDER BY action`,
       [scenario.fx.hospitalId],
     );
     expect(rows.map((row) => row.action)).toEqual([...ACCESS_AUDIT_ACTIONS].sort());
@@ -173,7 +170,7 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
 
   it('nenhum dado pessoal, senha, token ou segredo na trilha', async () => {
     const { rows } = await db.query(
-      `SELECT a.* FROM audit_logs a JOIN profiles p ON p.id = a.actor_profile_id WHERE p.hospital_id = $1`,
+      `SELECT a.* FROM audit_logs a JOIN profiles p ON p.id = a.actor_profile_id WHERE p.hospital_id = ?`,
       [scenario.fx.hospitalId],
     );
     const serialized = JSON.stringify(rows);
@@ -186,39 +183,27 @@ describe('T17 — catálogo: exatamente um registro por operação', () => {
 });
 
 describe('T17 — atomicidade: falha da auditoria impede a operação', () => {
-  /** Cliente Prisma cujas transações falham ao gravar em audit_logs. */
-  function prismaWithFailingAudit(real: PrismaClient): PrismaClient {
-    const failingTx = (tx: object) =>
-      new Proxy(tx, {
-        get(target, property) {
-          if (property === 'auditLog') {
-            return {
-              create: () => Promise.reject(new Error('falha simulada ao gravar a auditoria')),
-            };
-          }
-          return Reflect.get(target, property) as unknown;
-        },
-      });
-    return new Proxy(real, {
-      get(target, property) {
-        if (property === '$transaction') {
-          return (fn: (tx: object) => Promise<unknown>, options?: object) =>
-            target.$transaction((tx) => fn(failingTx(tx)), options);
-        }
-        const value = Reflect.get(target, property) as unknown;
-        return typeof value === 'function'
-          ? (value as (...a: unknown[]) => unknown).bind(target)
-          : value;
-      },
+  /** Banco cujas transações falham ao gravar em audit_logs (as demais escritas seguem normais). */
+  function withFailingAudit(real: Database): Database {
+    const failingTx = (tx: Queryable): Queryable => ({
+      query: (statement) => tx.query(statement),
+      execute: (statement) =>
+        statement.text.includes('INSERT INTO audit_logs')
+          ? Promise.reject(new Error('falha simulada ao gravar a auditoria'))
+          : tx.execute(statement),
     });
+    return {
+      ...real,
+      transaction: (work, options) => real.transaction((tx) => work(failingTx(tx)), options),
+    };
   }
 
   let failing: ReturnType<typeof buildAuthApp>;
   beforeAll(() => {
-    failing = buildAuthApp(prismaWithFailingAudit(prisma), fake);
+    failing = buildAuthApp(withFailingAudit(database));
   });
 
-  it('E07: sem perfil gravado e conta do Supabase Auth compensada (excluída)', async () => {
+  it('E07: sem perfil nem credencial gravados', async () => {
     const email = `atomicidade.${Date.now()}@example.com`;
     const response = await request(failing)
       .post('/api/v1/admin/users')
@@ -228,18 +213,16 @@ describe('T17 — atomicidade: falha da auditoria impede a operação', () => {
     expect(response.status).toBe(500);
     expect(errorOf(response).code).toBe('INTERNAL_ERROR');
     expect(response.text).not.toContain('falha simulada');
-    expect((await db.query('SELECT 1 FROM profiles WHERE email = $1', [email])).rowCount).toBe(0);
-    expect([...fake.users.values()].some((user) => user.email === email)).toBe(false);
+    expect((await db.query('SELECT 1 FROM profiles WHERE email = ?', [email])).rowCount).toBe(0);
   });
 
-  it('E08: nome e situação inalterados; nenhum bloqueio no Supabase', async () => {
+  it('E08: nome e situação inalterados', async () => {
     const target = scenario.users.vi;
     const before = (
-      await db.query('SELECT full_name, is_active, updated_at FROM profiles WHERE id = $1', [
+      await db.query('SELECT full_name, is_active, updated_at FROM profiles WHERE id = ?', [
         target.profileId,
       ])
     ).rows;
-    const bans = fake.calls.filter((call) => call.operation === 'setBanned').length;
 
     const response = await request(failing)
       .patch(`/api/v1/admin/users/${target.profileId}`)
@@ -249,17 +232,26 @@ describe('T17 — atomicidade: falha da auditoria impede a operação', () => {
     expect(response.status).toBe(500);
     expect(
       (
-        await db.query('SELECT full_name, is_active, updated_at FROM profiles WHERE id = $1', [
+        await db.query('SELECT full_name, is_active, updated_at FROM profiles WHERE id = ?', [
           target.profileId,
         ])
       ).rows,
     ).toEqual(before);
-    expect(fake.calls.filter((call) => call.operation === 'setBanned')).toHaveLength(bans);
+    expect(
+      (await request(app).get('/api/v1/me').set('Authorization', scenario.bearer('vi'))).status,
+    ).toBe(200);
   });
 
-  it('E09 e E05: senha não alterada no Supabase e flag preservada', async () => {
+  it('E09 e E05: hash da senha, sessões e flag preservados', async () => {
     const target = scenario.users.as;
-    const password = fake.users.get(target.authUserId)?.password;
+    const hashOf = async () =>
+      (
+        await db.query<{ password_hash: string }>(
+          'SELECT password_hash FROM profiles WHERE id = ?',
+          [target.profileId],
+        )
+      ).rows[0]?.password_hash;
+    const hash = await hashOf();
 
     expect(
       (
@@ -277,9 +269,12 @@ describe('T17 — atomicidade: falha da auditoria impede a operação', () => {
       ).status,
     ).toBe(500);
 
-    expect(fake.users.get(target.authUserId)?.password).toBe(password);
+    expect(await hashOf()).toBe(hash);
+    expect(
+      (await request(app).get('/api/v1/me').set('Authorization', scenario.bearer('as'))).status,
+    ).toBe(200);
     const { rows } = await db.query<{ must_change_password: boolean }>(
-      'SELECT must_change_password FROM profiles WHERE id = $1',
+      'SELECT must_change_password FROM profiles WHERE id = ?',
       [target.profileId],
     );
     expect(rows[0]?.must_change_password).toBe(false);
@@ -287,28 +282,29 @@ describe('T17 — atomicidade: falha da auditoria impede a operação', () => {
 });
 
 describe('T17 — imutabilidade de audit_logs no próprio banco', () => {
-  it('UPDATE, DELETE e TRUNCATE são rejeitados pelo PostgreSQL', async () => {
+  it('UPDATE e DELETE são rejeitados pelos gatilhos do MySQL', async () => {
     const { rows } = await db.query<{ id: string }>(
-      'SELECT id::text FROM audit_logs WHERE actor_profile_id = $1 ORDER BY id LIMIT 1',
+      'SELECT CAST(id AS CHAR) AS id FROM audit_logs WHERE actor_profile_id = ? ORDER BY audit_logs.id LIMIT 1',
       [scenario.users.sa.profileId],
     );
     const id = rows[0]?.id;
     expect(id).toBeDefined();
-    await db.query('BEGIN');
+    // TRUNCATE não dispara gatilhos no MySQL: é bloqueado pela falta do privilégio DROP no
+    // usuário da aplicação (verificado em modelo-de-dados.test.ts e database/seguranca/).
+    await db.query('START TRANSACTION');
     try {
-      await expectDbError(db, "UPDATE audit_logs SET action = 'ALTERADO' WHERE id = $1", [id], {
-        code: '23000',
+      await expectDbError(db, "UPDATE audit_logs SET action = 'ALTERADO' WHERE id = ?", [id], {
+        code: 'ER_SIGNAL_EXCEPTION',
         constraint: 'audit_logs_insert_only',
       });
-      await expectDbError(db, 'DELETE FROM audit_logs WHERE id = $1', [id], {
-        code: '23000',
+      await expectDbError(db, 'DELETE FROM audit_logs WHERE id = ?', [id], {
+        code: 'ER_SIGNAL_EXCEPTION',
         constraint: 'audit_logs_insert_only',
       });
-      await expectDbError(db, 'TRUNCATE audit_logs', [], { code: '23000' });
     } finally {
       await db.query('ROLLBACK');
     }
-    const after = await db.query('SELECT action FROM audit_logs WHERE id = $1', [id]);
+    const after = await db.query('SELECT action FROM audit_logs WHERE id = ?', [id]);
     expect(after.rowCount).toBe(1);
   });
 });
@@ -320,14 +316,15 @@ describe('T17 — E41 GET /api/v1/admin/audit-logs (RF11)', () => {
   beforeAll(async () => {
     // 105 eventos recentes e 1 antigo (40 dias) para a mesma entidade fictícia.
     await db.query(
-      `INSERT INTO audit_logs (occurred_at, actor_profile_id, actor_role, action, entity_type, entity_id, details)
-       SELECT now() - make_interval(secs => g), $1, 'superadmin', 'USER_UPDATED', 'profile', $2, '{}'::jsonb
-       FROM generate_series(1, 105) AS g`,
+      `INSERT INTO audit_logs (occurred_at, actor_profile_id, actor_role, action, entity_type, entity_id)
+       WITH RECURSIVE g (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM g WHERE n < 105)
+       SELECT UTC_TIMESTAMP(3) - INTERVAL n SECOND, ?, 'superadmin', 'USER_UPDATED', 'profile', ?
+       FROM g`,
       [scenario.users.sa.profileId, entityId],
     );
     await db.query(
-      `INSERT INTO audit_logs (occurred_at, actor_profile_id, actor_role, action, entity_type, entity_id, details)
-       VALUES (now() - interval '40 days', $1, 'superadmin', 'USER_CREATED', 'profile', $2, '{}'::jsonb)`,
+      `INSERT INTO audit_logs (occurred_at, actor_profile_id, actor_role, action, entity_type, entity_id)
+       VALUES (UTC_TIMESTAMP(3) - INTERVAL 40 DAY, ?, 'superadmin', 'USER_CREATED', 'profile', ?)`,
       [scenario.users.sa.profileId, entityId],
     );
   });
@@ -399,9 +396,8 @@ describe('T17 — E41 GET /api/v1/admin/audit-logs (RF11)', () => {
   });
 
   it('SA de outro hospital não vê estes eventos', async () => {
-    const otherFake = new FakeSupabase();
-    const other = await createAuthScenario(db, otherFake);
-    const otherApp = buildAuthApp(prisma, otherFake);
+    const other = await createAuthScenario(db, database);
+    const otherApp = buildAuthApp(database);
     const response = await request(otherApp)
       .get(`/api/v1/admin/audit-logs?entityId=${entityId}`)
       .set('Authorization', other.bearer('sa'));

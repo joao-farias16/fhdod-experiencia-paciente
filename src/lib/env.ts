@@ -2,18 +2,32 @@ import { z } from 'zod';
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
-/** URL de conexão PostgreSQL (postgres:// ou postgresql://). */
-export const postgresUrl = z.url({
-  protocol: /^postgres(ql)?$/,
-  message: 'Informe uma URL postgresql:// válida.',
-});
+/** Variável vazia no .env equivale a ausente. */
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value === '' ? undefined : value));
+
+const booleanText = z
+  .enum(['true', 'false', ''])
+  .optional()
+  .transform((value) => value === 'true');
+
+/** Nome de banco MySQL: letras, números e _ (até 64 caracteres). */
+export const databaseName = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9_]{1,64}$/, 'Use somente letras, números e _ (até 64 caracteres).');
+
+/** Segredo de 32+ caracteres (HMAC e assinatura de tokens). */
+const secret = (message: string) => z.string().trim().min(32, message);
 
 /**
- * Variáveis de ambiente usadas pela API (Tabela 15 da especificação).
- * DATABASE_URL entrou na ET02; SUPABASE_URL, SUPABASE_SECRET_KEY e AUDIT_IP_SECRET, na ET03
- * (autenticação e auditoria); PUBLIC_APP_URL (links e QR Code, ET05) e MANIFESTATION_TOKEN_SECRET
- * (token devolvido por E02, ET06). DIRECT_URL é lida só pelo Prisma CLI (prisma.config.ts);
- * TEST_DATABASE_URL e SEED_* só pelos testes e pelo seed.
+ * Variáveis de ambiente usadas pela API (Tabela 15 da especificação, atualizada na Etapa 3).
+ * Banco MySQL: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_CONNECTION_LIMIT, DB_SSL e
+ * DB_SSL_CA. Autenticação própria: JWT_SECRET, JWT_ACCESS_TOKEN_TTL_SECONDS,
+ * REFRESH_TOKEN_TTL_DAYS e BCRYPT_ROUNDS. TEST_DB_* e SEED_* são lidas só pelos testes e scripts.
  */
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -26,16 +40,30 @@ export const envSchema = z.object({
     .pipe(z.array(z.url({ protocol: /^https?$/, message: 'Origem inválida.' })).min(1)),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
-  // Pooler do Supabase em modo transação (porta 6543) em produção; PostgreSQL local em desenvolvimento.
-  DATABASE_URL: postgresUrl,
-  // Supabase Auth (ET03): a chave secreta existe somente no backend (Seção 10).
-  SUPABASE_URL: z.url({ protocol: /^https?$/, message: 'Informe a URL http(s) do Supabase.' }),
-  SUPABASE_SECRET_KEY: z.string().trim().min(1, 'Informe a chave secreta do Supabase.'),
+
+  // --- MySQL (Etapa 3) ---
+  DB_HOST: z.string().trim().min(1, 'Informe o servidor MySQL.').default('localhost'),
+  DB_PORT: z.coerce.number().int().min(1).max(65_535).default(3306),
+  DB_USER: z.string().trim().min(1, 'Informe o usuário do MySQL.'),
+  // Pode ser vazia somente em instalação local sem senha (proibido em produção).
+  DB_PASSWORD: z.string().default(''),
+  DB_NAME: databaseName.default('fhdod'),
+  DB_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(100).default(10),
+  // TLS obrigatório na nuvem (true); localmente, normalmente false.
+  DB_SSL: booleanText,
+  // Caminho do certificado da autoridade (PEM) exigido por alguns provedores; opcional.
+  DB_SSL_CA: optionalText,
+
+  // --- Autenticação própria (Etapa 3, substitui o Supabase Auth) ---
+  // Assinatura HS256 dos tokens de acesso; somente no backend.
+  JWT_SECRET: secret('Use ao menos 32 caracteres.'),
+  JWT_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3600),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+  // Custo do bcrypt: 12 em produção; os testes usam 4 para rodar rápido.
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
+
   // HMAC do IP gravado em audit_logs.ip_hash (Seção 10); obrigatório em produção.
-  AUDIT_IP_SECRET: z
-    .string()
-    .trim()
-    .min(32, 'Use ao menos 32 caracteres.')
+  AUDIT_IP_SECRET: secret('Use ao menos 32 caracteres.')
     .optional()
     .or(z.literal('').transform(() => undefined)),
   // Endereço público do frontend: base das URLs de link e QR Code /p/<slug> (RF30, E27).
@@ -44,10 +72,7 @@ export const envSchema = z.object({
     .transform((value) => value.replace(/\/+$/, ''))
     .default('http://localhost:5173'),
   // HMAC do token de manifestação devolvido por E02 (Seção 4.3); obrigatório em produção.
-  MANIFESTATION_TOKEN_SECRET: z
-    .string()
-    .trim()
-    .min(32, 'Use ao menos 32 caracteres.')
+  MANIFESTATION_TOKEN_SECRET: secret('Use ao menos 32 caracteres.')
     .optional()
     .or(z.literal('').transform(() => undefined)),
 });
@@ -73,7 +98,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     );
   }
   const env = result.data;
-  // RNF09: em produção, as origens autorizadas devem usar HTTPS.
+  // RNF09 e Seção 10: exigências adicionais em produção.
   if (env.NODE_ENV === 'production') {
     const insecure = env.CORS_ORIGIN.filter((origin) => !origin.startsWith('https://'));
     if (insecure.length > 0) {
@@ -81,8 +106,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
         'CORS_ORIGIN: em produção, todas as origens devem usar https.',
       ]);
     }
-    if (!env.SUPABASE_URL.startsWith('https://')) {
-      throw new EnvValidationError(['SUPABASE_URL: em produção, use https.']);
+    if (env.DB_PASSWORD === '') {
+      throw new EnvValidationError(['DB_PASSWORD: obrigatória em produção.']);
     }
     if (env.AUDIT_IP_SECRET === undefined) {
       throw new EnvValidationError(['AUDIT_IP_SECRET: obrigatória em produção.']);
@@ -93,6 +118,33 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     if (!env.PUBLIC_APP_URL.startsWith('https://')) {
       throw new EnvValidationError(['PUBLIC_APP_URL: em produção, use https.']);
     }
+    if (env.BCRYPT_ROUNDS < 10) {
+      throw new EnvValidationError(['BCRYPT_ROUNDS: em produção, use ao menos 10.']);
+    }
   }
   return env;
+}
+
+/** Somente as variáveis de conexão (scripts de banco, sem exigir as demais). */
+export const databaseEnvSchema = envSchema.pick({
+  DB_HOST: true,
+  DB_PORT: true,
+  DB_USER: true,
+  DB_PASSWORD: true,
+  DB_NAME: true,
+  DB_CONNECTION_LIMIT: true,
+  DB_SSL: true,
+  DB_SSL_CA: true,
+});
+
+export type DatabaseConnectionEnv = z.infer<typeof databaseEnvSchema>;
+
+export function loadDatabaseEnv(source: NodeJS.ProcessEnv = process.env): DatabaseConnectionEnv {
+  const result = databaseEnvSchema.safeParse(source);
+  if (!result.success) {
+    throw new EnvValidationError(
+      result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+    );
+  }
+  return result.data;
 }

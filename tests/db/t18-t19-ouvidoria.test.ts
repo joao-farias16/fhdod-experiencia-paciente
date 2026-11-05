@@ -1,16 +1,18 @@
 /**
- * Ouvidoria — E35–E40 com PostgreSQL real (ET07):
+ * Ouvidoria — E35–E40 com MySQL real (ET07):
  * T18: filtros, detalhe, transições válidas e inválidas, conclusão, updatedAt antigo e nota →
  * RN23; 422 e 409 nos inválidos. Lista e detalhe somente para OU e no escopo (RF44, RF45).
  * T19: E39 como OU e como GE; E40; E39 de novo → 200 no-store com auditoria; 403; 404 e evento
  * na linha do tempo.
  */
+import { randomUUID } from 'node:crypto';
+
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
-import { errorOf } from '../support/app.js';
+import type { Database } from '../../src/lib/database.js';
+import { createSession } from '../../src/modules/auth/auth.service.js';
+import { errorOf, TEST_AUTH_CONFIG } from '../support/app.js';
 import {
   auditRowsFor,
   type AuthScenario,
@@ -19,11 +21,10 @@ import {
   openConnections,
 } from '../support/auth-scenario.js';
 import { type App, call, dataOf, submitResponse } from '../support/api.js';
-import type { Db } from '../support/db.js';
+import { type Db, PASSWORD_HASH } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 /** Ouvidoria restrita ao setor B (criada neste teste). */
@@ -59,35 +60,34 @@ interface ListItem {
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  const { rows } = await db.query<{ id: string; auth_user_id: string }>(
-    `INSERT INTO profiles (hospital_id, auth_user_id, full_name, email, role, all_sectors, must_change_password, created_by)
-     VALUES ($1, gen_random_uuid(), 'Ouvidoria Fictícia B', $2, 'ombudsman', false, false, $3)
-     RETURNING id, auth_user_id`,
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  const row = { id: randomUUID() };
+  await db.query(
+    `INSERT INTO profiles (id, hospital_id, full_name, email, password_hash, role, all_sectors, must_change_password, created_by)
+     VALUES (?, ?, 'Ouvidoria Fictícia B', ?, ?, 'ombudsman', false, false, ?)`,
     [
+      row.id,
       scenario.fx.hospitalId,
       `oub.${Math.random().toString(36).slice(2, 8)}@example.com`,
+      PASSWORD_HASH,
       scenario.fx.adminId,
     ],
   );
-  const row = rows[0];
-  if (row === undefined) throw new Error('Perfil OU B não criado.');
-  await db.query('INSERT INTO profile_sectors (profile_id, sector_id) VALUES ($1, $2)', [
+  await db.query('INSERT INTO profile_sectors (profile_id, sector_id) VALUES (?, ?)', [
     row.id,
     scenario.fx.sectorB,
   ]);
-  fake.register(row.auth_user_id, 'oub@example.com');
-  ouB = { profileId: row.id, bearer: `Bearer ${fake.token(row.auth_user_id)}` };
+  const session = await createSession(database, TEST_AUTH_CONFIG, row.id, new Date());
+  ouB = { profileId: row.id, bearer: `Bearer ${session.tokens.accessToken}` };
 });
 
 beforeEach(() => {
-  app = buildAuthApp(prisma, fake);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -123,7 +123,7 @@ async function createManifestation(
   expect(created.status).toBe(201);
   const { protocol } = dataOf<{ protocol: string }>(created);
   const { rows } = await db.query<{ id: string }>(
-    'SELECT id FROM manifestations WHERE protocol = $1',
+    'SELECT id FROM manifestations WHERE protocol = ?',
     [protocol],
   );
   return { id: rows[0]?.id ?? '', protocol };
@@ -131,7 +131,7 @@ async function createManifestation(
 
 async function specificOfB(): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
-    "SELECT id FROM questions WHERE survey_config_id = $1 AND type = 'scale_1_5'",
+    "SELECT id FROM questions WHERE survey_config_id = ? AND type = 'scale_1_5'",
     [scenario.fx.surveyB],
   );
   return rows[0]?.id ?? '';
@@ -156,7 +156,7 @@ describe('T18 — lista e filtros (E35)', () => {
   let sectorB: { id: string; protocol: string };
 
   beforeAll(async () => {
-    app = buildAuthApp(prisma, fake);
+    app = buildAuthApp(database);
     withContact = await createManifestation({
       description: `Texto longo ${'x'.repeat(200)}`,
       contact: { fullName: 'Contato Fictício 950', email: 'c950@example.com', consent: true },
@@ -467,7 +467,7 @@ describe('T19 — consulta e eliminação de contato (E39, E40)', () => {
       toValue: 'holder_request',
     });
     const { rows } = await db.query(
-      'SELECT 1 FROM manifestation_contacts WHERE manifestation_id = $1',
+      'SELECT 1 FROM manifestation_contacts WHERE manifestation_id = ?',
       [id],
     );
     expect(rows).toHaveLength(0);

@@ -1,11 +1,17 @@
 import type ExcelJS from 'exceljs';
 
-import { Prisma, type PrismaClient, type UserRole } from '../../lib/prisma.js';
+import type { Queryable } from '../../lib/database.js';
+import type { UserRole } from '../../lib/domain-types.js';
+import { sql } from '../../lib/sql.js';
 import { addDays, localDateOf, localTimeOf, startOfLocalDay } from '../../utils/dates.js';
 import { HttpError } from '../../utils/errors.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { sectorWhere } from '../auth/scope.js';
+import { resolveSectorFilter } from '../auth/scope.js';
+import { listManifestationRows } from '../manifestations/manifestations.repository.js';
+import { findSectorsByIds } from '../sectors/sectors.repository.js';
+import { findSurveyScope } from '../surveys/surveys.repository.js';
+import { findTeamsByIds } from '../teams/teams.repository.js';
 import {
   type ResolvedFilters,
   resolveFilters,
@@ -97,7 +103,7 @@ const brDate = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}/${dat
 
 /** Aba Filtros (RF62: filtros e totais iguais aos da tela). */
 async function filterRows(
-  prisma: Pick<PrismaClient, 'sector' | 'surveyConfig' | 'team'>,
+  db: Queryable,
   filters: ResolvedFilters,
   query: ExportQuery,
   role: UserRole,
@@ -107,24 +113,9 @@ async function filterRows(
   const [sectors, survey, teams] = await Promise.all([
     filters.sectorIds === undefined
       ? Promise.resolve(null)
-      : prisma.sector.findMany({
-          where: { id: { in: [...filters.sectorIds] } },
-          select: { name: true },
-          orderBy: { name: 'asc' },
-        }),
-    filters.surveyId === undefined
-      ? Promise.resolve(null)
-      : prisma.surveyConfig.findUnique({
-          where: { id: filters.surveyId },
-          select: { title: true },
-        }),
-    filters.teamIds === undefined
-      ? Promise.resolve(null)
-      : prisma.team.findMany({
-          where: { id: { in: [...filters.teamIds] } },
-          select: { name: true },
-          orderBy: { name: 'asc' },
-        }),
+      : findSectorsByIds(db, filters.sectorIds),
+    filters.surveyId === undefined ? Promise.resolve(null) : findSurveyScope(db, filters.surveyId),
+    filters.teamIds === undefined ? Promise.resolve(null) : findTeamsByIds(db, filters.teamIds),
   ]);
   const rows: [string, CellValue | boolean][] = [
     ['Relatório', REPORT_LABELS[query.type]],
@@ -180,10 +171,10 @@ function indicatorRows(prefix: string, indicators: NpsIndicator): [string, CellV
 }
 
 async function summaryRows(
-  prisma: PrismaClient,
+  db: Queryable,
   filters: ResolvedFilters,
 ): Promise<[string, CellValue][]> {
-  const summary = await getSummary(prisma, filters, false);
+  const summary = await getSummary(db, filters, false);
   return [
     ...indicatorRows('', summary.indicators),
     ['Respostas atribuídas a turno e equipe', summary.coverage.attributed],
@@ -222,33 +213,32 @@ interface AnswerRow {
 
 /** RF63 — abas Filtros, Indicadores, Respostas e Respostas por pergunta, sem dados pessoais. */
 async function responsesWorkbook(
-  prisma: PrismaClient,
+  db: Queryable,
   workbook: ExcelJS.Workbook,
   filters: ResolvedFilters,
   addFilters: (total: number) => Promise<void>,
 ): Promise<number> {
-  const where = Prisma.sql`s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}`;
+  const where = sql`s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}`;
   const [responses, answers, indicators] = await Promise.all([
-    prisma.$queryRaw<ResponseRow[]>`
-      SELECT r.id::text AS id, r.submitted_at, s.name AS sector, sv.title AS survey,
-             sv.version_number::int AS version, r.origin::text AS origin,
-             r.shift_period::text AS shift_period, t.name AS team,
-             r.attribution_status::text AS attribution, r.nps_score::int AS nps_score, r.low_score
+    db.query<ResponseRow>(sql`
+      SELECT r.id, r.submitted_at, s.name AS sector, sv.title AS survey,
+             sv.version_number AS version, r.origin, r.shift_period, t.name AS team,
+             r.attribution_status AS attribution, r.nps_score, r.low_score
       FROM ${RESPONSES_FROM} LEFT JOIN teams t ON t.id = r.team_id
       WHERE ${where}
       ORDER BY r.submitted_at, r.id
-      LIMIT ${MAX_ROWS_PER_SHEET + 1}`,
-    prisma.$queryRaw<AnswerRow[]>`
-      SELECT r.id::text AS id, r.submitted_at, s.name AS sector, sv.title AS survey,
-             sv.version_number::int AS version, svq.journey_stage_name AS stage,
-             svq.text AS question, a.score::int AS score
+      LIMIT ${MAX_ROWS_PER_SHEET + 1}`),
+    db.query<AnswerRow>(sql`
+      SELECT r.id, r.submitted_at, s.name AS sector, sv.title AS survey,
+             sv.version_number AS version, svq.journey_stage_name AS stage,
+             svq.text AS question, a.score
       FROM response_answers a
       JOIN ${RESPONSES_FROM} ON r.id = a.response_id
       JOIN survey_version_questions svq ON svq.id = a.survey_version_question_id
       WHERE ${where}
       ORDER BY r.submitted_at, r.id, svq.position
-      LIMIT ${MAX_ROWS_PER_SHEET + 1}`,
-    summaryRows(prisma, filters),
+      LIMIT ${MAX_ROWS_PER_SHEET + 1}`),
+    summaryRows(db, filters),
   ]);
   assertWithinLimit(responses);
   assertWithinLimit(answers);
@@ -316,16 +306,16 @@ async function responsesWorkbook(
 
 /** RF64 — abas Filtros, Resumo, Por setor, Por pergunta e Tendência, iguais a E28, E29, E33 e E32. */
 async function indicatorsWorkbook(
-  prisma: PrismaClient,
+  db: Queryable,
   workbook: ExcelJS.Workbook,
   filters: ResolvedFilters,
   addFilters: (total: number) => Promise<void>,
 ): Promise<number> {
   const [summary, sectors, questions, trends] = await Promise.all([
-    summaryRows(prisma, filters),
-    getSectors(prisma, filters),
-    getQuestions(prisma, filters),
-    getTrends(prisma, filters),
+    summaryRows(db, filters),
+    getSectors(db, filters),
+    getQuestions(db, filters),
+    getTrends(db, filters),
   ]);
   const total = Number(summary[0]?.[1] ?? 0);
   await addFilters(total);
@@ -396,7 +386,7 @@ async function indicatorsWorkbook(
 
 /** RF65 — relatório da Ouvidoria: descrição e providências só com includeText; nunca contato. */
 async function manifestationsWorkbook(
-  prisma: PrismaClient,
+  db: Queryable,
   workbook: ExcelJS.Workbook,
   auth: AuthContext,
   filters: ResolvedFilters,
@@ -404,40 +394,23 @@ async function manifestationsWorkbook(
   addFilters: (total: number) => Promise<void>,
 ): Promise<number> {
   const includeText = query.includeText === true;
-  const where: Prisma.ManifestationWhereInput = {
-    ...sectorWhere(auth.scope, filters.sectorIds),
-    sector: { hospitalId: auth.hospitalId },
-    receivedAt: { gte: startOfLocalDay(filters.from), lt: startOfLocalDay(addDays(filters.to, 1)) },
-    ...(query.status === undefined ? {} : { status: { in: query.status } }),
-    ...(query.manifestationType === undefined ? {} : { type: { in: query.manifestationType } }),
-    response: {
-      ...(filters.origin === undefined ? {} : { origin: filters.origin }),
-      ...(filters.period === undefined ? {} : { shiftPeriod: filters.period }),
-      ...(filters.teamIds === undefined ? {} : { teamId: { in: [...filters.teamIds] } }),
-      ...(filters.surveyId === undefined
-        ? {}
-        : { surveyVersion: { surveyConfigId: filters.surveyId } }),
+  // Somente a existência do contato; nome, telefone e e-mail nunca são lidos (RN29).
+  const rows = await listManifestationRows(
+    db,
+    {
+      hospitalId: auth.hospitalId,
+      sectorIds: resolveSectorFilter(auth.scope, filters.sectorIds),
+      from: startOfLocalDay(filters.from),
+      toExclusive: startOfLocalDay(addDays(filters.to, 1)),
+      status: query.status,
+      type: query.manifestationType,
+      origin: filters.origin,
+      shiftPeriod: filters.period,
+      teamIds: filters.teamIds,
+      surveyId: filters.surveyId,
     },
-  };
-  const rows = await prisma.manifestation.findMany({
-    where,
-    orderBy: [{ receivedAt: 'asc' }, { id: 'asc' }],
-    take: MAX_ROWS_PER_SHEET + 1,
-    select: {
-      protocol: true,
-      receivedAt: true,
-      resolvedAt: true,
-      type: true,
-      status: true,
-      priority: true,
-      isAnonymous: true,
-      description: includeText,
-      actionsTaken: includeText,
-      sector: { select: { name: true } },
-      // Somente a existência do contato; nome, telefone e e-mail nunca são lidos (RN29).
-      contact: { select: { manifestationId: true } },
-    },
-  });
+    { sort: 'received_asc', offset: 0, limit: MAX_ROWS_PER_SHEET + 1 },
+  );
   assertWithinLimit(rows);
   await addFilters(rows.length);
   addTableSheet(
@@ -469,7 +442,7 @@ async function manifestationsWorkbook(
       STATUS_LABELS[row.status],
       PRIORITY_LABELS[row.priority],
       row.isAnonymous,
-      row.contact !== null,
+      row.hasContact,
       ...(includeText ? [row.description, row.actionsTaken] : []),
     ]),
   );
@@ -488,28 +461,28 @@ export interface ExportResult {
  * (REPORT_EXPORTED) antes de o arquivo ser entregue: sem auditoria, sem arquivo.
  */
 export async function exportReport(
-  prisma: PrismaClient,
+  db: Queryable,
   auth: AuthContext,
   audit: AuditContext,
   query: ExportQuery,
   now: Date,
 ): Promise<ExportResult> {
-  const filters = await resolveFilters(prisma, auth, query, now);
+  const filters = await resolveFilters(db, auth, query, now);
   const workbook = newWorkbook(now);
   const addFilters = async (total: number) => {
-    const rows = await filterRows(prisma, filters, query, auth.role, now, total);
+    const rows = await filterRows(db, filters, query, auth.role, now, total);
     styleDateCells(addKeyValueSheet(workbook, 'Filtros', rows, ['Filtro', 'Valor']), 'Gerado em');
   };
   let rows: number;
   if (query.type === 'responses') {
-    rows = await responsesWorkbook(prisma, workbook, filters, addFilters);
+    rows = await responsesWorkbook(db, workbook, filters, addFilters);
   } else if (query.type === 'indicators') {
-    rows = await indicatorsWorkbook(prisma, workbook, filters, addFilters);
+    rows = await indicatorsWorkbook(db, workbook, filters, addFilters);
   } else {
-    rows = await manifestationsWorkbook(prisma, workbook, auth, filters, query, addFilters);
+    rows = await manifestationsWorkbook(db, workbook, auth, filters, query, addFilters);
   }
   const buffer = await toBuffer(workbook);
-  await recordAudit(prisma, audit, {
+  await recordAudit(db, audit, {
     action: 'REPORT_EXPORTED',
     entityType: 'report',
     entityId: query.type,

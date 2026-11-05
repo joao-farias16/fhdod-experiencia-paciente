@@ -1,11 +1,20 @@
-import type { Prisma, PrismaClient, TransactionClient } from '../../lib/prisma.js';
+import { randomUUID } from 'node:crypto';
+
+import type { Database, Queryable } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import { invalidField } from '../../utils/validation.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { isSectorInScope, resourceNotFound, sectorOutOfScope, sectorWhere } from '../auth/scope.js';
+import {
+  isSectorInScope,
+  resolveSectorFilter,
+  resourceNotFound,
+  sectorOutOfScope,
+} from '../auth/scope.js';
+import { findSectorState } from '../sectors/sectors.repository.js';
 import { sectorInactive } from '../sectors/sectors.service.js';
+import { findActiveStageIds } from '../teams/teams.repository.js';
 import {
   type CreateSurveyInput,
   DEFAULT_NPS_TEXT,
@@ -14,9 +23,28 @@ import {
   MAX_ACTIVE_SPECIFIC_QUESTIONS,
   type UpdateSurveyInput,
 } from './surveys.schemas.js';
+import {
+  findSurveyDetail,
+  findSurveyIdBySlug,
+  insertQuestions,
+  insertSurvey,
+  insertSurveyVersion,
+  insertVersionQuestions,
+  listSurveySummaries,
+  lockSurvey,
+  markQuestionsPublished,
+  type QuestionChanges,
+  type QuestionInsert,
+  type SurveyChanges,
+  type SurveyDetailRecord,
+  type SurveySummaryRecord,
+  supersedeVersion,
+  updateQuestion,
+  updateSurveyRow,
+} from './surveys.repository.js';
 
 export interface SurveysDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   /** Base pública das URLs /p/<slug> (PUBLIC_APP_URL). */
   publicAppUrl: string;
@@ -87,66 +115,8 @@ export interface SurveyDetailDto extends SurveySummaryDto {
   links: SurveyLinks | null;
 }
 
-const summarySelect = {
-  id: true,
-  sectorId: true,
-  title: true,
-  slug: true,
-  isActive: true,
-  hasUnpublishedChanges: true,
-  updatedAt: true,
-  sector: { select: { code: true, name: true, isActive: true, hospitalId: true } },
-  currentVersion: { select: { id: true, versionNumber: true, publishedAt: true } },
-  _count: { select: { questions: { where: { isActive: true, type: 'scale_1_5' } } } },
-} as const satisfies Prisma.SurveyConfigSelect;
-
-const detailSelect = {
-  ...summarySelect,
-  introText: true,
-  thankYouMessage: true,
-  deactivatedAt: true,
-  createdAt: true,
-  questions: {
-    orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-    select: {
-      id: true,
-      type: true,
-      text: true,
-      position: true,
-      isRequired: true,
-      isActive: true,
-      firstPublishedAt: true,
-      journeyStage: { select: { id: true, code: true, name: true, position: true } },
-    },
-  },
-  versions: {
-    orderBy: { versionNumber: 'desc' },
-    select: {
-      id: true,
-      versionNumber: true,
-      title: true,
-      introText: true,
-      thankYouMessage: true,
-      publishedAt: true,
-      supersededAt: true,
-      publishedBy: { select: { id: true, fullName: true } },
-      questions: {
-        orderBy: { position: 'asc' },
-        select: {
-          id: true,
-          questionId: true,
-          type: true,
-          text: true,
-          journeyStageName: true,
-          position: true,
-        },
-      },
-    },
-  },
-} as const satisfies Prisma.SurveyConfigSelect;
-
-type SummaryRecord = Prisma.SurveyConfigGetPayload<{ select: typeof summarySelect }>;
-type DetailRecord = Prisma.SurveyConfigGetPayload<{ select: typeof detailSelect }>;
+type SummaryRecord = SurveySummaryRecord;
+type DetailRecord = SurveyDetailRecord;
 
 function statusOf(survey: { isActive: boolean; currentVersion: unknown }): SurveyStatus {
   if (!survey.isActive) return 'inactive';
@@ -171,7 +141,7 @@ function toSummaryDto(survey: SummaryRecord): SurveySummaryDto {
     status: statusOf(survey),
     isActive: survey.isActive,
     hasUnpublishedChanges: survey.hasUnpublishedChanges,
-    activeSpecificQuestions: survey._count.questions,
+    activeSpecificQuestions: survey.activeSpecificQuestions,
     currentVersion:
       survey.currentVersion === null
         ? null
@@ -242,83 +212,52 @@ function questionLocked(field: string): HttpError {
 }
 
 /** Pesquisa do hospital e do escopo; fora do escopo ou inexistente → 404 (RN10). */
-async function findInScope(
-  tx: Pick<TransactionClient, 'surveyConfig'>,
-  auth: AuthContext,
-  id: string,
-): Promise<DetailRecord> {
-  const survey = await tx.surveyConfig.findUnique({ where: { id }, select: detailSelect });
+async function findInScope(tx: Queryable, auth: AuthContext, id: string): Promise<DetailRecord> {
+  const survey = await findSurveyDetail(tx, id);
   if (survey?.sector.hospitalId !== auth.hospitalId) throw resourceNotFound();
   if (!isSectorInScope(auth.scope, survey.sectorId)) throw resourceNotFound();
   return survey;
 }
 
-async function lockSurvey(tx: TransactionClient, id: string): Promise<void> {
-  await tx.$queryRaw`SELECT id FROM survey_configs WHERE id = ${id}::uuid FOR UPDATE`;
-}
-
 /** Setor de destino: do escopo (403), do hospital (404) e ativo (422). */
 async function assertTargetSector(
-  tx: Pick<TransactionClient, 'sector'>,
+  tx: Queryable,
   auth: AuthContext,
   sectorId: string,
 ): Promise<void> {
   if (!isSectorInScope(auth.scope, sectorId)) throw sectorOutOfScope();
-  const sector = await tx.sector.findFirst({
-    where: { id: sectorId, hospitalId: auth.hospitalId },
-    select: { isActive: true },
-  });
+  const sector = await findSectorState(tx, auth.hospitalId, sectorId);
   if (sector === null) throw resourceNotFound();
   if (!sector.isActive) throw sectorInactive();
 }
 
 /** E22 — pesquisas do escopo com situação (rascunho, ativa, inativa), paginadas (RF32). */
 export async function listSurveys(
-  prisma: Pick<PrismaClient, 'surveyConfig'>,
+  db: Queryable,
   auth: AuthContext,
   query: ListSurveysQuery,
 ): Promise<{ items: SurveySummaryDto[]; total: number }> {
-  const statusWhere: Prisma.SurveyConfigWhereInput =
-    query.status === 'inactive'
-      ? { isActive: false }
-      : query.status === 'draft'
-        ? { isActive: true, currentVersionId: null }
-        : query.status === 'active'
-          ? { isActive: true, currentVersionId: { not: null } }
-          : {};
-  const where: Prisma.SurveyConfigWhereInput = {
-    ...sectorWhere(auth.scope, query.sectorId === undefined ? undefined : [query.sectorId]),
-    sector: { hospitalId: auth.hospitalId },
-    ...statusWhere,
-    ...(query.search === undefined
-      ? {}
-      : {
-          OR: [
-            { title: { contains: query.search, mode: 'insensitive' } },
-            { slug: { contains: query.search, mode: 'insensitive' } },
-          ],
-        }),
-  };
-  const [items, total] = await Promise.all([
-    prisma.surveyConfig.findMany({
-      where,
-      orderBy: [{ sector: { name: 'asc' } }, { title: 'asc' }, { id: 'asc' }],
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-      select: summarySelect,
-    }),
-    prisma.surveyConfig.count({ where }),
-  ]);
+  const { items, total } = await listSurveySummaries(db, {
+    hospitalId: auth.hospitalId,
+    sectorIds: resolveSectorFilter(
+      auth.scope,
+      query.sectorId === undefined ? undefined : [query.sectorId],
+    ),
+    status: query.status,
+    search: query.search,
+    offset: (query.page - 1) * query.pageSize,
+    limit: query.pageSize,
+  });
   return { items: items.map(toSummaryDto), total };
 }
 
 /** E23 — configuração, perguntas e histórico de versões com os textos publicados (RF32). */
 export async function getSurvey(
-  { prisma, publicAppUrl }: SurveysDeps,
+  { db, publicAppUrl }: SurveysDeps,
   auth: AuthContext,
   id: string,
 ): Promise<SurveyDetailDto> {
-  return toDetailDto(await findInScope(prisma, auth, id), publicAppUrl);
+  return toDetailDto(await findInScope(db, auth, id), publicAppUrl);
 }
 
 /**
@@ -326,34 +265,38 @@ export async function getSurvey(
  * → 409; setor fora do escopo → 403; setor inativo → 422. O link de rascunho responde 404.
  */
 export async function createSurvey(
-  { prisma, publicAppUrl }: SurveysDeps,
+  { db, publicAppUrl }: SurveysDeps,
   auth: AuthContext,
   audit: AuditContext,
   input: CreateSurveyInput,
 ): Promise<SurveyDetailDto> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       await assertTargetSector(tx, auth, input.sectorId);
-      const existing = await tx.surveyConfig.findUnique({
-        where: { slug: input.slug },
-        select: { id: true },
-      });
-      if (existing !== null) throw slugConflict();
+      if ((await findSurveyIdBySlug(tx, input.slug)) !== null) throw slugConflict();
 
-      const created = await tx.surveyConfig.create({
-        data: {
-          sectorId: input.sectorId,
-          title: input.title,
-          slug: input.slug,
-          introText: input.introText ?? null,
-          thankYouMessage: input.thankYouMessage ?? DEFAULT_THANK_YOU_MESSAGE,
-          createdById: auth.profileId,
-          questions: {
-            create: { type: 'nps', text: DEFAULT_NPS_TEXT, isRequired: true, position: 1 },
-          },
-        },
-        select: { id: true },
+      const created = { id: randomUUID() };
+      await insertSurvey(tx, {
+        id: created.id,
+        sectorId: input.sectorId,
+        title: input.title,
+        slug: input.slug,
+        introText: input.introText ?? null,
+        thankYouMessage: input.thankYouMessage ?? DEFAULT_THANK_YOU_MESSAGE,
+        createdById: auth.profileId,
       });
+      await insertQuestions(tx, [
+        {
+          id: randomUUID(),
+          surveyConfigId: created.id,
+          type: 'nps',
+          text: DEFAULT_NPS_TEXT,
+          journeyStageId: null,
+          isRequired: true,
+          position: 1,
+          isActive: true,
+        },
+      ]);
       await recordAudit(tx, audit, {
         action: 'SURVEY_CREATED',
         entityType: 'survey_config',
@@ -383,19 +326,19 @@ interface QuestionState {
  * Desativar e reativar a pesquisa não apaga respostas nem versões (RN11).
  */
 export async function updateSurvey(
-  { prisma, clock, publicAppUrl }: SurveysDeps,
+  { db, clock, publicAppUrl }: SurveysDeps,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
   patch: UpdateSurveyInput,
 ): Promise<SurveyDetailDto> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       await lockSurvey(tx, id);
       const survey = await findInScope(tx, auth, id);
       const published = survey.versions.length > 0;
       const changed: string[] = [];
-      const data: Prisma.SurveyConfigUncheckedUpdateInput = {};
+      const data: Omit<SurveyChanges, 'updatedById'> = {};
 
       if (patch.title !== undefined && patch.title !== survey.title) {
         data.title = patch.title;
@@ -411,11 +354,7 @@ export async function updateSurvey(
       }
       if (patch.slug !== undefined && patch.slug !== survey.slug) {
         if (published) throw fieldLocked('slug');
-        const taken = await tx.surveyConfig.findUnique({
-          where: { slug: patch.slug },
-          select: { id: true },
-        });
-        if (taken !== null) throw slugConflict();
+        if ((await findSurveyIdBySlug(tx, patch.slug)) !== null) throw slugConflict();
         data.slug = patch.slug;
         changed.push('slug');
       }
@@ -427,7 +366,7 @@ export async function updateSurvey(
       }
 
       const nps = survey.questions.find((question) => question.type === 'nps');
-      const questionUpdates: { id: string; data: Prisma.QuestionUncheckedUpdateInput }[] = [];
+      const questionUpdates: { id: string; data: QuestionChanges }[] = [];
       if (
         patch.npsQuestionText !== undefined &&
         nps !== undefined &&
@@ -445,17 +384,10 @@ export async function updateSurvey(
           { id: question.id, type: question.type, isActive: question.isActive },
         ]),
       );
-      const creations: Prisma.QuestionUncheckedCreateInput[] = [];
+      const creations: QuestionInsert[] = [];
       const changes = patch.questions ?? [];
       const stageIds = [...new Set(changes.flatMap((change) => change.journeyStageId ?? []))];
-      const stages = new Set(
-        (
-          await tx.journeyStage.findMany({
-            where: { id: { in: stageIds }, hospitalId: auth.hospitalId, isActive: true },
-            select: { id: true },
-          })
-        ).map((stage) => stage.id),
-      );
+      const stages = await findActiveStageIds(tx, auth.hospitalId, stageIds);
       let nextPosition = Math.max(0, ...survey.questions.map((question) => question.position)) + 1;
       let questionsChanged = false;
 
@@ -466,6 +398,7 @@ export async function updateSurvey(
         }
         if (change.id === undefined) {
           creations.push({
+            id: randomUUID(),
             surveyConfigId: id,
             type: 'scale_1_5',
             isRequired: false,
@@ -487,7 +420,7 @@ export async function updateSurvey(
         if (current === undefined) {
           throw invalidField(`${field}.id`, 'A pergunta não pertence a esta pesquisa.');
         }
-        const update: Prisma.QuestionUncheckedUpdateInput = {};
+        const update: QuestionChanges = {};
         const newText =
           change.text !== undefined && change.text !== current.text ? change.text : undefined;
         const newStageId =
@@ -552,16 +485,13 @@ export async function updateSurvey(
       if (!contentChanged && !activeChanged) return toDetailDto(survey, publicAppUrl);
 
       for (const update of questionUpdates) {
-        await tx.question.update({ where: { id: update.id }, data: update.data });
+        await updateQuestion(tx, update.id, update.data);
       }
-      if (creations.length > 0) await tx.question.createMany({ data: creations });
-      await tx.surveyConfig.update({
-        where: { id },
-        data: {
-          ...data,
-          ...(contentChanged ? { hasUnpublishedChanges: true } : {}),
-          updatedById: auth.profileId,
-        },
+      await insertQuestions(tx, creations);
+      await updateSurveyRow(tx, id, {
+        ...data,
+        ...(contentChanged ? { hasUnpublishedChanges: true } : {}),
+        updatedById: auth.profileId,
       });
       await recordAudit(tx, audit, {
         action: activeChanged
@@ -588,12 +518,12 @@ export async function updateSurvey(
  * por 24 horas (RN26). Sem alterações → 409 NO_CHANGES_TO_PUBLISH; inativos → 422.
  */
 export async function publishSurvey(
-  { prisma, clock }: SurveysDeps,
+  { db, clock }: SurveysDeps,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
 ): Promise<SurveyVersionDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     await lockSurvey(tx, id);
     const survey = await findInScope(tx, auth, id);
     if (!survey.isActive) {
@@ -623,21 +553,22 @@ export async function publishSurvey(
     const now = clock.now();
     const versionNumber = (survey.versions[0]?.versionNumber ?? 0) + 1;
 
-    const version = await tx.surveyVersion.create({
-      data: {
-        surveyConfigId: id,
-        sectorId: survey.sectorId,
-        versionNumber,
-        title: survey.title,
-        introText: survey.introText,
-        thankYouMessage: survey.thankYouMessage,
-        publishedAt: now,
-        publishedById: auth.profileId,
-      },
-      select: { id: true },
+    const version = { id: randomUUID() };
+    await insertSurveyVersion(tx, {
+      id: version.id,
+      surveyConfigId: id,
+      sectorId: survey.sectorId,
+      versionNumber,
+      title: survey.title,
+      introText: survey.introText,
+      thankYouMessage: survey.thankYouMessage,
+      publishedAt: now,
+      publishedById: auth.profileId,
     });
-    await tx.surveyVersionQuestion.createMany({
-      data: [nps, ...specifics].map((question, index) => ({
+    await insertVersionQuestions(
+      tx,
+      [nps, ...specifics].map((question, index) => ({
+        id: randomUUID(),
         surveyVersionId: version.id,
         questionId: question.id,
         type: question.type,
@@ -648,24 +579,19 @@ export async function publishSurvey(
         position: index + 1,
         isRequired: question.type === 'nps',
       })),
-    });
-    await tx.question.updateMany({
-      where: { id: { in: active.map((question) => question.id) }, firstPublishedAt: null },
-      data: { firstPublishedAt: now },
-    });
+    );
+    await markQuestionsPublished(
+      tx,
+      active.map((question) => question.id),
+      now,
+    );
     if (survey.currentVersion !== null) {
-      await tx.surveyVersion.update({
-        where: { id: survey.currentVersion.id },
-        data: { supersededAt: now },
-      });
+      await supersedeVersion(tx, survey.currentVersion.id, now);
     }
-    await tx.surveyConfig.update({
-      where: { id },
-      data: {
-        currentVersionId: version.id,
-        hasUnpublishedChanges: false,
-        updatedById: auth.profileId,
-      },
+    await updateSurveyRow(tx, id, {
+      currentVersionId: version.id,
+      hasUnpublishedChanges: false,
+      updatedById: auth.profileId,
     });
     await recordAudit(tx, audit, {
       action: 'SURVEY_PUBLISHED',
@@ -683,11 +609,11 @@ export async function publishSurvey(
 
 /** E27 — link e QR Code da versão vigente (RF30); pesquisa sem versão → 409. */
 export async function getSurveyLinks(
-  { prisma, publicAppUrl }: SurveysDeps,
+  { db, publicAppUrl }: SurveysDeps,
   auth: AuthContext,
   id: string,
 ): Promise<SurveyLinks & { slug: string; title: string; sectorName: string }> {
-  const survey = await findInScope(prisma, auth, id);
+  const survey = await findInScope(db, auth, id);
   if (survey.currentVersion === null) {
     throw new HttpError(
       409,

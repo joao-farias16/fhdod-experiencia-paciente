@@ -1,4 +1,6 @@
-import type { PrismaClient } from '../../lib/prisma.js';
+import { randomUUID } from 'node:crypto';
+
+import type { Database, Queryable } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import {
@@ -9,6 +11,14 @@ import {
 import { invalidField } from '../../utils/validation.js';
 import { isLowScore } from '../dashboard/nps.js';
 import { attributeResponse } from './attribution.js';
+import {
+  findPublicSurvey,
+  findResponseByIdempotencyKey,
+  findVersionForSubmission,
+  insertResponse,
+  insertResponseAnswers,
+  type StoredResponse,
+} from './public-survey.repository.js';
 import type { SubmitResponseInput } from './public-survey.schemas.js';
 
 /** RN26: versão substituída aceita respostas por 24 horas. */
@@ -58,40 +68,11 @@ export function surveyUnavailable(): HttpError {
  * setor inativo → 410. Somente os textos públicos da versão: nada de identificadores internos de
  * setor, equipe, turno ou usuários.
  */
-export async function getPublicSurvey(
-  prisma: Pick<PrismaClient, 'surveyConfig'>,
-  slug: string,
-): Promise<PublicSurveyDto> {
-  const survey = await prisma.surveyConfig.findUnique({
-    where: { slug },
-    select: {
-      slug: true,
-      isActive: true,
-      sector: { select: { name: true, isActive: true } },
-      currentVersion: {
-        select: {
-          id: true,
-          versionNumber: true,
-          title: true,
-          introText: true,
-          thankYouMessage: true,
-          questions: {
-            orderBy: { position: 'asc' },
-            select: {
-              questionId: true,
-              type: true,
-              text: true,
-              journeyStageName: true,
-              journeyStagePosition: true,
-            },
-          },
-        },
-      },
-    },
-  });
-  const version = survey?.currentVersion;
+export async function getPublicSurvey(db: Queryable, slug: string): Promise<PublicSurveyDto> {
+  const survey = await findPublicSurvey(db, slug);
+  const version = survey?.version;
   if (survey === null || version === null || version === undefined) throw surveyNotFound();
-  if (!survey.isActive || !survey.sector.isActive) throw surveyUnavailable();
+  if (!survey.isActive || !survey.sectorIsActive) throw surveyUnavailable();
 
   const nps = version.questions.find((question) => question.type === 'nps');
   if (nps === undefined) throw surveyNotFound();
@@ -115,7 +96,7 @@ export async function getPublicSurvey(
     title: version.title,
     introText: version.introText,
     thankYouMessage: version.thankYouMessage,
-    sectorName: survey.sector.name,
+    sectorName: survey.sectorName,
     npsQuestion: { id: nps.questionId, text: nps.text, anchors: NPS_ANCHORS },
     stages,
     scaleLabels: SCALE_LABELS,
@@ -133,22 +114,6 @@ function hashOf(input: SubmitResponseInput): string {
     ),
   });
 }
-
-interface StoredResponse {
-  id: string;
-  submittedAt: Date;
-  lowScore: boolean;
-  requestHash: string;
-  manifestationTokenExpiresAt: Date;
-}
-
-const storedSelect = {
-  id: true,
-  submittedAt: true,
-  lowScore: true,
-  requestHash: true,
-  manifestationTokenExpiresAt: true,
-} as const;
 
 function toSubmittedDto(stored: StoredResponse, tokenSecret: string): SubmittedResponseDto {
   return {
@@ -171,7 +136,7 @@ function replay(stored: StoredResponse, requestHash: string, tokenSecret: string
 }
 
 export interface PublicSurveyDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   manifestationTokenSecret: string;
 }
@@ -183,36 +148,22 @@ export interface PublicSurveyDeps {
  * UNIQUE de idempotency_key resolve envios concorrentes com a mesma chave.
  */
 export async function submitResponse(
-  { prisma, clock, manifestationTokenSecret }: PublicSurveyDeps,
+  { db, clock, manifestationTokenSecret }: PublicSurveyDeps,
   idempotencyKey: string,
   input: SubmitResponseInput,
 ): Promise<SubmitResult> {
   const requestHash = hashOf(input);
-  const previous = await prisma.response.findUnique({
-    where: { idempotencyKey },
-    select: storedSelect,
-  });
+  const previous = await findResponseByIdempotencyKey(db, idempotencyKey);
   if (previous !== null) return replay(previous, requestHash, manifestationTokenSecret);
 
-  const version = await prisma.surveyVersion.findUnique({
-    where: { id: input.surveyVersionId },
-    select: {
-      id: true,
-      sectorId: true,
-      supersededAt: true,
-      surveyConfig: {
-        select: { isActive: true, currentVersionId: true, sector: { select: { isActive: true } } },
-      },
-      questions: { select: { id: true, questionId: true, type: true } },
-    },
-  });
+  const version = await findVersionForSubmission(db, input.surveyVersionId);
   if (version === null) throw surveyNotFound();
-  if (!version.surveyConfig.isActive || !version.surveyConfig.sector.isActive) {
+  if (!version.surveyIsActive || !version.sectorIsActive) {
     throw surveyUnavailable();
   }
   const now = clock.now();
   if (
-    version.surveyConfig.currentVersionId !== version.id &&
+    version.currentVersionId !== version.id &&
     (version.supersededAt === null ||
       now.getTime() - version.supersededAt.getTime() > OUTDATED_VERSION_GRACE_MS)
   ) {
@@ -234,7 +185,7 @@ export async function submitResponse(
         'A pergunta não pertence a esta versão da pesquisa.',
       );
     }
-    return { surveyVersionQuestionId: question.id, score: answer.score };
+    return { id: randomUUID(), surveyVersionQuestionId: question.id, score: answer.score };
   });
   const lowScore = isLowScore(
     input.npsScore,
@@ -242,51 +193,40 @@ export async function submitResponse(
   );
 
   try {
-    const stored = await prisma.$transaction(async (tx) => {
+    const stored = await db.transaction(async (tx): Promise<StoredResponse> => {
       const attribution = await attributeResponse(tx, version.sectorId, input.origin, now);
-      const response = await tx.response.create({
-        data: {
-          surveyVersionId: version.id,
-          sectorId: version.sectorId,
-          origin: input.origin,
-          npsScore: input.npsScore,
-          lowScore,
-          submittedAt: now,
-          attributionStatus: attribution.status,
-          ...(attribution.status === 'attributed'
-            ? {
-                shiftId: attribution.shiftId,
-                teamId: attribution.teamId,
-                shiftPeriod: attribution.period,
-              }
-            : {}),
-          idempotencyKey,
-          requestHash,
-          manifestationTokenExpiresAt: new Date(now.getTime() + MANIFESTATION_TOKEN_TTL_MS),
-        },
-        select: storedSelect,
+      const response: StoredResponse = {
+        id: randomUUID(),
+        submittedAt: now,
+        lowScore,
+        requestHash,
+        manifestationTokenExpiresAt: new Date(now.getTime() + MANIFESTATION_TOKEN_TTL_MS),
+      };
+      const attributed = attribution.status === 'attributed' ? attribution : null;
+      await insertResponse(tx, {
+        id: response.id,
+        surveyVersionId: version.id,
+        sectorId: version.sectorId,
+        origin: input.origin,
+        npsScore: input.npsScore,
+        lowScore,
+        submittedAt: now,
+        attributionStatus: attribution.status,
+        shiftId: attributed?.shiftId ?? null,
+        teamId: attributed?.teamId ?? null,
+        shiftPeriod: attributed?.period ?? null,
+        idempotencyKey,
+        requestHash,
+        manifestationTokenExpiresAt: response.manifestationTokenExpiresAt,
       });
-      if (answers.length > 0) {
-        await tx.responseAnswer.createMany({
-          data: answers.map((answer) => ({
-            responseId: response.id,
-            surveyVersionId: version.id,
-            surveyVersionQuestionId: answer.surveyVersionQuestionId,
-            questionType: 'scale_1_5' as const,
-            score: answer.score,
-          })),
-        });
-      }
+      await insertResponseAnswers(tx, response.id, version.id, answers);
       return response;
     });
     return { replayed: false, data: toSubmittedDto(stored, manifestationTokenSecret) };
   } catch (error) {
     // Envio concorrente com a mesma chave: o primeiro COMMIT vence; os demais repetem o original.
     if (!isUniqueViolation(error, 'responses_idempotency_key_key')) throw error;
-    const winner = await prisma.response.findUnique({
-      where: { idempotencyKey },
-      select: storedSelect,
-    });
+    const winner = await findResponseByIdempotencyKey(db, idempotencyKey);
     if (winner === null) throw error;
     return replay(winner, requestHash, manifestationTokenSecret);
   }

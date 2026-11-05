@@ -1,5 +1,5 @@
 /**
- * Relatórios Excel — E34 com PostgreSQL real (ET09):
+ * Relatórios Excel — E34 com MySQL real (ET09):
  * T20: gerar os três tipos e um vazio e abrir com ExcelJS → abas, cabeçalhos, tipos, datas, nome e
  * totais corretos; sem contatos.
  * T21: cada tipo por perfil; 11ª exportação; mais de 50.000 linhas → 403 conforme a matriz; 429;
@@ -9,9 +9,8 @@ import ExcelJS from 'exceljs';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { localDateOf, localTimeOf } from '../../src/utils/dates.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -24,8 +23,7 @@ import { type App, dataOf, submitResponse } from '../support/api.js';
 import { type Db, HASH } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 
@@ -96,7 +94,7 @@ function allText(workbook: ExcelJS.Workbook): string {
 const reportAudits = async (profileId: string) =>
   (
     await db.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM audit_logs WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = $1",
+      "SELECT COUNT(*) AS n FROM audit_logs WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = ?",
       [profileId],
     )
   ).rows[0]?.n ?? 0;
@@ -104,10 +102,9 @@ const reportAudits = async (profileId: string) =>
 let submittedAt: string;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 
   // Três avaliações reais no período padrão (últimos 30 dias) e uma manifestação com contato.
   for (const [npsScore, score] of [
@@ -146,7 +143,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -359,7 +356,7 @@ describe('T21 — bloqueio de exportação não autorizada', () => {
   it.each(['responses', 'indicators', 'manifestations'] as const)(
     'type=%s: cada perfil → 200 ou 403 conforme a matriz; uma auditoria por exportação',
     async (type) => {
-      const target = buildAuthApp(prisma, fake);
+      const target = buildAuthApp(database);
       for (const key of ['sa', 'as', 'ge', 'ou', 'vi'] as const) {
         const before = await reportAudits(scenario.users[key].profileId);
         const response = await exportAs(key, `type=${type}`, target);
@@ -375,14 +372,14 @@ describe('T21 — bloqueio de exportação não autorizada', () => {
   );
 
   it('auditoria registra tipo, período e linhas, sem dados pessoais', async () => {
-    await exportAs('ge', 'type=responses', buildAuthApp(prisma, fake));
+    await exportAs('ge', 'type=responses', buildAuthApp(database));
     const { rows } = await db.query<{
       entity_type: string;
       entity_id: string;
       details: Record<string, unknown>;
     }>(
       `SELECT entity_type, entity_id, details FROM audit_logs
-       WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = $1 ORDER BY id DESC LIMIT 1`,
+       WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = ? ORDER BY id DESC LIMIT 1`,
       [scenario.users.ge.profileId],
     );
     expect(rows[0]).toMatchObject({
@@ -403,7 +400,7 @@ describe('T21 — bloqueio de exportação não autorizada', () => {
   });
 
   it('11ª exportação em 10 minutos → 429 com Retry-After', async () => {
-    const target = buildAuthApp(prisma, fake);
+    const target = buildAuthApp(database);
     for (let index = 0; index < 10; index += 1) {
       expect((await exportAs('ge', 'type=indicators', target)).status).toBe(200);
     }
@@ -416,25 +413,29 @@ describe('T21 — bloqueio de exportação não autorizada', () => {
     let large: AuthScenario;
 
     beforeAll(async () => {
-      large = await createAuthScenario(db, fake);
+      large = await createAuthScenario(db, database);
       // 50.001 respostas fictícias num hospital exclusivo (removidas ao final).
+      await db.query('SET SESSION cte_max_recursion_depth = 60000');
       await db.query(
-        `INSERT INTO responses (survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
+        `INSERT INTO responses (id, survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
            attribution_status, idempotency_key, request_hash, manifestation_token_expires_at)
-         SELECT $1, $2, 'link', 9, false, ts, 'not_qr_origin', gen_random_uuid(), $3, ts + interval '60 minutes'
-         FROM (SELECT timestamptz '2026-09-15T12:00:00Z' + (n || ' milliseconds')::interval AS ts
-               FROM generate_series(1, 50001) AS n) series`,
+         WITH RECURSIVE series (n, ts) AS (
+           SELECT 1, TIMESTAMP '2026-09-15 12:00:00.001'
+           UNION ALL SELECT n + 1, ts + INTERVAL 1000 MICROSECOND FROM series WHERE n < 50001
+         )
+         SELECT UUID(), ?, ?, 'link', 9, false, ts, 'not_qr_origin', UUID(), ?, ts + INTERVAL 60 MINUTE
+         FROM series`,
         [large.fx.versionA2, large.fx.sectorA, HASH],
       );
     }, 120_000);
 
     afterAll(async () => {
-      await db.query('DELETE FROM responses WHERE survey_version_id = $1', [large.fx.versionA2]);
+      await db.query('DELETE FROM responses WHERE survey_version_id = ?', [large.fx.versionA2]);
     });
 
     it('→ 422 EXPORT_TOO_LARGE e nenhuma auditoria de exportação', async () => {
       const before = await reportAudits(large.users.ge.profileId);
-      const response = await request(buildAuthApp(prisma, fake))
+      const response = await request(buildAuthApp(database))
         .get('/api/v1/reports/export?type=responses&from=2026-09-15&to=2026-09-15')
         .set('Authorization', large.bearer('ge'));
       expect(response.status).toBe(422);

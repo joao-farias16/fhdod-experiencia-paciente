@@ -47,13 +47,8 @@ credentials*.json
 service-account*.json
 secrets/
 
-# Prisma Client gerado por `prisma generate` (recriado no npm ci pelo postinstall)
-src/generated/
-
-# Supabase CLI (estado local; supabase/config.toml é versionado)
-supabase/.branches/
-supabase/.temp/
-supabase/.env
+# Seed de demonstração exportado para o MySQL Workbench (`npm run db:seed:export`)
+database/seeds/gerado/
 
 # Backups do banco gerados localmente (nunca versionados)
 backups/

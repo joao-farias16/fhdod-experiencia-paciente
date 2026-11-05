@@ -1,6 +1,6 @@
 import { parse } from 'csv-parse/sync';
 
-import type { ShiftPeriod } from '../../lib/prisma.js';
+import type { ShiftPeriod } from '../../lib/domain-types.js';
 import { isValidLocalTime, parseBrazilianDate } from '../../utils/dates.js';
 import { HttpError } from '../../utils/errors.js';
 import { validationError } from '../../utils/validation.js';

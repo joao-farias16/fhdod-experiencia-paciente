@@ -1,6 +1,6 @@
 import { type RequestHandler, Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { parseInput } from '../../utils/validation.js';
 import { authOf, requirePermission } from '../auth/auth.middleware.js';
@@ -8,17 +8,17 @@ import { listAuditLogsQuerySchema } from './audit.schemas.js';
 import { listAuditLogs } from './audit.service.js';
 
 export interface AuditRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
 }
 
 /** E41 — GET /admin/audit-logs (somente SA). Montado em /admin. */
-export function auditRouter({ prisma, clock }: AuditRoutesDeps): Router {
+export function auditRouter({ db, clock }: AuditRoutesDeps): Router {
   const router = Router();
   const list: RequestHandler = async (req, res) => {
     const query = parseInput(listAuditLogsQuerySchema, req.query);
     const { items, total, period } = await listAuditLogs(
-      prisma,
+      db,
       authOf(req).hospitalId,
       query,
       clock.now(),

@@ -20,7 +20,7 @@ export interface NpsCounts {
 
 /**
  * computeNps (RF51): nps10 = sinal(P − D) × ⌊(2 × |P − D| × 1000 + N) ÷ (2N)⌋, em aritmética
- * inteira, o que reproduz o ROUND do PostgreSQL sem erro de ponto flutuante.
+ * inteira, o que reproduz o ROUND exato do SQL (metade afastando-se de zero) sem erro de ponto flutuante.
  */
 export function computeNps({ promoters, passives, detractors }: NpsCounts): number | null {
   const total = promoters + passives + detractors;
@@ -28,6 +28,29 @@ export function computeNps({ promoters, passives, detractors }: NpsCounts): numb
   const difference = promoters - detractors;
   const nps10 = Math.floor((2 * Math.abs(difference) * 1000 + total) / (2 * total));
   return (Math.sign(difference) * nps10) / 10;
+}
+
+/**
+ * Razão `numerator / denominator` × `scale`, arredondada com `decimals` casas (metade
+ * afastando-se de zero), em aritmética inteira — o mesmo resultado do ROUND exato do SQL, sem
+ * erro de ponto flutuante. Denominador 0 → null. Ex.: roundedRatio(1, 3, 100, 1) = 33.3.
+ */
+export function roundedRatio(
+  numerator: number,
+  denominator: number,
+  scale: number,
+  decimals: number,
+): number | null {
+  if (denominator === 0) return null;
+  const factor = 10 ** decimals;
+  const scaled = Math.abs(numerator) * scale * factor;
+  const rounded = Math.floor((2 * scaled + denominator) / (2 * denominator));
+  return (Math.sign(numerator) * rounded) / factor;
+}
+
+/** Percentual com uma casa decimal (ROUND(100.0 * parte / total, 1)). */
+export function percentOf(part: number, total: number): number | null {
+  return roundedRatio(part, total, 100, 1);
 }
 
 /** RN05: nota baixa é NPS de 0 a 6 ou alguma específica 1 ou 2. */

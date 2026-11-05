@@ -21,7 +21,7 @@ export function usersRouter(deps: UsersRoutesDeps): Router {
 
   const list: RequestHandler = async (req, res) => {
     const filters = parseInput(listUsersQuerySchema, req.query);
-    const { items, total } = await listUsers(deps.prisma, authOf(req), filters);
+    const { items, total } = await listUsers(deps.db, authOf(req), filters);
     res
       .status(200)
       .json({ data: items, meta: { page: filters.page, pageSize: filters.pageSize, total } });

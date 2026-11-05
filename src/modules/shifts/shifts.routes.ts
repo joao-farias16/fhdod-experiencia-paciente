@@ -1,7 +1,7 @@
 import { type RequestHandler, Router } from 'express';
 import multer from 'multer';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import { profileRateLimit } from '../../middlewares/rate-limit.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError } from '../../utils/errors.js';
@@ -37,7 +37,7 @@ function receiveCsv(): RequestHandler {
 }
 
 export interface ShiftsRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   ipSecret: string | undefined;
 }
@@ -46,23 +46,17 @@ export interface ShiftsRoutesDeps {
  * Escala de turnos, montada em /admin: E17–E19 (consulta, cadastro manual e cancelamento) e
  * E20–E21 (importação de escala CSV: pré-validação e confirmação).
  */
-export function shiftsRouter({ prisma, clock, ipSecret }: ShiftsRoutesDeps): Router {
+export function shiftsRouter({ db, clock, ipSecret }: ShiftsRoutesDeps): Router {
   const router = Router();
 
   const list: RequestHandler = async (req, res) => {
     const query = parseInput(listShiftsQuerySchema, req.query);
-    res.status(200).json({ data: await listShifts(prisma, authOf(req), query) });
+    res.status(200).json({ data: await listShifts(db, authOf(req), query) });
   };
 
   const create: RequestHandler = async (req, res) => {
     const input = parseInput(createShiftSchema, req.body);
-    const shift = await createShift(
-      prisma,
-      clock,
-      authOf(req),
-      auditContextOf(req, ipSecret),
-      input,
-    );
+    const shift = await createShift(db, clock, authOf(req), auditContextOf(req, ipSecret), input);
     res.status(201).json({ data: shift });
   };
 
@@ -70,7 +64,7 @@ export function shiftsRouter({ prisma, clock, ipSecret }: ShiftsRoutesDeps): Rou
     const { id } = parseInput(idParamsSchema, req.params);
     const input = parseInput(cancelShiftSchema, req.body);
     const shift = await cancelShift(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),
@@ -85,7 +79,7 @@ export function shiftsRouter({ prisma, clock, ipSecret }: ShiftsRoutesDeps): Rou
       throw invalidField('file', 'Envie o arquivo CSV da escala.');
     }
     const result = await validateRosterImport(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),
@@ -97,7 +91,7 @@ export function shiftsRouter({ prisma, clock, ipSecret }: ShiftsRoutesDeps): Rou
   const confirm: RequestHandler = async (req, res) => {
     const { id } = parseInput(idParamsSchema, req.params);
     const result = await confirmRosterImport(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),

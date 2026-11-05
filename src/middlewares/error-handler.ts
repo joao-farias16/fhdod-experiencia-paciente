@@ -1,24 +1,13 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 
-import { Prisma } from '../lib/prisma.js';
-import { AuthServiceUnavailableError } from '../modules/auth/auth.types.js';
+import { isDatabaseUnavailable } from '../lib/database.js';
 import { HttpError, serviceUnavailable } from '../utils/errors.js';
-
-/** Códigos do Prisma para banco inacessível, tempo esgotado ou conexão encerrada. */
-const PRISMA_UNAVAILABLE_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
 
 /** Converte erros conhecidos (inclusive os do body-parser do Express) para o padrão da API. */
 function normalizeError(error: unknown): HttpError {
   if (error instanceof HttpError) return error;
-  // Tabela 18: SERVICE_UNAVAILABLE quando o banco ou o Supabase Auth não respondem.
-  if (error instanceof AuthServiceUnavailableError) return serviceUnavailable();
-  if (error instanceof Prisma.PrismaClientInitializationError) return serviceUnavailable();
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    PRISMA_UNAVAILABLE_CODES.has(error.code)
-  ) {
-    return serviceUnavailable();
-  }
+  // Tabela 18: SERVICE_UNAVAILABLE quando o MySQL não responde ou recusa a conexão.
+  if (isDatabaseUnavailable(error)) return serviceUnavailable();
 
   const type =
     typeof error === 'object' && error !== null && 'type' in error ? error.type : undefined;

@@ -1,37 +1,94 @@
 /**
- * Apoio aos testes com PostgreSQL real: conexão, transação desfeita ao final, captura de erros do
- * banco com SAVEPOINT e um cenário mínimo válido (fixture) criado com SQL puro.
+ * Apoio aos testes com MySQL real: conexão com o banco de testes (TEST_DB_*), transação desfeita
+ * ao final, captura de erros do banco com SAVEPOINT e um cenário mínimo válido (fixture) criado
+ * com SQL puro. Os identificadores são gerados no teste (randomUUID), pois o MySQL não tem
+ * INSERT ... RETURNING.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-import pg from 'pg';
+import type { Connection } from 'mysql2/promise';
 import { expect } from 'vitest';
 
-if (existsSync('.env')) {
-  process.loadEnvFile('.env');
+import {
+  connect as connectMysql,
+  loadDotEnv,
+  loadTestDatabaseEnv,
+} from '../../scripts/db/connection.js';
+import { createDatabase, type Database } from '../../src/lib/database.js';
+
+loadDotEnv();
+
+/** Conexão direta dos testes (verificações e cenários), com a API `query` → `{ rows }`. */
+export interface Db {
+  connection: Connection;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- leitura tipada das linhas
+  query<T = Record<string, unknown>>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{ rows: T[]; rowCount: number }>;
+  end(): Promise<void>;
 }
 
-export type Db = pg.Client;
+export function testDatabaseEnv() {
+  return loadTestDatabaseEnv();
+}
 
-/** Erro do PostgreSQL com os campos usados nas verificações. */
-export interface PgError extends Error {
+export async function connect(): Promise<Db> {
+  const connection = await connectMysql(testDatabaseEnv());
+  return {
+    connection,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- leitura tipada das linhas
+    async query<T>(sql: string, params: unknown[] = []) {
+      const [rows] = await connection.query(sql, params);
+      const list = (Array.isArray(rows) ? rows : []) as T[];
+      return {
+        rows: list,
+        rowCount: Array.isArray(rows)
+          ? list.length
+          : (rows as { affectedRows: number }).affectedRows,
+      };
+    },
+    end: () => connection.end(),
+  };
+}
+
+/** Pool da API apontando para o banco de testes. */
+export function createTestDatabase(): Database {
+  return createDatabase(testDatabaseEnv());
+}
+
+/** Erro do MySQL com os campos usados nas verificações. */
+export interface MysqlTestError extends Error {
   code: string;
-  constraint?: string;
-  table?: string;
-  detail?: string;
+  errno: number;
+  sqlMessage: string;
 }
 
-export async function connect(url = process.env.TEST_DATABASE_URL): Promise<Db> {
-  if (url === undefined || url === '') throw new Error('TEST_DATABASE_URL não definida.');
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
-  return client;
+/**
+ * Nome da regra que rejeitou a operação, extraído da mensagem do MySQL: CHECK
+ * ("Check constraint 'x'"), UNIQUE ("for key 'tabela.x'"), chave estrangeira ("CONSTRAINT `x`")
+ * ou gatilho ("[x] ...").
+ */
+export function constraintOf(error: { sqlMessage?: string; message: string }): string | undefined {
+  const text = error.sqlMessage ?? error.message;
+  const patterns = [
+    /Check constraint '([^']+)'/,
+    /for key '(?:[^'.]+\.)?([^']+)'/,
+    /CONSTRAINT `([^`]+)`/,
+    /^\[([a-z0-9_]+)\]/,
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (match?.[1] !== undefined) return match[1];
+  }
+  return undefined;
 }
 
 /** Executa o corpo numa transação que é sempre desfeita (ROLLBACK). */
 export async function inRollback<T>(db: Db, body: () => Promise<T>): Promise<T> {
-  await db.query('BEGIN');
+  await db.query('START TRANSACTION');
   try {
     return await body();
   } finally {
@@ -41,51 +98,65 @@ export async function inRollback<T>(db: Db, body: () => Promise<T>): Promise<T> 
 
 /**
  * Executa um comando que DEVE falhar no banco. Usa SAVEPOINT para que a transação continue
- * utilizável depois do erro e devolve o erro do PostgreSQL para as verificações.
+ * utilizável depois do erro e devolve o erro do MySQL para as verificações. `code`: código do
+ * mysql2 (ER_CHECK_CONSTRAINT_VIOLATED, ER_DUP_ENTRY, ER_NO_REFERENCED_ROW_2,
+ * ER_ROW_IS_REFERENCED_2 ou ER_SIGNAL_EXCEPTION para os gatilhos).
  */
 export async function expectDbError(
   db: Db,
   sql: string,
   params: unknown[] = [],
   expected: { code: string; constraint?: string | RegExp },
-): Promise<PgError> {
+): Promise<MysqlTestError & { constraint: string | undefined }> {
   await db.query('SAVEPOINT tentativa_invalida');
-  let error: PgError | undefined;
+  let error: MysqlTestError | undefined;
   try {
     await db.query(sql, params);
   } catch (caught) {
-    error = caught as PgError;
+    error = caught as MysqlTestError;
   }
   await db.query('ROLLBACK TO SAVEPOINT tentativa_invalida');
   if (error === undefined) {
     throw new Error(`O banco aceitou uma operação inválida: ${sql}`);
   }
-  expect(error.code).toBe(expected.code);
+  const constraint = constraintOf(error);
+  expect(error.code, error.sqlMessage).toBe(expected.code);
   if (expected.constraint instanceof RegExp) {
-    expect(error.constraint).toMatch(expected.constraint);
+    expect(constraint).toMatch(expected.constraint);
   } else if (expected.constraint !== undefined) {
-    expect(error.constraint).toBe(expected.constraint);
+    expect(constraint).toBe(expected.constraint);
   }
-  return error;
+  return Object.assign(error, { constraint });
 }
 
 export async function count(db: Db, sql: string, params: unknown[] = []): Promise<number> {
-  const { rows } = await db.query<{ count: string }>(sql, params);
-  return Number(rows[0]?.count);
+  const { rows } = await db.query(sql, params);
+  return Number(Object.values(rows[0] ?? {})[0]);
 }
 
-async function insertId(db: Db, sql: string, params: unknown[]): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(sql, params);
-  const id = rows[0]?.id;
-  if (id === undefined) throw new Error(`Inserção sem id: ${sql}`);
+/** INSERT com id gerado no teste; devolve o id. */
+async function insertWithId(db: Db, sql: string, params: unknown[]): Promise<string> {
+  const id = randomUUID();
+  await db.query(sql, [id, ...params]);
   return id;
 }
 
 /** SHA-256 fictício (64 dígitos hexadecimais) para colunas request_hash. */
 export const HASH = 'a'.repeat(64);
 
+/** Hash bcrypt fictício (custo 4) para perfis criados diretamente no banco. */
+export const PASSWORD_HASH = '$2b$04$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ01234';
+
 /** Instante de referência dos cenários (UTC). */
 export const T0 = '2026-09-01T10:00:00Z';
+
+/** Converte um instante ISO para DATETIME(3) UTC aceito pelo MySQL. */
+export function dt(iso: string | Date): string {
+  return (typeof iso === 'string' ? new Date(iso) : iso)
+    .toISOString()
+    .replace('T', ' ')
+    .replace('Z', '');
+}
 
 /**
  * Cenário mínimo válido: hospital, superadministrador, dois setores (A e B) com equipes, uma
@@ -94,24 +165,24 @@ export const T0 = '2026-09-01T10:00:00Z';
  */
 export async function createFixture(db: Db) {
   const suffix = Math.random().toString(36).slice(2, 8);
-  const hospitalId = await insertId(
+  const hospitalId = await insertWithId(
     db,
-    "INSERT INTO hospitals (name, short_name) VALUES ('Hospital de Teste', $1) RETURNING id",
+    "INSERT INTO hospitals (id, name, short_name) VALUES (?, 'Hospital de Teste', ?)",
     [`TESTE-${suffix}`],
   );
-  const adminId = await insertId(
+  const adminId = await insertWithId(
     db,
-    `INSERT INTO profiles (hospital_id, auth_user_id, full_name, email, role, all_sectors, must_change_password)
-     VALUES ($1, gen_random_uuid(), 'Administrador de Teste', $2, 'superadmin', true, false) RETURNING id`,
-    [hospitalId, `sa.${suffix}@example.com`],
+    `INSERT INTO profiles (id, hospital_id, full_name, email, password_hash, role, all_sectors, must_change_password)
+     VALUES (?, ?, 'Administrador de Teste', ?, ?, 'superadmin', true, false)`,
+    [hospitalId, `sa.${suffix}@example.com`, PASSWORD_HASH],
   );
-  const stageId = await insertId(
+  const stageId = await insertWithId(
     db,
-    "INSERT INTO journey_stages (hospital_id, code, name, position) VALUES ($1, 'RECEPCAO', 'Recepção', 1) RETURNING id",
+    "INSERT INTO journey_stages (id, hospital_id, code, name, position) VALUES (?, ?, 'RECEPCAO', 'Recepção', 1)",
     [hospitalId],
   );
   const sector = (code: string, name: string) =>
-    insertId(db, 'INSERT INTO sectors (hospital_id, code, name) VALUES ($1, $2, $3) RETURNING id', [
+    insertWithId(db, 'INSERT INTO sectors (id, hospital_id, code, name) VALUES (?, ?, ?, ?)', [
       hospitalId,
       code,
       name,
@@ -119,8 +190,9 @@ export async function createFixture(db: Db) {
   const sectorA = await sector('SETOR-A', 'Setor A');
   const sectorB = await sector('SETOR-B', 'Setor B');
   const team = (sectorId: string, code: string) =>
-    insertId(db, 'INSERT INTO teams (sector_id, code, name) VALUES ($1, $2, $2) RETURNING id', [
+    insertWithId(db, 'INSERT INTO teams (id, sector_id, code, name) VALUES (?, ?, ?, ?)', [
       sectorId,
+      code,
       code,
     ]);
   const teamA1 = await team(sectorA, 'A1');
@@ -128,20 +200,20 @@ export async function createFixture(db: Db) {
   const teamB1 = await team(sectorB, 'B1');
 
   const survey = (sectorId: string, slug: string) =>
-    insertId(
+    insertWithId(
       db,
-      `INSERT INTO survey_configs (sector_id, title, slug, thank_you_message, created_by)
-       VALUES ($1, 'Pesquisa de teste', $2, 'Obrigado.', $3) RETURNING id`,
+      `INSERT INTO survey_configs (id, sector_id, title, slug, thank_you_message, created_by)
+       VALUES (?, ?, 'Pesquisa de teste', ?, 'Obrigado.', ?)`,
       [sectorId, `${slug}-${suffix}`, adminId],
     );
   const surveyA = await survey(sectorA, 'pesquisa-a');
   const surveyB = await survey(sectorB, 'pesquisa-b');
 
   const question = (surveyId: string, type: 'nps' | 'scale_1_5', position: number) =>
-    insertId(
+    insertWithId(
       db,
-      `INSERT INTO questions (survey_config_id, journey_stage_id, type, text, is_required, position, first_published_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      `INSERT INTO questions (id, survey_config_id, journey_stage_id, type, text, is_required, position, first_published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         surveyId,
         type === 'nps' ? null : stageId,
@@ -149,7 +221,7 @@ export async function createFixture(db: Db) {
         type === 'nps' ? 'Pergunta geral de teste?' : `Pergunta específica ${position}?`,
         type === 'nps',
         position,
-        '2026-08-01T00:00:00Z',
+        dt('2026-08-01T00:00:00Z'),
       ],
     );
   const npsA = await question(surveyA, 'nps', 1);
@@ -158,11 +230,11 @@ export async function createFixture(db: Db) {
   const specificB = await question(surveyB, 'scale_1_5', 2);
 
   const version = (surveyId: string, sectorId: string, number: number, publishedAt: string) =>
-    insertId(
+    insertWithId(
       db,
-      `INSERT INTO survey_versions (survey_config_id, sector_id, version_number, title, thank_you_message, published_at, published_by)
-       VALUES ($1, $2, $3, 'Pesquisa de teste', 'Obrigado.', $4, $5) RETURNING id`,
-      [surveyId, sectorId, number, publishedAt, adminId],
+      `INSERT INTO survey_versions (id, survey_config_id, sector_id, version_number, title, thank_you_message, published_at, published_by)
+       VALUES (?, ?, ?, ?, 'Pesquisa de teste', 'Obrigado.', ?, ?)`,
+      [surveyId, sectorId, number, dt(publishedAt), adminId],
     );
   const svq = (
     versionId: string,
@@ -170,11 +242,11 @@ export async function createFixture(db: Db) {
     type: 'nps' | 'scale_1_5',
     position: number,
   ) =>
-    insertId(
+    insertWithId(
       db,
       `INSERT INTO survey_version_questions
-         (survey_version_id, question_id, type, text, journey_stage_id, journey_stage_name, journey_stage_position, position, is_required)
-       VALUES ($1, $2, $3, 'Texto publicado', $4, $5, $6, $7, $8) RETURNING id`,
+         (id, survey_version_id, question_id, type, text, journey_stage_id, journey_stage_name, journey_stage_position, position, is_required)
+       VALUES (?, ?, ?, ?, 'Texto publicado', ?, ?, ?, ?, ?)`,
       [
         versionId,
         questionId,
@@ -197,20 +269,20 @@ export async function createFixture(db: Db) {
   const svqB1Specific = await svq(versionB1, specificB, 'scale_1_5', 2);
   await svq(versionB1, npsB, 'nps', 1);
 
-  await db.query('UPDATE survey_configs SET current_version_id = $1 WHERE id = $2', [
+  await db.query('UPDATE survey_configs SET current_version_id = ? WHERE id = ?', [
     versionA2,
     surveyA,
   ]);
-  await db.query('UPDATE survey_configs SET current_version_id = $1 WHERE id = $2', [
+  await db.query('UPDATE survey_configs SET current_version_id = ? WHERE id = ?', [
     versionB1,
     surveyB,
   ]);
 
   // Turno 07:00–13:00 (America/Sao_Paulo) = 10:00–16:00 UTC em 01/09/2026.
-  const shiftA1 = await insertId(
+  const shiftA1 = await insertWithId(
     db,
-    `INSERT INTO shifts (sector_id, team_id, period, starts_at, ends_at, source, created_by)
-     VALUES ($1, $2, 'morning', '2026-09-01T10:00:00Z', '2026-09-01T16:00:00Z', 'manual', $3) RETURNING id`,
+    `INSERT INTO shifts (id, sector_id, team_id, period, starts_at, ends_at, source, created_by)
+     VALUES (?, ?, ?, 'morning', '2026-09-01 10:00:00', '2026-09-01 16:00:00', 'manual', ?)`,
     [sectorA, teamA1, adminId],
   );
 
@@ -250,15 +322,21 @@ export function insertResponse(
   values: { versionId: string; sectorId: string; npsScore?: number; submittedAt?: string },
 ): Promise<string> {
   const npsScore = values.npsScore ?? 9;
-  const submittedAt = values.submittedAt ?? '2026-09-01T12:00:00Z';
-  return insertId(
+  const submittedAt = new Date(values.submittedAt ?? '2026-09-01T12:00:00Z');
+  return insertWithId(
     db,
-    `INSERT INTO responses (survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
+    `INSERT INTO responses (id, survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
        attribution_status, idempotency_key, request_hash, manifestation_token_expires_at)
-     VALUES ($1, $2, 'link', $3, $4, $5::timestamptz, 'not_qr_origin', gen_random_uuid(), $6,
-       $5::timestamptz + interval '60 minutes')
-     RETURNING id`,
-    [values.versionId, values.sectorId, npsScore, npsScore <= 6, submittedAt, HASH],
+     VALUES (?, ?, ?, 'link', ?, ?, ?, 'not_qr_origin', UUID(), ?, ?)`,
+    [
+      values.versionId,
+      values.sectorId,
+      npsScore,
+      npsScore <= 6,
+      dt(submittedAt),
+      HASH,
+      dt(new Date(submittedAt.getTime() + 60 * 60_000)),
+    ],
   );
 }
 
@@ -267,13 +345,12 @@ export function insertManifestation(
   db: Db,
   values: { responseId: string; sectorId: string; anonymous?: boolean },
 ): Promise<string> {
-  return insertId(
+  return insertWithId(
     db,
-    `INSERT INTO manifestations (response_id, sector_id, type, description, is_anonymous,
+    `INSERT INTO manifestations (id, response_id, sector_id, type, description, is_anonymous,
        triggered_by_low_score, received_at, idempotency_key, request_hash)
-     VALUES ($1, $2, 'complaint', 'Descrição fictícia com mais de dez caracteres.', $3, false,
-       '2026-09-01T12:10:00Z', gen_random_uuid(), $4)
-     RETURNING id`,
+     VALUES (?, ?, ?, 'complaint', 'Descrição fictícia com mais de dez caracteres.', ?, false,
+       '2026-09-01 12:10:00', UUID(), ?)`,
     [values.responseId, values.sectorId, values.anonymous ?? true, HASH],
   );
 }

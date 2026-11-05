@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ResponseOrigin } from '../../lib/prisma.js';
+import type { ResponseOrigin } from '../../lib/domain-types.js';
 import { uuidSchema } from '../../utils/validation.js';
 import { MAX_ACTIVE_SPECIFIC_QUESTIONS, SLUG_PATTERN } from '../surveys/surveys.schemas.js';
 

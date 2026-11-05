@@ -1,5 +1,5 @@
 /**
- * Dashboard — E28–E33 com PostgreSQL real (ET08):
+ * Dashboard — E28–E33 com MySQL real (ET08):
  * T05: E28 com os conjuntos de referência (4,3,3) → 10,0 e (1,15,0) → 6,3, iguais a computeNps.
  * T11 (parte de API): nova resposta (E02) → E28 seguinte mostra total + 1 e NPS recalculado, sem
  * cache no servidor (RF61).
@@ -16,12 +16,13 @@
  *   1 reclamação (setor A) e 1 sugestão (setor B);
  * - período anterior (03 a 09/09): setor A com notas 9 e 0 → NPS 0,0.
  */
+import { randomUUID } from 'node:crypto';
+
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { computeNps } from '../../src/modules/dashboard/nps.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -34,8 +35,7 @@ import { type App, dataOf, submitResponse } from '../support/api.js';
 import { type Db, HASH } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 
@@ -83,12 +83,21 @@ async function insertShift(
   startsAt: string,
   endsAt: string,
 ): Promise<Shift> {
-  const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO shifts (sector_id, team_id, period, starts_at, ends_at, source, created_by)
-     VALUES ($1, $2, $3, $4, $5, 'manual', $6) RETURNING id`,
-    [scenario.fx.sectorA, teamId, period, startsAt, endsAt, scenario.fx.adminId],
+  const id = randomUUID();
+  await db.query(
+    `INSERT INTO shifts (id, sector_id, team_id, period, starts_at, ends_at, source, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)`,
+    [
+      id,
+      scenario.fx.sectorA,
+      teamId,
+      period,
+      new Date(startsAt),
+      new Date(endsAt),
+      scenario.fx.adminId,
+    ],
   );
-  return { id: rows[0]?.id ?? '', teamId, period };
+  return { id, teamId, period };
 }
 
 /** Resposta direta no banco (link sem atribuição, ou QR Code atribuído ao turno informado). */
@@ -101,32 +110,33 @@ async function addResponse(values: {
 }): Promise<string> {
   const versionId = values.sector === 'A' ? scenario.fx.versionA2 : scenario.fx.versionB1;
   const sectorId = values.sector === 'A' ? scenario.fx.sectorA : scenario.fx.sectorB;
-  const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO responses (survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
+  const id = randomUUID();
+  const at = new Date(values.at);
+  await db.query(
+    `INSERT INTO responses (id, survey_version_id, sector_id, origin, nps_score, low_score, submitted_at,
        attribution_status, shift_id, team_id, shift_period, idempotency_key, request_hash,
        manifestation_token_expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7, $8, $9, $10, gen_random_uuid(), $11,
-       $6::timestamptz + interval '60 minutes')
-     RETURNING id`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UUID(), ?, ?)`,
     [
+      id,
       versionId,
       sectorId,
       values.shift === undefined ? 'link' : 'qr_code',
       values.nps,
       values.nps <= 6 || (values.specific !== undefined && values.specific <= 2),
-      values.at,
+      at,
       values.shift === undefined ? 'not_qr_origin' : 'attributed',
       values.shift?.id ?? null,
       values.shift?.teamId ?? null,
       values.shift?.period ?? null,
       HASH,
+      new Date(at.getTime() + 60 * 60_000),
     ],
   );
-  const id = rows[0]?.id ?? '';
   if (values.specific !== undefined) {
     await db.query(
-      `INSERT INTO response_answers (response_id, survey_version_id, survey_version_question_id, question_type, score)
-       VALUES ($1, $2, $3, 'scale_1_5', $4)`,
+      `INSERT INTO response_answers (id, response_id, survey_version_id, survey_version_question_id, question_type, score)
+       VALUES (UUID(), ?, ?, ?, 'scale_1_5', ?)`,
       [id, versionId, scenario.fx.svqA2Specific, values.specific],
     );
   }
@@ -137,17 +147,21 @@ async function addManifestation(responseId: string, sector: 'A' | 'B', type: str
   await db.query(
     `INSERT INTO manifestations (response_id, sector_id, type, description, is_anonymous,
        triggered_by_low_score, received_at, idempotency_key, request_hash)
-     VALUES ($1, $2, $3, 'Descrição fictícia com mais de dez caracteres.', true, false, $4,
-       gen_random_uuid(), $5)`,
-    [responseId, sector === 'A' ? scenario.fx.sectorA : scenario.fx.sectorB, type, at, HASH],
+     VALUES (?, ?, ?, 'Descrição fictícia com mais de dez caracteres.', true, false, ?, UUID(), ?)`,
+    [
+      responseId,
+      sector === 'A' ? scenario.fx.sectorA : scenario.fx.sectorB,
+      type,
+      new Date(at),
+      HASH,
+    ],
   );
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 
   // Turnos de 12/09 07:00–13:00 (A1, manhã) e 13/09 19:00–07:00 (A2, noite), horários locais.
   const morning = await insertShift(
@@ -214,7 +228,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 

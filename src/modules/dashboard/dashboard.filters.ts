@@ -1,8 +1,11 @@
-import { Prisma, type PrismaClient } from '../../lib/prisma.js';
+import type { Queryable } from '../../lib/database.js';
+import { sql, type SqlStatement } from '../../lib/sql.js';
 import { addDays, startOfLocalDay } from '../../utils/dates.js';
 import { type LocalPeriod, resolvePeriod } from '../../utils/validation.js';
 import type { AuthContext } from '../auth/auth.types.js';
 import { isSectorInScope, resolveSectorFilter, sectorOutOfScope } from '../auth/scope.js';
+import { findSurveyScope } from '../surveys/surveys.repository.js';
+import { findTeamsByIds } from '../teams/teams.repository.js';
 import type { DashboardFilters } from './dashboard.schemas.js';
 
 /**
@@ -31,34 +34,27 @@ export interface ResolvedFilters extends LocalPeriod {
  * SECTOR_OUT_OF_SCOPE (RN10); identificadores inexistentes simplesmente não trazem dados.
  */
 export async function resolveFilters(
-  prisma: Pick<PrismaClient, 'surveyConfig' | 'team'>,
+  db: Queryable,
   auth: AuthContext,
   query: DashboardFilters,
   now: Date,
 ): Promise<ResolvedFilters> {
   const sectorIds = resolveSectorFilter(auth.scope, query.sectorIds);
   if (query.surveyId !== undefined) {
-    const survey = await prisma.surveyConfig.findUnique({
-      where: { id: query.surveyId },
-      select: { sectorId: true, sector: { select: { hospitalId: true } } },
-    });
+    const survey = await findSurveyScope(db, query.surveyId);
     if (
       survey !== null &&
-      (survey.sector.hospitalId !== auth.hospitalId ||
-        !isSectorInScope(auth.scope, survey.sectorId))
+      (survey.hospitalId !== auth.hospitalId || !isSectorInScope(auth.scope, survey.sectorId))
     ) {
       throw sectorOutOfScope();
     }
   }
   if (query.teamIds !== undefined) {
-    const teams = await prisma.team.findMany({
-      where: { id: { in: query.teamIds } },
-      select: { sectorId: true, sector: { select: { hospitalId: true } } },
-    });
+    const teams = await findTeamsByIds(db, query.teamIds);
     if (
       teams.some(
         (team) =>
-          team.sector.hospitalId !== auth.hospitalId || !isSectorInScope(auth.scope, team.sectorId),
+          team.hospitalId !== auth.hospitalId || !isSectorInScope(auth.scope, team.sectorId),
       )
     ) {
       throw sectorOutOfScope();
@@ -76,36 +72,41 @@ export async function resolveFilters(
   };
 }
 
+/** Lista para IN; lista vazia não casa com nada (escopo restrito sem setores). */
+function inList(column: SqlStatement, values: readonly string[]): SqlStatement {
+  return values.length === 0 ? sql`FALSE` : sql`${column} IN (${sql.list(values)})`;
+}
+
 /**
  * Condições sobre responses r (e survey_versions sv). `cuts`: inclui os recortes por turno e
  * equipe, que só alcançam respostas atribuídas (RN14, RF57); sem eles, o mesmo recorte serve de
  * base para a cobertura de atribuição.
  */
-export function responseConditions(filters: ResolvedFilters, cuts = true): Prisma.Sql {
+export function responseConditions(filters: ResolvedFilters, cuts = true): SqlStatement {
   const conditions = [
-    Prisma.sql`r.submitted_at >= ${startOfLocalDay(filters.from)}`,
-    Prisma.sql`r.submitted_at < ${startOfLocalDay(addDays(filters.to, 1))}`,
+    sql`r.submitted_at >= ${startOfLocalDay(filters.from)}`,
+    sql`r.submitted_at < ${startOfLocalDay(addDays(filters.to, 1))}`,
   ];
   if (filters.sectorIds !== undefined) {
-    conditions.push(Prisma.sql`r.sector_id = ANY(${[...filters.sectorIds]}::uuid[])`);
+    conditions.push(inList(sql`r.sector_id`, filters.sectorIds));
   }
   if (filters.surveyId !== undefined) {
-    conditions.push(Prisma.sql`sv.survey_config_id = ${filters.surveyId}::uuid`);
+    conditions.push(sql`sv.survey_config_id = ${filters.surveyId}`);
   }
   if (filters.origin !== undefined) {
-    conditions.push(Prisma.sql`r.origin = ${filters.origin}::response_origin`);
+    conditions.push(sql`r.origin = ${filters.origin}`);
   }
   if (cuts && filters.period !== undefined) {
-    conditions.push(Prisma.sql`r.shift_period = ${filters.period}::shift_period`);
+    conditions.push(sql`r.shift_period = ${filters.period}`);
   }
   if (cuts && filters.teamIds !== undefined) {
-    conditions.push(Prisma.sql`r.team_id = ANY(${[...filters.teamIds]}::uuid[])`);
+    conditions.push(inList(sql`r.team_id`, filters.teamIds));
   }
-  return Prisma.join(conditions, ' AND ');
+  return sql.join(conditions, ' AND ');
 }
 
 /** Respostas do hospital com setor e versão (para os filtros por pesquisa). */
-export const RESPONSES_FROM = Prisma.sql`
+export const RESPONSES_FROM = sql`
   responses r
   JOIN sectors s ON s.id = r.sector_id
   JOIN survey_versions sv ON sv.id = r.survey_version_id`;

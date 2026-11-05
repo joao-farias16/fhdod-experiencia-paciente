@@ -1,6 +1,6 @@
 import { type RequestHandler, Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { parseInput } from '../../utils/validation.js';
 import { authOf, requirePermission } from '../auth/auth.middleware.js';
@@ -21,7 +21,7 @@ import {
 } from './dashboard.service.js';
 
 export interface DashboardRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
 }
 
@@ -30,51 +30,51 @@ export interface DashboardRoutesDeps {
  * supressão, RN21). Sem cache no servidor (RF61): cada chamada consulta o banco e a cadeia
  * autenticada responde com Cache-Control: no-store. Montado em /dashboard.
  */
-export function dashboardRouter({ prisma, clock }: DashboardRoutesDeps): Router {
+export function dashboardRouter({ db, clock }: DashboardRoutesDeps): Router {
   const router = Router();
 
   const summary: RequestHandler = async (req, res) => {
     const { compare, ...query } = parseInput(summaryQuerySchema, req.query);
-    const filters = await resolveFilters(prisma, authOf(req), query, clock.now());
-    res.status(200).json({ data: await getSummary(prisma, filters, compare !== undefined) });
+    const filters = await resolveFilters(db, authOf(req), query, clock.now());
+    res.status(200).json({ data: await getSummary(db, filters, compare !== undefined) });
   };
 
   const sectors: RequestHandler = async (req, res) => {
     const filters = await resolveFilters(
-      prisma,
+      db,
       authOf(req),
       parseInput(filtersQuerySchema, req.query),
       clock.now(),
     );
-    res.status(200).json({ data: await getSectors(prisma, filters), meta: periodOf(filters) });
+    res.status(200).json({ data: await getSectors(db, filters), meta: periodOf(filters) });
   };
 
   const shifts: RequestHandler = async (req, res) => {
     const filters = await resolveFilters(
-      prisma,
+      db,
       authOf(req),
       parseInput(filtersQuerySchema, req.query),
       clock.now(),
     );
-    const { items, coverage } = await getShifts(prisma, filters);
+    const { items, coverage } = await getShifts(db, filters);
     res.status(200).json({ data: items, meta: { ...periodOf(filters), coverage } });
   };
 
   const teams: RequestHandler = async (req, res) => {
     const filters = await resolveFilters(
-      prisma,
+      db,
       authOf(req),
       parseInput(filtersQuerySchema, req.query),
       clock.now(),
     );
-    const { items, coverage } = await getTeams(prisma, filters);
+    const { items, coverage } = await getTeams(db, filters);
     res.status(200).json({ data: items, meta: { ...periodOf(filters), coverage } });
   };
 
   const trends: RequestHandler = async (req, res) => {
     const { granularity, ...query } = parseInput(trendsQuerySchema, req.query);
-    const filters = await resolveFilters(prisma, authOf(req), query, clock.now());
-    const result = await getTrends(prisma, filters, granularity);
+    const filters = await resolveFilters(db, authOf(req), query, clock.now());
+    const result = await getTrends(db, filters, granularity);
     res.status(200).json({
       data: result.points,
       meta: { ...periodOf(filters), granularity: result.granularity },
@@ -83,8 +83,8 @@ export function dashboardRouter({ prisma, clock }: DashboardRoutesDeps): Router 
 
   const questions: RequestHandler = async (req, res) => {
     const { journeyStageId, ...query } = parseInput(questionsQuerySchema, req.query);
-    const filters = await resolveFilters(prisma, authOf(req), query, clock.now());
-    const result = await getQuestions(prisma, filters, journeyStageId);
+    const filters = await resolveFilters(db, authOf(req), query, clock.now());
+    const result = await getQuestions(db, filters, journeyStageId);
     res
       .status(200)
       .json({ data: result.items, meta: { ...periodOf(filters), total: result.total } });

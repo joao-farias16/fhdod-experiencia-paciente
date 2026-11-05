@@ -43,7 +43,10 @@ export function invalidField(field: string, message: string): HttpError {
 }
 
 /** UUID em parâmetros de rota e filtros. */
-export const uuidSchema = z.uuid({ error: 'Informe um identificador válido.' });
+// Minúsculas: forma canônica gravada no MySQL (CHAR(36)), como o tipo uuid do PostgreSQL fazia.
+export const uuidSchema = z
+  .uuid({ error: 'Informe um identificador válido.' })
+  .overwrite((value) => value.toLowerCase());
 
 /** Parâmetro de rota `:id` (UUID). */
 export const idParamsSchema = z.strictObject({ id: uuidSchema });

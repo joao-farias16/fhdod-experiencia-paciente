@@ -1,14 +1,13 @@
 /**
- * Administração de usuários (RF06–RF08; E06, E07 e E08), integração com PostgreSQL real:
- * filtros e paginação, cadastro com senha temporária, e-mail duplicado, compensação no Supabase
- * Auth e regras de edição. Complementa T14–T17.
+ * Administração de usuários (RF06–RF08; E06, E07 e E08), integração com MySQL real:
+ * filtros e paginação, cadastro com senha temporária (hash bcrypt), e-mail duplicado e regras de
+ * edição. Complementa T14–T17.
  */
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { isPasswordCompliant } from '../../src/modules/auth/password-policy.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -19,8 +18,7 @@ import {
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let other: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
@@ -37,15 +35,14 @@ interface UserBody {
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  other = await createAuthScenario(db, fake); // outro hospital: não pode aparecer nem ser editado
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  other = await createAuthScenario(db, database); // outro hospital: não pode aparecer nem ser editado
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -68,7 +65,7 @@ describe('E06 — GET /admin/users', () => {
     expect(ids).not.toContain(other.users.sa.profileId);
     const names = body.data.map((user) => user.fullName);
     expect([...names].sort((a, b) => a.localeCompare(b, 'pt-BR'))).toEqual(names);
-    expect(JSON.stringify(body)).not.toMatch(/authUserId|auth_user_id/);
+    expect(JSON.stringify(body)).not.toMatch(/passwordHash|password_hash|\$2[aby]\$/);
   });
 
   it('filtra por perfil, situação, setor e busca (nome ou e-mail)', async () => {
@@ -141,20 +138,27 @@ describe('E07 — POST /admin/users', () => {
     expect(temporaryPassword).toHaveLength(16);
     expect(isPasswordCompliant(temporaryPassword)).toBe(true);
 
-    const token = fake.signIn(user.email, temporaryPassword);
-    expect(token).not.toBeNull();
-    const me = await request(app)
-      .get('/api/v1/me')
-      .set('Authorization', `Bearer ${token ?? ''}`);
+    const signIn = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: temporaryPassword });
+    expect(signIn.status).toBe(200);
+    const token = (signIn.body as { data: { accessToken: string } }).data.accessToken;
+    const stored = await db.query<{ password_hash: string }>(
+      'SELECT password_hash FROM profiles WHERE id = ?',
+      [user.id],
+    );
+    expect(stored.rows[0]?.password_hash).toMatch(/^\$2[aby]\$/);
+    expect(stored.rows[0]?.password_hash).not.toContain(temporaryPassword);
+    const me = await request(app).get('/api/v1/me').set('Authorization', `Bearer ${token}`);
     expect((me.body as { data: { mustChangePassword: boolean } }).data.mustChangePassword).toBe(
       true,
     );
     const blocked = await request(app)
       .get('/api/v1/admin/sectors')
-      .set('Authorization', `Bearer ${token ?? ''}`);
+      .set('Authorization', `Bearer ${token}`);
     expect(errorOf(blocked).code).toBe('PASSWORD_CHANGE_REQUIRED');
 
-    const { rows } = await db.query('SELECT created_by FROM profiles WHERE id = $1', [user.id]);
+    const { rows } = await db.query('SELECT created_by FROM profiles WHERE id = ?', [user.id]);
     expect(rows[0]).toEqual({ created_by: scenario.users.sa.profileId });
   });
 
@@ -171,8 +175,8 @@ describe('E07 — POST /admin/users', () => {
     });
   });
 
-  it('e-mail já cadastrado na aplicação → 409, sem chamar o Supabase Auth', async () => {
-    const calls = fake.calls.length;
+  it('e-mail já cadastrado → 409 sem gravar outro perfil', async () => {
+    const before = await db.query('SELECT 1 FROM profiles');
     const response = await create({
       fullName: 'Duplicado',
       email: scenario.users.ge.email.toUpperCase(),
@@ -181,33 +185,22 @@ describe('E07 — POST /admin/users', () => {
     });
     expect(response.status).toBe(409);
     expect(errorOf(response).code).toBe('CONFLICT');
-    expect(fake.calls.length).toBe(calls);
+    expect((await db.query('SELECT 1 FROM profiles')).rowCount).toBe(before.rowCount);
   });
 
-  it('e-mail que já existe somente no Supabase Auth → 409 e nenhum perfil', async () => {
-    const email = `so.no.auth.${Date.now()}@example.com`;
-    fake.register(crypto.randomUUID(), email);
-    const response = await create({
-      fullName: 'Somente no Auth',
-      email,
-      role: 'viewer',
-      allSectors: true,
-    });
-    expect(response.status).toBe(409);
-    expect((await db.query('SELECT 1 FROM profiles WHERE email = $1', [email])).rowCount).toBe(0);
-  });
-
-  it('Supabase Auth indisponível → 503 e nenhum perfil', async () => {
-    const email = `indisponivel.${Date.now()}@example.com`;
-    fake.failNext('createUser');
-    const response = await create({
-      fullName: 'Pessoa Fictícia',
-      email,
-      role: 'viewer',
-      allSectors: true,
-    });
+  it('banco indisponível → 503 e nenhum perfil', async () => {
+    const { buildTestApp, databaseStub } = await import('../support/app.js');
+    const response = await request(buildTestApp(databaseStub('down')))
+      .post('/api/v1/admin/users')
+      .set('Authorization', sa())
+      .send({
+        fullName: 'Pessoa Fictícia',
+        email: 'x@example.com',
+        role: 'viewer',
+        allSectors: true,
+      });
     expect(response.status).toBe(503);
-    expect((await db.query('SELECT 1 FROM profiles WHERE email = $1', [email])).rowCount).toBe(0);
+    expect(errorOf(response).code).toBe('SERVICE_UNAVAILABLE');
   });
 
   it.each([
@@ -264,7 +257,7 @@ describe('E08 — PATCH /admin/users/:id', () => {
   it('usuário de outro hospital ou inexistente → 404', async () => {
     expect((await patch(other.users.vi.profileId, { fullName: 'Invasão' })).status).toBe(404);
     expect((await patch(crypto.randomUUID(), { fullName: 'Ninguém' })).status).toBe(404);
-    const { rows } = await db.query('SELECT full_name FROM profiles WHERE id = $1', [
+    const { rows } = await db.query('SELECT full_name FROM profiles WHERE id = ?', [
       other.users.vi.profileId,
     ]);
     expect(rows[0]).toEqual({ full_name: 'Usuário Fictício vi' });

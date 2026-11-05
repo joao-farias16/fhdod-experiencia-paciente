@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import { ipRateLimit } from '../../middlewares/rate-limit.js';
 import type { Clock } from '../../utils/dates.js';
 import { serviceUnavailable } from '../../utils/errors.js';
@@ -17,12 +17,12 @@ export interface HealthStatus {
 
 export interface HealthDeps {
   clock: Clock;
-  prisma: Pick<PrismaClient, '$queryRaw'>;
+  db: Pick<Database, 'ping'>;
   databaseTimeoutMs?: number;
 }
 
 /** Executa `SELECT 1`; rejeita se o banco falhar ou não responder dentro do limite. */
-async function checkDatabase(prisma: HealthDeps['prisma'], timeoutMs: number): Promise<void> {
+async function checkDatabase(db: HealthDeps['db'], timeoutMs: number): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
@@ -30,7 +30,7 @@ async function checkDatabase(prisma: HealthDeps['prisma'], timeoutMs: number): P
     }, timeoutMs);
   });
   try {
-    await Promise.race([prisma.$queryRaw`SELECT 1`, timeout]);
+    await Promise.race([db.ping(timeoutMs), timeout]);
   } finally {
     clearTimeout(timer);
   }
@@ -42,14 +42,14 @@ async function checkDatabase(prisma: HealthDeps['prisma'], timeoutMs: number): P
  */
 export function healthRouter({
   clock,
-  prisma,
+  db,
   databaseTimeoutMs = DATABASE_CHECK_TIMEOUT_MS,
 }: HealthDeps): Router {
   const router = Router();
 
   router.get('/health', ipRateLimit({ windowMs: 60_000, limit: 60 }), async (_req, res) => {
     try {
-      await checkDatabase(prisma, databaseTimeoutMs);
+      await checkDatabase(db, databaseTimeoutMs);
     } catch {
       throw serviceUnavailable();
     }

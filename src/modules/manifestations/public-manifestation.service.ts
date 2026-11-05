@@ -1,6 +1,6 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import {
@@ -8,10 +8,20 @@ import {
   idempotencyKeyReused,
   manifestationToken,
 } from '../../utils/idempotency.js';
+import {
+  consumeManifestationToken,
+  findManifestationByIdempotencyKey,
+  findProtocol,
+  findResponseForManifestation,
+  insertContact,
+  insertManifestation,
+  insertNotes,
+  type StoredManifestation,
+} from './manifestations.repository.js';
 import { type CreateManifestationInput, PURPOSE_TEXT_VERSION } from './manifestations.schemas.js';
 
 export interface PublicManifestationDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   manifestationTokenSecret: string;
 }
@@ -59,8 +69,7 @@ export function isValidManifestationToken(
   return expected.length === received.length && timingSafeEqual(expected, received);
 }
 
-const storedSelect = { protocol: true, receivedAt: true, requestHash: true } as const;
-type Stored = { protocol: string; receivedAt: Date; requestHash: string };
+type Stored = StoredManifestation;
 
 function replay(stored: Stored, requestHash: string): CreateManifestationResult {
   if (stored.requestHash !== requestHash) throw idempotencyKeyReused();
@@ -81,15 +90,12 @@ class TokenAlreadyUsed extends Error {}
  * protocolo original (200); concorrência resolvida pelas restrições UNIQUE e pelo bloqueio da linha.
  */
 export async function createManifestation(
-  { prisma, clock, manifestationTokenSecret }: PublicManifestationDeps,
+  { db, clock, manifestationTokenSecret }: PublicManifestationDeps,
   idempotencyKey: string,
   input: CreateManifestationInput,
 ): Promise<CreateManifestationResult> {
   const requestHash = canonicalHash(input);
-  const previous = await prisma.manifestation.findUnique({
-    where: { idempotencyKey },
-    select: storedSelect,
-  });
+  const previous = await findManifestationByIdempotencyKey(db, idempotencyKey);
   if (previous !== null) return replay(previous, requestHash);
 
   if (
@@ -97,23 +103,10 @@ export async function createManifestation(
   ) {
     throw tokenInvalid();
   }
-  const response = await prisma.response.findUnique({
-    where: { id: input.responseId },
-    select: {
-      id: true,
-      sectorId: true,
-      lowScore: true,
-      manifestationTokenExpiresAt: true,
-      manifestationTokenUsedAt: true,
-      manifestations: { select: { id: true } },
-    },
-  });
+  const response = await findResponseForManifestation(db, input.responseId);
   if (response === null) throw tokenInvalid();
   const recover = async (error: unknown): Promise<CreateManifestationResult> => {
-    const winner = await prisma.manifestation.findUnique({
-      where: { idempotencyKey },
-      select: storedSelect,
-    });
+    const winner = await findManifestationByIdempotencyKey(db, idempotencyKey);
     if (winner !== null) return replay(winner, requestHash);
     if (
       error instanceof TokenAlreadyUsed ||
@@ -126,59 +119,53 @@ export async function createManifestation(
 
   // RN22: uma manifestação por resposta (409) antes da validade do token (422). Um envio
   // concorrente que chega depois do COMMIT do primeiro, com a mesma chave, repete o original.
-  if (response.manifestations.length > 0 || response.manifestationTokenUsedAt !== null) {
+  if (response.hasManifestation || response.manifestationTokenUsedAt !== null) {
     return recover(new TokenAlreadyUsed());
   }
   const now = clock.now();
   if (now.getTime() > response.manifestationTokenExpiresAt.getTime()) throw tokenExpired();
 
   try {
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await db.transaction(async (tx) => {
       // Uso único: só um envio muda manifestation_token_used_at de nulo para preenchido.
-      const consumed = await tx.response.updateMany({
-        where: { id: response.id, manifestationTokenUsedAt: null },
-        data: { manifestationTokenUsedAt: now },
-      });
-      if (consumed.count !== 1) throw new TokenAlreadyUsed();
+      if (!(await consumeManifestationToken(tx, response.id, now))) throw new TokenAlreadyUsed();
 
-      const manifestation = await tx.manifestation.create({
-        data: {
-          responseId: response.id,
-          sectorId: response.sectorId,
-          type: input.type,
-          description: input.description,
-          isAnonymous: input.anonymous,
-          triggeredByLowScore: response.lowScore,
-          receivedAt: now,
-          idempotencyKey,
-          requestHash,
-          createdAt: now,
-          updatedAt: now,
-        },
-        select: { id: true, ...storedSelect },
+      const id = randomUUID();
+      await insertManifestation(tx, {
+        id,
+        responseId: response.id,
+        sectorId: response.sectorId,
+        type: input.type,
+        description: input.description,
+        isAnonymous: input.anonymous,
+        triggeredByLowScore: response.lowScore,
+        receivedAt: now,
+        idempotencyKey,
+        requestHash,
       });
       if (!input.anonymous && input.contact !== undefined) {
-        await tx.manifestationContact.create({
-          data: {
-            manifestationId: manifestation.id,
-            fullName: input.contact.fullName,
-            phone: input.contact.phone ?? null,
-            email: input.contact.email ?? null,
-            consentGivenAt: now,
-            purposeTextVersion: PURPOSE_TEXT_VERSION,
-            createdAt: now,
-          },
+        await insertContact(tx, {
+          manifestationId: id,
+          fullName: input.contact.fullName,
+          phone: input.contact.phone ?? null,
+          email: input.contact.email ?? null,
+          consentGivenAt: now,
+          purposeTextVersion: PURPOSE_TEXT_VERSION,
         });
       }
-      await tx.manifestationNote.create({
-        data: {
-          manifestationId: manifestation.id,
+      await insertNotes(tx, [
+        {
+          id: randomUUID(),
+          manifestationId: id,
+          authorId: null,
           kind: 'created',
+          content: null,
+          fromValue: null,
           toValue: 'received',
           createdAt: now,
         },
-      });
-      return manifestation;
+      ]);
+      return { protocol: await findProtocol(tx, id), receivedAt: now };
     });
     return {
       replayed: false,

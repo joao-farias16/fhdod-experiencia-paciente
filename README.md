@@ -27,39 +27,40 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 **ET04, ET05 e ET06 — Setores e escalas, pesquisas e pesquisa pública**: integradas em `develop`.
 **ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: integradas em `develop`.
 **Etapa 1 do novo cronograma — Revisão e reorganização do projeto**: integrada em `develop` (issue #32), sem mudança de funcionalidades.
-**Etapa 2 do novo cronograma — Separação definitiva do backend e do frontend**: na branch `refactor/separacao-backend-frontend`, sem mudança de funcionalidades. A API passou para a raiz do repositório e o frontend foi removido deste repositório, passando a ser mantido em repositório próprio (veja [Organização do repositório](#organização-do-repositório)).
+**Etapa 2 do novo cronograma — Separação definitiva do backend e do frontend**: integrada em `develop` (PR #34). A API fica na raiz do repositório; o frontend é mantido em repositório próprio (veja [Organização do repositório](#organização-do-repositório)).
+**Etapa 3 do novo cronograma — Migração completa do banco para MySQL**: na branch `feat/migracao-mysql`. Prisma, Supabase (PostgreSQL e Auth) e PostgreSQL foram **substituídos por MySQL 8.4 LTS** com SQL parametrizado (driver `mysql2`, sem ORM) e **autenticação própria** (bcrypt + JWT + sessões no banco). Rotas, contratos JSON, códigos HTTP e permissões foram preservados; foram acrescentados os endpoints de login, renovação e logout (E44–E46), antes feitos pelo frontend direto no Supabase Auth. Detalhes: [`database/README.md`](database/README.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md).
 
-| Implementado (ET01 a ET09)                                                                     | Reservado para etapas futuras                            |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                         | TV Wall (E42, TL15, ET10)                                |
-| **ET03:** Supabase Auth, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                  | Conferência das telas com o Figma (revisão)              |
-| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)        |                                                          |
-| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)     | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12) |
-| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                     | E2E com axe em todas as telas (ET11)                     |
-| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08) | Publicação na nuvem (ET12)                               |
-| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)       |                                                          |
-| **ET07:** manifestação após a avaliação, anonimato, contato e protocolo (E03; TL10)            |                                                          |
-| **ET07:** Ouvidoria: lista, detalhe, status, notas e contato auditado (E35–E40; TL12, TL13)    |                                                          |
-| **ET08:** painel geral e por setor com filtros, supressão e comparação (E28–E33; TL03, TL04)   |                                                          |
-| **ET09:** relatórios Excel de respostas, indicadores e manifestações (E34; TL14)               |                                                          |
-| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros               |                                                          |
-| **ET02:** Prisma 7, 18 tabelas, 5 migrations, CHECK/EXCLUDE/gatilhos, RLS, seed e T32          |                                                          |
-| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                        |                                                          |
-| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)            |                                                          |
-| Testes E2E com Playwright (no repositório do frontend; dados preparados por `e2e:fixture`)     |                                                          |
-| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas    |                                                          |
+| Implementado (ET01 a ET09)                                                                      | Reservado para etapas futuras                            |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                          | TV Wall (E42, TL15, ET10)                                |
+| **ET03:** autenticação, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                    | Conferência das telas com o Figma (revisão)              |
+| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)         |                                                          |
+| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)      | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12) |
+| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                      | E2E com axe em todas as telas (ET11)                     |
+| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08)  | Publicação na nuvem (ET12)                               |
+| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)        |                                                          |
+| **ET07:** manifestação após a avaliação, anonimato, contato e protocolo (E03; TL10)             |                                                          |
+| **ET07:** Ouvidoria: lista, detalhe, status, notas e contato auditado (E35–E40; TL12, TL13)     |                                                          |
+| **ET08:** painel geral e por setor com filtros, supressão e comparação (E28–E33; TL03, TL04)    |                                                          |
+| **ET09:** relatórios Excel de respostas, indicadores e manifestações (E34; TL14)                |                                                          |
+| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros                |                                                          |
+| **Etapa 3:** MySQL 8.4, 21 tabelas, 5 migrations SQL, CHECK, gatilhos, seed, T32 e auth própria |                                                          |
+| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                         |                                                          |
+| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)             |                                                          |
+| Testes E2E com Playwright (no repositório do frontend; dados preparados por `e2e:fixture`)      |                                                          |
+| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas     |                                                          |
 
-Desde a ET02, a API conecta-se ao PostgreSQL pelo Prisma; a rota de saúde responde 503 se o banco não responder em 2 s.
+Desde a Etapa 3, a API conecta-se ao **MySQL** por um pool do `mysql2` (SQL puro e parametrizado, sem ORM); a rota de saúde responde 503 se o banco não responder em 2 s. Até a Etapa 2 o projeto usava Prisma + PostgreSQL (Supabase) e Supabase Auth — esse histórico está nos documentos das etapas e em `docs/evidencias/`.
 
 ## Tecnologias
 
-| Camada    | Tecnologias (versões instaladas)                                                                                                                                                                                  |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, supabase-js 2 (Supabase Auth), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV), ExcelJS 4.4 (relatórios .xlsx) |
-| Banco     | PostgreSQL 17 (Supabase CLI local), Prisma 7.10.1 (`@prisma/client`, `@prisma/adapter-pg`, `pg`), `@faker-js/faker` 10 no seed, Supabase CLI 2.121.0                                                              |
-| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, Supertest, commitlint + husky                                                                                                            |
-| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                                                      |
-| Previstas | Recharts, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                           |
+| Camada    | Tecnologias (versões instaladas)                                                                                                                                                                                                         |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, bcryptjs 3 (hash de senhas), JWT HS256 (node:crypto), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV), ExcelJS 4.4 (relatórios .xlsx) |
+| Banco     | **MySQL 8.4 LTS** (administrável pelo MySQL Workbench), driver `mysql2` 3 (pool, SQL parametrizado, sem ORM), migrations SQL versionadas em `database/`, `@faker-js/faker` 10 no seed de demonstração                                    |
+| Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, Supertest, commitlint + husky                                                                                                                                   |
+| CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                                                                             |
+| Previstas | Recharts, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                                                  |
 
 As bibliotecas da linha "Previstas" fazem parte da especificação, mas só serão instaladas na etapa que as utilizar, para não manter dependências sem uso.
 
@@ -68,13 +69,13 @@ As bibliotecas da linha "Previstas" fazem parte da especificação, mas só ser�
 - **Node.js 24 LTS** (versão em `.nvmrc`; a CI usa Node 24). O projeto também foi verificado com Node 22.12+.
 - **npm 10+** (instalado com o Node.js).
 - **Git**.
-- **Docker** (Docker Desktop no Windows) para o banco local. O Supabase CLI vem como dependência de desenvolvimento (`npx supabase`).
+- **MySQL Server 8.4 LTS** (recomendado; 8.0.16 ou mais recente também atende) e, para administrar, o **MySQL Workbench**. Alternativa: Docker com a imagem `mysql:8.4`.
 
 ## Organização do repositório
 
 Desde a **Etapa 2 do novo cronograma (separação definitiva)**, este repositório é **dedicado à API (backend)**, que fica na raiz: há um único `package.json`, com as dependências e os scripts da API (endereço local `http://localhost:3333`; documentação neste README e em [`docs/`](docs/)). A interface web não faz parte deste repositório: é mantida em repositório próprio, com dependências, configurações, documentação e CI próprias.
 
-A API e o frontend se comunicam **somente por HTTP**: o frontend chama os endpoints `/api/v1`, e a API libera a origem do frontend pelo CORS (`CORS_ORIGIN`). O frontend não importa código da API, não acessa o banco nem o Prisma.
+A API e o frontend se comunicam **somente por HTTP**: o frontend chama os endpoints `/api/v1` (inclusive o login, `POST /api/v1/auth/login`), e a API libera a origem do frontend pelo CORS (`CORS_ORIGIN`). O frontend não importa código da API nem acessa o banco.
 
 ## Estrutura de pastas
 
@@ -83,29 +84,30 @@ O backend é organizado **por domínio** (`auth`, `users`, `audit`, `sectors`, `
 ```text
 fhdod-experiencia-paciente/      repositório da API (backend na raiz)
 ├── src/
-│   ├── server.ts                inicialização do processo (.env, ambiente, Prisma, Supabase, HTTP)
+│   ├── server.ts                inicialização do processo (.env, ambiente, pool MySQL, HTTP)
 │   ├── app.ts                   createApp(deps): middlewares globais, CORS, /api/v1, 404 e erros
 │   ├── routes.ts                agregador de /api/v1 (cadeias pública, autenticada e /admin)
-│   ├── lib/                     infraestrutura: env, logger, prisma, supabase
+│   ├── lib/                     infraestrutura: env, logger, database (pool mysql2), sql (template
+│   │                            parametrizado) e domain-types (ENUMs do modelo)
 │   ├── middlewares/             request-logger, rate-limit e error-handler (inclui o 404)
 │   ├── modules/<domínio>/       *.routes.ts (rotas e controladores), *.schemas.ts (Zod),
-│   │                            *.service.ts (regras, Prisma, transações) e auxiliares do domínio
+│   │                            *.service.ts (regras e transações), *.repository.ts (SQL)
 │   └── utils/                   funções puras: errors, validation, dates, idempotency
-├── prisma/                      schema.prisma, migrations/ e seed.ts
-├── scripts/                     db/ (verificação do seed, reset local, trava de banco remoto) e
+├── database/                    banco MySQL: create_database.sql, schema.sql (gerado),
+│                                migrations/, seeds/, seguranca/ e README (MySQL Workbench)
+├── scripts/                     db/ (migrations, seed, verificação, reset local, primeiro admin) e
 │                                e2e/ (dados fictícios da E2E executada pelo repositório do frontend)
-├── tests/                       unit/, integration/, db/ (PostgreSQL real), supabase/ e support/
-├── supabase/config.toml         ambiente local (PostgreSQL 54322, Auth 54321, Data API desligada)
+├── tests/                       unit/, integration/, db/ (MySQL real) e support/
 ├── docs/                        documentação técnica e evidencias/ (por etapa)
 ├── .github/                     CI da API e modelo de Pull Request
 ├── package.json · package-lock.json   dependências e scripts da API
-├── tsconfig.json · tsconfig.build.json · vitest.config.ts · prisma.config.ts
+├── tsconfig.json · tsconfig.build.json · vitest.config.ts
 ├── eslint.config.js · .prettierrc.json · commitlint.config.js · .husky/
 ├── .env.example                 variáveis da API (o .env real não é versionado)
 └── README.md
 ```
 
-`dist/` (builds), `coverage/`, `playwright-report/`, `test-results/` e `src/generated/` (Prisma Client) são gerados e não versionados.
+`dist/` (builds), `coverage/`, `playwright-report/`, `test-results/` e `database/seeds/gerado/` (seed exportado) são gerados e não versionados.
 
 ## Instalação da API
 
@@ -113,55 +115,60 @@ fhdod-experiencia-paciente/      repositório da API (backend na raiz)
 git clone https://github.com/joao-farias16/fhdod-experiencia-paciente.git
 cd fhdod-experiencia-paciente
 npm ci
-cp .env.example .env
+cp .env.example .env      # depois preencha DB_USER, DB_PASSWORD e JWT_SECRET
 ```
 
-O `npm ci` instala as dependências da API, gera o Prisma Client em `src/generated/` (`postinstall`) e ativa o hook `commit-msg` (husky) que valida as mensagens de commit. Se `src/generated/` for apagado ou o `schema.prisma` mudar, gere o client de novo com `npm run db:generate` antes de lint, typecheck, testes ou build.
+O `npm ci` instala as dependências da API e ativa o hook `commit-msg` (husky) que valida as mensagens de commit. Não há cliente gerado nem passo de "generate".
 
-### Banco de dados local (ET02)
+### Banco de dados MySQL (Etapa 3)
 
-Com o Docker em execução, na raiz do repositório:
+Passo a passo completo, inclusive pelo **MySQL Workbench**: [`database/README.md`](database/README.md). Resumo pela linha de comando, na raiz do repositório (MySQL rodando e `.env` preenchido):
 
 ```bash
-npm run db:start                      # Supabase CLI: PostgreSQL 54322, Auth 54321, Studio 54323
-npx supabase status -o env            # copie SECRET_KEY para SUPABASE_SECRET_KEY no .env
-npm run db:migrate                    # aplica as migrations versionadas
-npm run db:seed                       # dados fictícios determinísticos
-npm run db:seed:verify                # confere as contagens no banco
+npm run db:create          # cria o banco DB_NAME (utf8mb4_0900_as_cs), se não existir
+npm run db:migrate         # aplica database/migrations/*.sql pendentes
+npm run db:migrate:status  # aplicadas, pendentes e conferência de checksum
+npm run db:seed            # dados fictícios de demonstração (exige SEED_DEMO_PASSWORD)
+npm run db:seed:verify     # confere as contagens no banco
 ```
 
-`npm run db:reset` recria o banco **local** (migrations + seed) e recusa URLs remotas. Detalhes: [`docs/padroes-banco-de-dados.md`](docs/padroes-banco-de-dados.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/mapeamento-classes-e-consultas.md`](docs/mapeamento-classes-e-consultas.md).
+Pelo **MySQL Workbench**: execute `database/create_database.sql`, depois `database/schema.sql` (todas as tabelas, chaves, índices, restrições e gatilhos) e, para uma instalação real, `database/seeds/001_dados_base.sql` seguido de `npm run db:create-admin` (primeiro superadministrador). O seed de demonstração também pode ser gerado como `.sql` para importar no Workbench: `npm run db:seed:export`.
 
-Contas de demonstração (somente no ambiente local, senha = `SEED_DEMO_PASSWORD` do seu `.env`): `superadmin@`, `admin.setor@`, `gestao@`, `gestao.setores@`, `ouvidoria@` e `visualizador@example.com`. Elas são usadas no login do frontend (TL01), mantido em repositório próprio.
+`npm run db:reset` apaga e recria o banco **local** (migrations + seed) e recusa servidor remoto. Detalhes: [`docs/padroes-banco-de-dados.md`](docs/padroes-banco-de-dados.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/mapeamento-classes-e-consultas.md`](docs/mapeamento-classes-e-consultas.md).
+
+Contas de demonstração (somente no ambiente local, senha = `SEED_DEMO_PASSWORD` do seu `.env`): `superadmin@`, `admin.setor@`, `gestao@`, `gestao.setores@`, `ouvidoria@` e `visualizador@example.com`. O login é feito em `POST /api/v1/auth/login` (usado pelo frontend, mantido em repositório próprio).
 
 O seed também publica as pesquisas dos 6 setores fictícios. Na API, a pesquisa pública responde sem login, por exemplo em `GET http://localhost:3333/api/v1/public/surveys/pronto-atendimento` (E01).
-
-> **Windows — "ports are not available" ao iniciar o Supabase.** Se `npm run db:start` falhar com `bind: An attempt was made to access a socket in a way forbidden by its access permissions` nas portas 54321–54323, o Windows reservou essa faixa (veja com `netsh interface ipv4 show excludedportrange protocol=tcp`). Em um terminal **como administrador**, execute `net stop winnat` e `net start winnat` e tente de novo.
 
 ## Variáveis de ambiente da API
 
 O `.env` fica na **raiz** do repositório (copiado de `.env.example`, que tem só valores fictícios).
 
-| Variável                              | Uso                                                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                            | `development`, `test` ou `production`                                                                                                 |
-| `PORT`                                | porta da API (padrão `3333`)                                                                                                          |
-| `CORS_ORIGIN`                         | **obrigatória**; origens do frontend permitidas, separadas por vírgula (local `http://localhost:5173`; HTTPS em produção)             |
-| `LOG_LEVEL`                           | nível do pino (padrão `info`)                                                                                                         |
-| `TRUST_PROXY`                         | número de proxies confiáveis (Render = `1`)                                                                                           |
-| `DATABASE_URL`                        | **obrigatória** (ET02); API → PostgreSQL (nuvem: pooler transação, 6543)                                                              |
-| `DIRECT_URL`                          | Prisma Migrate (nuvem: pooler sessão, 5432)                                                                                           |
-| `TEST_DATABASE_URL`                   | testes de banco e E2E (somente servidor local)                                                                                        |
-| `SEED_*`                              | senha das contas de demonstração, trava de banco remoto e data de referência                                                          |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | **obrigatórias** (ET03): validação do token e administração das contas; seed                                                          |
-| `AUDIT_IP_SECRET`                     | HMAC do IP na auditoria (opcional local; obrigatória em produção, 32+)                                                                |
-| `PUBLIC_APP_URL`                      | endereço do frontend: base dos links e do QR Code `/p/<slug>` (padrão local `http://localhost:5173`; HTTPS e obrigatória em produção) |
-| `MANIFESTATION_TOKEN_SECRET`          | HMAC do token devolvido por E02 (opcional local; obrigatória em produção, 32+)                                                        |
-| `SUPABASE_PUBLISHABLE_KEY`            | somente `npm run test:supabase`                                                                                                       |
+| Variável                       | Uso                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                     | `development`, `test` ou `production`                                                                                                 |
+| `PORT`                         | porta da API (padrão `3333`)                                                                                                          |
+| `CORS_ORIGIN`                  | **obrigatória**; origens do frontend permitidas, separadas por vírgula (local `http://localhost:5173`; HTTPS em produção)             |
+| `LOG_LEVEL`                    | nível do pino (padrão `info`)                                                                                                         |
+| `TRUST_PROXY`                  | número de proxies confiáveis (Render = `1`)                                                                                           |
+| `DB_HOST`, `DB_PORT`           | servidor MySQL (padrão `localhost:3306`)                                                                                              |
+| `DB_USER`, `DB_PASSWORD`       | **`DB_USER` obrigatória**; senha obrigatória em produção (use o usuário de privilégio mínimo de `database/seguranca/usuarios.sql`)    |
+| `DB_NAME`                      | nome do banco (padrão `fhdod`)                                                                                                        |
+| `DB_CONNECTION_LIMIT`          | tamanho do pool de conexões (padrão `10`)                                                                                             |
+| `DB_SSL`, `DB_SSL_CA`          | TLS para o MySQL na nuvem (`true`) e certificado da autoridade (PEM), se o provedor exigir                                            |
+| `TEST_DB_NAME`, `TEST_DB_*`    | banco dos testes (padrão `fhdod_test`; recriado a cada `npm test`; somente servidor local e nunca igual a `DB_NAME`)                  |
+| `JWT_SECRET`                   | **obrigatória** (Etapa 3): assinatura HS256 dos tokens de acesso, 32+ caracteres, somente no backend                                  |
+| `JWT_ACCESS_TOKEN_TTL_SECONDS` | validade do token de acesso (padrão `3600`)                                                                                           |
+| `REFRESH_TOKEN_TTL_DAYS`       | validade da sessão sem renovação (padrão `7`)                                                                                         |
+| `BCRYPT_ROUNDS`                | custo do bcrypt (padrão `12`; mínimo `10` em produção)                                                                                |
+| `SEED_*`                       | senha das contas de demonstração, trava de servidor remoto e data de referência                                                       |
+| `AUDIT_IP_SECRET`              | HMAC do IP na auditoria e nas sessões (opcional local; obrigatória em produção, 32+)                                                  |
+| `PUBLIC_APP_URL`               | endereço do frontend: base dos links e do QR Code `/p/<slug>` (padrão local `http://localhost:5173`; HTTPS e obrigatória em produção) |
+| `MANIFESTATION_TOKEN_SECRET`   | HMAC do token devolvido por E02 (opcional local; obrigatória em produção, 32+)                                                        |
 
-Todas as variáveis da Tabela 15 já são lidas pela API. Sem `MANIFESTATION_TOKEN_SECRET` local, a API usa um segredo aleatório válido enquanto estiver rodando. Valores locais do Supabase: `npx supabase status -o env` (`API_URL`, `SECRET_KEY`, `PUBLISHABLE_KEY`). A API valida as variáveis na inicialização e não sobe se alguma for inválida.
+Sem `MANIFESTATION_TOKEN_SECRET` local, a API usa um segredo aleatório válido enquanto estiver rodando. A API valida as variáveis na inicialização e não sobe se alguma for inválida (as mensagens nunca mostram os valores). As antigas `DATABASE_URL`, `DIRECT_URL`, `TEST_DATABASE_URL` e `SUPABASE_*` não são mais lidas.
 
-**Nunca versione arquivos `.env`** (o `.gitignore` só aceita `.env.example`). A chave secreta do Supabase existe somente na API.
+**Nunca versione arquivos `.env`** (o `.gitignore` só aceita `.env.example`). `JWT_SECRET` e as senhas existem somente na API.
 
 ## Execução
 
@@ -201,6 +208,7 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 | Grupo                         | Endpoints (prefixo `/api/v1`)                                                                            | Documentação                                                                               |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Saúde                         | E43 `GET /health`                                                                                        | [`docs/arquitetura.md`](docs/arquitetura.md)                                               |
+| Autenticação (Etapa 3)        | E44 `POST /auth/login`, E45 `POST /auth/refresh`, E46 `POST /auth/logout`                                | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)                   |
 | Perfil, usuários e auditoria  | E04–E09, E41                                                                                             | [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)                   |
 | Setores, equipes e etapas     | E10–E12 `/admin/sectors`, E13–E15 `/admin/teams`, E16 `/admin/journey-stages`                            | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
 | Turnos e importação de escala | E17–E19 `/admin/shifts`, E20 `POST /admin/rosters/import`, E21 `POST /admin/rosters/imports/:id/confirm` | [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md)               |
@@ -217,30 +225,30 @@ A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para
 
 Comandos executados na **raiz** do repositório.
 
-| Comando                 | O que faz                                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `npm run check`         | formatação, lint, typecheck, testes e build em sequência (mesmos passos do job `qualidade` da CI)                        |
-| `npm run format:check`  | verifica a formatação (Prettier); `npm run format` corrige                                                               |
-| `npm run lint`          | ESLint sem avisos tolerados (inclui as regras de camadas); `npm run lint:fix` corrige                                    |
-| `npm run typecheck`     | TypeScript (`src`, `tests`, `prisma`, `scripts`)                                                                         |
-| `npm test`              | projetos `unidade-e-integracao` e `banco`: unidade, integração e banco real (T32, T12–T26, T07–T11, T18–T21, T36, T37)   |
-| `npm run test:db`       | somente o projeto `banco` (PostgreSQL, `TEST_DATABASE_URL`)                                                              |
-| `npm run test:supabase` | projeto `supabase`: T12, T13 e T16 contra o Supabase Auth local (`npm run db:start`)                                     |
-| `npm run test:coverage` | cobertura da API                                                                                                         |
-| `npm run build`         | build da API em `dist/` (`npm start` executa o build)                                                                    |
-| `npm run dev:no-watch`  | API sem recarga automática (usado pela E2E do frontend, em repositório próprio; no dia a dia, prefira `npm run dev`)     |
-| `npm run e2e:fixture`   | cria/exclui os dados fictícios da E2E do frontend no banco de teste (acionado pela E2E do frontend; não é usado sozinho) |
+| Comando                 | O que faz                                                                                                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`         | formatação, lint, typecheck, conferência do `schema.sql`, testes e build em sequência                                                                                             |
+| `npm run format:check`  | verifica a formatação (Prettier); `npm run format` corrige                                                                                                                        |
+| `npm run lint`          | ESLint sem avisos tolerados (inclui as regras de camadas e de SQL parametrizado); `npm run lint:fix` corrige                                                                      |
+| `npm run typecheck`     | TypeScript (`src`, `tests`, `scripts`)                                                                                                                                            |
+| `npm test`              | projetos `unidade-e-integracao` e `banco`: unidade, integração e MySQL real (T32, T12–T26, T07–T11, T18–T21, T36, T37)                                                            |
+| `npm run test:db`       | somente o projeto `banco` (MySQL, banco `TEST_DB_NAME` recriado e migrado automaticamente)                                                                                        |
+| `npm run test:coverage` | cobertura da API                                                                                                                                                                  |
+| `npm run build`         | build da API em `dist/` (`npm start` executa o build)                                                                                                                             |
+| `npm run db:*`          | banco: `create`, `migrate`, `migrate:status`, `migration:new`, `schema`, `schema:check`, `seed`, `seed:export`, `seed:verify`, `reset`, `create-admin` (ver `database/README.md`) |
+| `npm run dev:no-watch`  | API sem recarga automática (usado pela E2E do frontend, em repositório próprio; no dia a dia, prefira `npm run dev`)                                                              |
+| `npm run e2e:fixture`   | cria/encerra os dados fictícios da E2E do frontend no banco de teste (acionado pela E2E do frontend)                                                                              |
 
-Regras de lint relevantes para segurança: `any` explícito proibido (RNF20), `$queryRawUnsafe` proibido (RNF11).
+Regras de lint relevantes para segurança: `any` explícito proibido (RNF20); em `src/`, SQL montado por interpolação de template literal em `query`/`execute` é proibido — use o template `sql` parametrizado (RNF11); rotas não importam a camada de banco (RNF21).
 
-Os testes de banco usam `TEST_DATABASE_URL` (somente servidor local; o banco é criado e migrado automaticamente). Para usar outro PostgreSQL local sem editar o `.env`, defina a variável na linha de comando, por exemplo `TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55432/fhdod_test npm test` com um contêiner `postgres:17`.
+Os testes de banco usam `TEST_DB_*` (cada variável vazia usa a `DB_*` correspondente; o banco padrão é `fhdod_test`). O banco de testes é **apagado e recriado** a cada execução — por isso só é aceito servidor local e nunca o mesmo `DB_NAME`. Para usar um MySQL em Docker sem editar o `.env`: `docker run -d --name fhdod-mysql-test -p 127.0.0.1:33306:3306 -e MYSQL_ROOT_PASSWORD=senha mysql:8.4` e `TEST_DB_PORT=33306 TEST_DB_USER=root TEST_DB_PASSWORD=senha npm test`.
 
 ## Integração contínua
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em push e pull request para `main` e `develop`:
 
 1. **Segredos** — gitleaks no histórico completo;
-2. **API** — `npm ci` na raiz, serviço PostgreSQL 17, validação do schema, `prisma migrate deploy` em banco vazio, `prisma migrate diff --exit-code`, seed com verificação das contagens, formatação, lint, typecheck, testes (inclusive com banco real), build e verificação de `GET /api/v1/health` com o build, em Node 24;
+2. **API** — `npm ci` na raiz, serviço **MySQL 8.4**, conferência do `database/schema.sql`, `db:create` + `db:migrate` em banco vazio, importação do `schema.sql` num banco novo (mesmo fluxo do Workbench), seed com verificação das contagens, formatação, lint, typecheck, testes (inclusive com MySQL real), build e verificação de `GET /api/v1/health` e do login com o build, em Node 24;
 3. **Dependências** — `npm audit --audit-level=high` com o `package.json` e o `package-lock.json` da raiz (API).
 
 ## ET01 — Repositório, ambiente e Kanban
@@ -263,6 +271,8 @@ Evidências: [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-t
 
 Critério de conclusão (Tabela 27): migrations, seed; **contagens do seed e T32 aprovados**.
 
+> Implementada com Prisma 7 + PostgreSQL; na Etapa 3 o mesmo modelo (tabelas, chaves, restrições e gatilhos) foi recriado em MySQL 8.4 — ver [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md).
+
 - [x] Prisma 7 configurado e integrado ao backend (`DATABASE_URL`, saúde com `SELECT 1`)
 - [x] 18 tabelas, 11 enums, FKs compostas, CHECK, UQ parciais, EXCLUDE, gatilhos, sequência do protocolo
 - [x] RLS sem políticas e privilégios de `anon`/`authenticated` revogados; Data API desligada no ambiente local
@@ -271,13 +281,15 @@ Critério de conclusão (Tabela 27): migrations, seed; **contagens do seed e T32
 - [x] T32 com os 6 cenários aprovados contra PostgreSQL real (e teste de mutação comprovando a detecção)
 - [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável)
 - [ ] Revisão do Felipe
-- [ ] Data API do projeto Supabase remoto desligada no painel e migrations aplicadas na nuvem (somente com autorização, ET12)
+- ~~Data API do projeto Supabase remoto desligada no painel e migrations aplicadas na nuvem~~ (obsoleto desde a Etapa 3: o banco passou a ser MySQL)
 
 Evidências: [`docs/evidencias/ET02/`](docs/evidencias/ET02/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
 ## ET03 — Autenticação e permissões
 
 Critério de conclusão (Tabela 27): **E04–E09, E41, TL01, TL02, TL16, TL17; T12–T17**.
+
+> Implementada com Supabase Auth; na Etapa 3 substituída por autenticação própria (bcrypt, JWT e sessões no MySQL), com as mesmas regras de acesso.
 
 - [x] Login no Supabase Auth, validação do token a cada requisição, perfil/escopo/permissões no E04, logout com revogação
 - [x] E05 (troca de senha), E06–E09 (usuários, escopo, desativação, redefinição assistida com senha temporária CSPRNG)
@@ -360,15 +372,27 @@ Critério de conclusão (Tabela 27): **E34, TL14; T20, T21**.
 
 Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07-ET09/`](docs/evidencias/ET07-ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
+## Etapa 3 — Migração para MySQL
+
+Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; autenticação própria; tabelas, relacionamentos e restrições recriados; SQL importável no MySQL Workbench; funcionalidades preservadas; testes, CI e documentação atualizados.
+
+- [x] MySQL 8.4 LTS com pool `mysql2`, UTC, READ COMMITTED, transações com nova tentativa em deadlock e 503 para banco indisponível
+- [x] `database/`: criação do banco, 5 migrations versionadas (tabelas, chaves e índices, relacionamentos, CHECK e gatilhos), `schema.sql` gerado, seeds, usuários de privilégio mínimo e README do Workbench
+- [x] Camada de repositórios por domínio (`*.repository.ts`) com SQL parametrizado; serviços e rotas preservados
+- [x] Autenticação própria: E44 login, E45 renovação rotativa com detecção de reutilização, E46 logout; bcrypt; sessões revogadas na troca/redefinição de senha
+- [x] Seed de demonstração no MySQL (e exportável para o Workbench) com verificação das contagens aprovada
+- [x] 731 testes aprovados contra MySQL 8.4 (unidade, integração e banco), lint, typecheck e build
+- [x] CI com serviço MySQL 8.4; Prisma, Supabase e PostgreSQL removidos de dependências, scripts e configurações
+- [ ] Ajuste do frontend (repositório próprio) para usar E44–E46 no lugar do Supabase Auth — **pendente, fora deste repositório**
+- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+
 ## Limitações conhecidas e pendências
 
-- **E2E com Supabase Auth (frontend):** 23/23 aprovados em 28/10/2026 (`t12-autenticacao`, `administracao`, `escalas-e-pesquisas`, `pesquisa-publica` e `manifestacoes-painel-relatorios`) e novamente após a separação da Etapa 2 (resultado em [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md)). Se `npm run db:start` acusar porta proibida, conferir `netsh interface ipv4 show excludedportrange protocol=tcp` e liberar a faixa (ver [banco local](#banco-de-dados-local-et02)). A E2E é executada a partir do repositório do frontend; neste repositório ficam apenas os dados de apoio (`npm run e2e:fixture`) e as evidências já registradas em `docs/evidencias/`.
-- **Supabase remoto vazio (verificado em 28/10/2026):** o projeto `mowxlbpwhcsurjpcrpra` tem 0 tabelas e 0 migrations; a publicação do esquema é da ET12 e exige autorização. Tudo foi desenvolvido e testado no Supabase local ([detalhes](docs/manifestacoes-dashboard-relatorios.md#supabase-e-figma)).
-- **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais do FHDOD e as telas de todas as etapas implementadas (ET01 a ET09): início, pesquisa pública, manifestação, confirmação, login, troca de senha, painel geral e por setor, setores e equipes, escalas, importação, pesquisas e cartaz, Ouvidoria, relatórios, usuários, auditoria e acesso não permitido. A TL15 (TV Wall, ET10) ainda não foi implementada e não tem tela. A revisão cruzada das telas faz parte da revisão de cada etapa. Detalhes em [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md#supabase-e-figma).
-- **`npm audit`:** o ExcelJS 4.4 depende do `uuid` 8, com aviso moderado (GHSA-w5hq-g745-h8pq) que só afeta `v3`/`v5`/`v6` com `buf`; o ExcelJS usa apenas `v4`. A CI falha somente em alta ou crítica.
-- **Banco de desenvolvimento local:** `npm run db:seed:verify` acusa 2.401 respostas (uma resposta manual de 27/10/2026) e 2 registros de auditoria (primeiro E2E da ET03); restaurar só com `npm run db:reset` autorizado.
-- **OpenAPI/Swagger, axe e T35/T39** continuam previstos para a ET11/ET12.
-- A matriz de testes completa e a execução contra a nuvem dependem das próximas etapas (ET11–ET12).
+- **Frontend:** o login, a renovação de sessão e o logout passaram para a API (E44–E46). O frontend, em repositório próprio, ainda chama o Supabase Auth e precisa ser adaptado (contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)). A E2E do frontend só volta a rodar depois desse ajuste.
+- **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#migração-de-dados-de-um-banco-postgresql-antigo).
+- **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais e as telas das etapas implementadas (ET01 a ET09). A TL15 (TV Wall, ET10) ainda não tem tela.
+- **`npm audit`:** avisos moderados já existentes antes da Etapa 3 (ExcelJS 4.4 → `uuid` 8, GHSA-w5hq-g745-h8pq, que só afeta `v3`/`v5`/`v6` com `buf`; e `minimatch` nas ferramentas de lint). A CI falha somente em alta ou crítica.
+- **OpenAPI/Swagger, axe e T35/T39** continuam previstos para etapas futuras.
 
 ## Branches e colaboração
 

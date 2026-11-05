@@ -1,5 +1,6 @@
-import { Prisma, type PrismaClient } from '../../lib/prisma.js';
-import { addDays, daysInclusive, HOSPITAL_TIME_ZONE } from '../../utils/dates.js';
+import { type Queryable, toNumber } from '../../lib/database.js';
+import { sql, type SqlStatement } from '../../lib/sql.js';
+import { addDays, daysInclusive, localDateOf } from '../../utils/dates.js';
 import type { LocalPeriod } from '../../utils/validation.js';
 import { SHIFT_PERIODS } from '../shifts/shift-rules.js';
 import {
@@ -9,38 +10,52 @@ import {
   RESPONSES_FROM,
 } from './dashboard.filters.js';
 import { type Granularity, GRANULARITY_MAX_DAYS } from './dashboard.schemas.js';
-import { computeNps } from './nps.js';
+import { computeNps, percentOf, roundedRatio } from './nps.js';
 
-type Db = Pick<PrismaClient, '$queryRaw' | 'surveyConfig' | 'team'>;
+type Db = Queryable;
 
 /**
- * Contagens e NPS do RN03 calculados no PostgreSQL (Seção 8): ROUND do PostgreSQL arredonda a
- * metade afastando-se de zero, como computeNps (RF51, T05). COUNT(r.id) permite LEFT JOIN.
+ * Contagens do RN03 calculadas no MySQL (Seção 8); NPS e percentuais calculados a partir delas
+ * com aritmética inteira (computeNps e percentOf), que reproduzem exatamente o ROUND do SQL
+ * (metade afastando-se de zero, RF51, T05). COUNT(r.id) permite LEFT JOIN.
  */
-const NPS_COLUMNS = Prisma.sql`
-  COUNT(r.id)::int AS total,
-  COUNT(r.id) FILTER (WHERE r.nps_score >= 9)::int AS promoters,
-  COUNT(r.id) FILTER (WHERE r.nps_score IN (7, 8))::int AS passives,
-  COUNT(r.id) FILTER (WHERE r.nps_score <= 6)::int AS detractors,
-  ROUND(100.0 * (COUNT(r.id) FILTER (WHERE r.nps_score >= 9)
-                 - COUNT(r.id) FILTER (WHERE r.nps_score <= 6))
-        / NULLIF(COUNT(r.id), 0), 1)::float8 AS nps,
-  ROUND(100.0 * COUNT(r.id) FILTER (WHERE r.nps_score >= 9) / NULLIF(COUNT(r.id), 0), 1)::float8
-    AS promoters_percent,
-  ROUND(100.0 * COUNT(r.id) FILTER (WHERE r.nps_score IN (7, 8)) / NULLIF(COUNT(r.id), 0), 1)::float8
-    AS passives_percent,
-  ROUND(100.0 * COUNT(r.id) FILTER (WHERE r.nps_score <= 6) / NULLIF(COUNT(r.id), 0), 1)::float8
-    AS detractors_percent`;
+const NPS_COLUMNS = sql`
+  COUNT(r.id) AS total,
+  COUNT(CASE WHEN r.nps_score >= 9 THEN 1 END) AS promoters,
+  COUNT(CASE WHEN r.nps_score IN (7, 8) THEN 1 END) AS passives,
+  COUNT(CASE WHEN r.nps_score <= 6 THEN 1 END) AS detractors`;
 
-interface NpsRow {
+interface NpsCountsRow {
   total: number;
   promoters: number;
   passives: number;
   detractors: number;
+}
+
+interface NpsRow extends NpsCountsRow {
   nps: number | null;
   promoters_percent: number | null;
   passives_percent: number | null;
   detractors_percent: number | null;
+}
+
+/** Converte as contagens do banco (BIGINT) e calcula NPS e percentuais. */
+function withNps<T extends NpsCountsRow>(row: T): T & NpsRow {
+  const total = toNumber(row.total);
+  const promoters = toNumber(row.promoters);
+  const passives = toNumber(row.passives);
+  const detractors = toNumber(row.detractors);
+  return {
+    ...row,
+    total,
+    promoters,
+    passives,
+    detractors,
+    nps: computeNps({ promoters, passives, detractors }),
+    promoters_percent: percentOf(promoters, total),
+    passives_percent: percentOf(passives, total),
+    detractors_percent: percentOf(detractors, total),
+  };
 }
 
 /** Indicadores de NPS sempre com o n considerado (RF53); `suppressed` conforme RN21. */
@@ -85,11 +100,11 @@ function npsIndicator(row: NpsRow | undefined, filters: ResolvedFilters): NpsInd
 }
 
 async function npsOf(db: Db, filters: ResolvedFilters): Promise<NpsRow | undefined> {
-  const rows = await db.$queryRaw<NpsRow[]>`
+  const rows = await db.query<NpsCountsRow>(sql`
     SELECT ${NPS_COLUMNS}
     FROM ${RESPONSES_FROM}
-    WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}`;
-  return rows[0];
+    WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}`);
+  return rows[0] === undefined ? undefined : withNps(rows[0]);
 }
 
 /** Cobertura de atribuição do recorte sem os filtros de turno e equipe (RF50, RF57). */
@@ -101,18 +116,17 @@ export interface Coverage {
 }
 
 async function coverageOf(db: Db, filters: ResolvedFilters): Promise<Coverage> {
-  const rows = await db.$queryRaw<{ total: number; attributed: number; percent: number | null }[]>`
-    SELECT COUNT(*)::int AS total,
-           COUNT(*) FILTER (WHERE r.attribution_status = 'attributed')::int AS attributed,
-           ROUND(100.0 * COUNT(*) FILTER (WHERE r.attribution_status = 'attributed')
-                 / NULLIF(COUNT(*), 0), 1)::float8 AS percent
+  const rows = await db.query<{ total: number; attributed: number }>(sql`
+    SELECT COUNT(*) AS total,
+           COUNT(CASE WHEN r.attribution_status = 'attributed' THEN 1 END) AS attributed
     FROM ${RESPONSES_FROM}
-    WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters, false)}`;
-  const row = rows[0] ?? { total: 0, attributed: 0, percent: null };
-  if (isSuppressed(filters, row.total)) {
+    WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters, false)}`);
+  const total = toNumber(rows[0]?.total ?? 0);
+  const attributed = toNumber(rows[0]?.attributed ?? 0);
+  if (isSuppressed(filters, total)) {
     return { total: null, attributed: null, percent: null, suppressed: true };
   }
-  return { ...row, suppressed: false };
+  return { total, attributed, percent: percentOf(attributed, total), suppressed: false };
 }
 
 export interface DistributionItem {
@@ -164,21 +178,27 @@ export async function getSummary(
   filters: ResolvedFilters,
   compare: boolean,
 ): Promise<SummaryDto> {
-  const where = Prisma.sql`s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}`;
-  const [npsRow, distributionRows, manifestationRows, coverage] = await Promise.all([
+  const where = sql`s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}`;
+  const [npsRow, scoreRows, typeRows, coverage] = await Promise.all([
     npsOf(db, filters),
-    db.$queryRaw<{ score: number; count: number; percent: number }[]>`
-      SELECT r.nps_score::int AS score, COUNT(*)::int AS count,
-             ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1)::float8 AS percent
+    db.query<{ score: number; count: number }>(sql`
+      SELECT r.nps_score AS score, COUNT(*) AS count
       FROM ${RESPONSES_FROM} WHERE ${where}
-      GROUP BY r.nps_score`,
-    db.$queryRaw<{ type: 'compliment' | 'complaint' | 'suggestion'; count: number }[]>`
-      SELECT m.type::text AS type, COUNT(*)::int AS count
+      GROUP BY r.nps_score`),
+    db.query<{ type: 'compliment' | 'complaint' | 'suggestion'; count: number }>(sql`
+      SELECT m.type, COUNT(*) AS count
       FROM manifestations m JOIN ${RESPONSES_FROM} ON r.id = m.response_id
       WHERE ${where}
-      GROUP BY m.type`,
+      GROUP BY m.type`),
     coverageOf(db, filters),
   ]);
+  const scoreTotal = scoreRows.reduce((sum, row) => sum + toNumber(row.count), 0);
+  const distributionRows = scoreRows.map((row) => ({
+    score: toNumber(row.score),
+    count: toNumber(row.count),
+    percent: percentOf(toNumber(row.count), scoreTotal),
+  }));
+  const manifestationRows = typeRows.map((row) => ({ type: row.type, count: toNumber(row.count) }));
   const indicators = npsIndicator(npsRow, filters);
   const distribution = indicators.suppressed
     ? null
@@ -250,21 +270,21 @@ export interface SectorResultDto {
  * setores fora do escopo nunca aparecem. Setor inativo aparece somente se tiver respostas.
  */
 export async function getSectors(db: Db, filters: ResolvedFilters): Promise<SectorResultDto[]> {
-  const sectorFilter =
-    filters.sectorIds === undefined
-      ? Prisma.empty
-      : Prisma.sql`AND s.id = ANY(${[...filters.sectorIds]}::uuid[])`;
-  const rows = await db.$queryRaw<
-    (NpsRow & { id: string; code: string; name: string; is_active: boolean })[]
-  >`
-    SELECT s.id::text AS id, s.code, s.name, s.is_active, ${NPS_COLUMNS}
+  if (filters.sectorIds?.length === 0) return [];
+  const sectorFilter: SqlStatement =
+    filters.sectorIds === undefined ? sql.empty : sql`AND s.id IN (${sql.list(filters.sectorIds)})`;
+  const counts = await db.query<
+    NpsCountsRow & { id: string; code: string; name: string; is_active: boolean }
+  >(sql`
+    SELECT s.id, s.code, s.name, s.is_active, ${NPS_COLUMNS}
     FROM sectors s
     LEFT JOIN (responses r JOIN survey_versions sv ON sv.id = r.survey_version_id)
       ON r.sector_id = s.id AND ${responseConditions(filters)}
-    WHERE s.hospital_id = ${filters.hospitalId}::uuid ${sectorFilter}
+    WHERE s.hospital_id = ${filters.hospitalId} ${sectorFilter}
     GROUP BY s.id
-    HAVING s.is_active OR COUNT(r.id) > 0`;
-  return rows
+    HAVING s.is_active OR COUNT(r.id) > 0`);
+  return counts
+    .map(withNps)
     .map((row) => ({
       id: row.id,
       code: row.code,
@@ -285,15 +305,16 @@ export async function getShifts(
   db: Db,
   filters: ResolvedFilters,
 ): Promise<{ items: ShiftResultDto[]; coverage: Coverage }> {
-  const [rows, coverage] = await Promise.all([
-    db.$queryRaw<(NpsRow & { period: string })[]>`
-      SELECT r.shift_period::text AS period, ${NPS_COLUMNS}
+  const [counts, coverage] = await Promise.all([
+    db.query<NpsCountsRow & { period: string }>(sql`
+      SELECT r.shift_period AS period, ${NPS_COLUMNS}
       FROM ${RESPONSES_FROM}
-      WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}
+      WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}
         AND r.attribution_status = 'attributed'
-      GROUP BY r.shift_period`,
+      GROUP BY r.shift_period`),
     coverageOf(db, filters),
   ]);
+  const rows = counts.map(withNps);
   const periods = filters.period === undefined ? SHIFT_PERIODS : [filters.period];
   return {
     items: periods.map((period) => ({
@@ -320,26 +341,26 @@ export async function getTeams(
   db: Db,
   filters: ResolvedFilters,
 ): Promise<{ items: TeamResultDto[]; coverage: Coverage }> {
-  const [rows, coverage] = await Promise.all([
-    db.$queryRaw<
-      (NpsRow & {
+  const [counts, coverage] = await Promise.all([
+    db.query<
+      NpsCountsRow & {
         id: string;
         code: string;
         name: string;
         sector_id: string;
         sector_name: string;
-      })[]
-    >`
-      SELECT t.id::text AS id, t.code, t.name, s.id::text AS sector_id, s.name AS sector_name,
-             ${NPS_COLUMNS}
+      }
+    >(sql`
+      SELECT t.id, t.code, t.name, s.id AS sector_id, s.name AS sector_name, ${NPS_COLUMNS}
       FROM ${RESPONSES_FROM} JOIN teams t ON t.id = r.team_id
-      WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}
+      WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}
         AND r.attribution_status = 'attributed'
-      GROUP BY t.id, s.id`,
+      GROUP BY t.id, s.id`),
     coverageOf(db, filters),
   ]);
   return {
-    items: rows
+    items: counts
+      .map(withNps)
       .map((row) => ({
         id: row.id,
         code: row.code,
@@ -394,7 +415,8 @@ export function trendBuckets(period: LocalPeriod, granularity: Granularity): Loc
 
 /**
  * E32 — série de NPS e n (RF59), um ponto por intervalo e sem lacunas. As contagens vêm do banco
- * por dia local; o NPS de cada intervalo usa computeNps, idêntico ao ROUND do SQL (RF51).
+ * por hora UTC e são somadas por dia local (America/Sao_Paulo) no TypeScript — sem depender das
+ * tabelas de fuso horário do servidor MySQL; o NPS de cada intervalo usa computeNps (RF51).
  */
 export async function getTrends(
   db: Db,
@@ -402,16 +424,26 @@ export async function getTrends(
   requested?: Granularity,
 ): Promise<{ granularity: Granularity; points: TrendPointDto[] }> {
   const granularity = granularityFor(filters, requested);
-  const rows = await db.$queryRaw<
-    { day: string; promoters: number; passives: number; detractors: number }[]
-  >`
-    SELECT to_char(r.submitted_at AT TIME ZONE ${HOSPITAL_TIME_ZONE}, 'YYYY-MM-DD') AS day,
-           COUNT(*) FILTER (WHERE r.nps_score >= 9)::int AS promoters,
-           COUNT(*) FILTER (WHERE r.nps_score IN (7, 8))::int AS passives,
-           COUNT(*) FILTER (WHERE r.nps_score <= 6)::int AS detractors
+  const hourly = await db.query<{
+    hour: string;
+    promoters: number;
+    passives: number;
+    detractors: number;
+  }>(sql`
+    SELECT DATE_FORMAT(r.submitted_at, '%Y-%m-%dT%H:00:00Z') AS hour,
+           COUNT(CASE WHEN r.nps_score >= 9 THEN 1 END) AS promoters,
+           COUNT(CASE WHEN r.nps_score IN (7, 8) THEN 1 END) AS passives,
+           COUNT(CASE WHEN r.nps_score <= 6 THEN 1 END) AS detractors
     FROM ${RESPONSES_FROM}
-    WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)}
-    GROUP BY 1`;
+    WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)}
+    GROUP BY hour`);
+  // Os deslocamentos do fuso do hospital são em horas inteiras: cada hora UTC cai num único dia local.
+  const rows = hourly.map((row) => ({
+    day: localDateOf(new Date(row.hour)),
+    promoters: toNumber(row.promoters),
+    passives: toNumber(row.passives),
+    detractors: toNumber(row.detractors),
+  }));
   const points = trendBuckets(filters, granularity).map((bucket) => {
     const counts = { promoters: 0, passives: 0, detractors: 0 };
     for (const row of rows) {
@@ -454,55 +486,97 @@ export async function getQuestions(
   filters: ResolvedFilters,
   journeyStageId?: string,
 ): Promise<{ total: number | null; items: QuestionResultDto[] }> {
-  const stageFilter =
-    journeyStageId === undefined
-      ? Prisma.empty
-      : Prisma.sql`AND svq.journey_stage_id = ${journeyStageId}::uuid`;
-  const [rows, npsRow] = await Promise.all([
-    db.$queryRaw<
-      {
-        question_id: string;
-        text: string;
-        stage_id: string | null;
-        stage_name: string | null;
-        stage_position: number | null;
-        position: number;
-        survey_id: string;
-        survey_title: string;
-        n: number;
-        average: number;
-        s1: number;
-        s2: number;
-        s3: number;
-        s4: number;
-        s5: number;
-        top_two: number;
-      }[]
-    >`
-      SELECT svq.question_id::text AS question_id,
+  const stageFilter: SqlStatement =
+    journeyStageId === undefined ? sql.empty : sql`AND svq.journey_stage_id = ${journeyStageId}`;
+  const [grouped, npsRow] = await Promise.all([
+    db.query<{
+      question_id: string;
+      text: string;
+      stage_id: string | null;
+      stage_name: string | null;
+      stage_position: number | null;
+      position: number;
+      survey_id: string;
+      latest_version: number;
+      n: number;
+      score_sum: number;
+      s1: number;
+      s2: number;
+      s3: number;
+      s4: number;
+      s5: number;
+    }>(sql`
+      SELECT svq.question_id,
              MIN(svq.text) AS text,
-             svq.journey_stage_id::text AS stage_id,
+             svq.journey_stage_id AS stage_id,
              MIN(svq.journey_stage_name) AS stage_name,
-             MIN(svq.journey_stage_position)::int AS stage_position,
-             MIN(svq.position)::int AS position,
-             sv.survey_config_id::text AS survey_id,
-             (array_agg(sv.title ORDER BY sv.version_number DESC))[1] AS survey_title,
-             COUNT(*)::int AS n,
-             ROUND(AVG(a.score)::numeric, 2)::float8 AS average,
-             COUNT(*) FILTER (WHERE a.score = 1)::int AS s1,
-             COUNT(*) FILTER (WHERE a.score = 2)::int AS s2,
-             COUNT(*) FILTER (WHERE a.score = 3)::int AS s3,
-             COUNT(*) FILTER (WHERE a.score = 4)::int AS s4,
-             COUNT(*) FILTER (WHERE a.score = 5)::int AS s5,
-             ROUND(100.0 * COUNT(*) FILTER (WHERE a.score >= 4) / COUNT(*), 1)::float8 AS top_two
+             MIN(svq.journey_stage_position) AS stage_position,
+             MIN(svq.position) AS position,
+             sv.survey_config_id AS survey_id,
+             MAX(sv.version_number) AS latest_version,
+             COUNT(*) AS n,
+             SUM(a.score) AS score_sum,
+             COUNT(CASE WHEN a.score = 1 THEN 1 END) AS s1,
+             COUNT(CASE WHEN a.score = 2 THEN 1 END) AS s2,
+             COUNT(CASE WHEN a.score = 3 THEN 1 END) AS s3,
+             COUNT(CASE WHEN a.score = 4 THEN 1 END) AS s4,
+             COUNT(CASE WHEN a.score = 5 THEN 1 END) AS s5
       FROM response_answers a
       JOIN ${RESPONSES_FROM} ON r.id = a.response_id
       JOIN survey_version_questions svq ON svq.id = a.survey_version_question_id
-      WHERE s.hospital_id = ${filters.hospitalId}::uuid AND ${responseConditions(filters)} ${stageFilter}
-      GROUP BY svq.question_id, svq.journey_stage_id, sv.survey_config_id
-      ORDER BY stage_position NULLS LAST, survey_title, position`,
+      WHERE s.hospital_id = ${filters.hospitalId} AND ${responseConditions(filters)} ${stageFilter}
+      GROUP BY svq.question_id, svq.journey_stage_id, sv.survey_config_id`),
     npsOf(db, filters),
   ]);
+  // Título da versão mais recente do recorte, por pesquisa.
+  const titles = new Map<string, string>();
+  if (grouped.length > 0) {
+    const pairs = [
+      ...new Map(
+        grouped.map((row) => [`${row.survey_id}:${String(row.latest_version)}`, row]),
+      ).values(),
+    ].map((row) => sql`(${row.survey_id}, ${toNumber(row.latest_version)})`);
+    const versions = await db.query<{
+      survey_config_id: string;
+      version_number: number;
+      title: string;
+    }>(
+      sql`
+        SELECT survey_config_id, version_number, title FROM survey_versions
+        WHERE (survey_config_id, version_number) IN (${sql.join(pairs, ', ')})`,
+    );
+    for (const version of versions) {
+      titles.set(`${version.survey_config_id}:${String(version.version_number)}`, version.title);
+    }
+  }
+  const rows = grouped
+    .map((row) => {
+      const n = toNumber(row.n);
+      const s4 = toNumber(row.s4);
+      const s5 = toNumber(row.s5);
+      return {
+        ...row,
+        stage_position: row.stage_position === null ? null : toNumber(row.stage_position),
+        position: toNumber(row.position),
+        survey_title: titles.get(`${row.survey_id}:${String(row.latest_version)}`) ?? '',
+        n,
+        average: roundedRatio(toNumber(row.score_sum), n, 1, 2) ?? 0,
+        s1: toNumber(row.s1),
+        s2: toNumber(row.s2),
+        s3: toNumber(row.s3),
+        s4,
+        s5,
+        top_two: percentOf(s4 + s5, n) ?? 0,
+      };
+    })
+    // Ordem anterior: etapa (sem etapa por último), título da pesquisa e posição da pergunta.
+    .sort(
+      (a, b) =>
+        (a.stage_position ?? Number.MAX_SAFE_INTEGER) -
+          (b.stage_position ?? Number.MAX_SAFE_INTEGER) ||
+        a.survey_title.localeCompare(b.survey_title, 'pt-BR') ||
+        a.position - b.position,
+    );
   const total = npsRow?.total ?? 0;
   return {
     total: isSuppressed(filters, total) ? null : total,

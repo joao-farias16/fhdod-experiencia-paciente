@@ -21,7 +21,6 @@ import {
   assertResourceInScope,
   isSectorInScope,
   resolveSectorFilter,
-  sectorWhere,
 } from '../../src/modules/auth/scope.js';
 import {
   addDays,
@@ -41,7 +40,7 @@ describe('RN28 — política de senhas', () => {
     ['Abcdefg12', false], // 9 caracteres
     ['abcdefghijk', false], // sem número
     ['12345678901', false], // sem letra
-    ['çãõéíóúâêô1', false], // letras fora de A–Z, como no requisito letters_digits do Supabase
+    ['çãõéíóúâêô1', false], // letras fora de A–Z (exigência letters_digits mantida da política anterior)
     [`A1${'x'.repeat(71)}`, false], // 73 caracteres
   ])('%s → %s', (password, expected) => {
     expect(isPasswordCompliant(password)).toBe(expected);
@@ -109,9 +108,7 @@ describe('RN10 — aplicação do escopo', () => {
   it('sem filtro: global não restringe; restrito usa os próprios setores', () => {
     expect(resolveSectorFilter(global)).toBeUndefined();
     expect(resolveSectorFilter(restricted)).toEqual([A]);
-    expect(sectorWhere(global)).toEqual({});
-    expect(sectorWhere(restricted)).toEqual({ sectorId: { in: [A] } });
-    expect(sectorWhere({ all: false, sectorIds: [] })).toEqual({ sectorId: { in: [] } });
+    expect(resolveSectorFilter({ all: false, sectorIds: [] })).toEqual([]);
   });
 
   it('filtro dentro do escopo é aceito (sem duplicatas); fora → 403 SECTOR_OUT_OF_SCOPE', () => {
@@ -207,13 +204,11 @@ describe('Seção 10 — auditoria sem dados pessoais nem segredos', () => {
   });
 
   it('não grava nada quando os detalhes são proibidos e ignora requestId inválido', async () => {
-    const created: unknown[] = [];
+    const created: { text: string; values: readonly unknown[] }[] = [];
     const tx = {
-      auditLog: {
-        create: (args: unknown) => {
-          created.push(args);
-          return Promise.resolve();
-        },
+      execute: (statement: { text: string; values: readonly unknown[] }) => {
+        created.push(statement);
+        return Promise.resolve({ affectedRows: 1, insertId: 1 });
       },
     };
     await expect(
@@ -230,9 +225,18 @@ describe('Seção 10 — auditoria sem dados pessoais nem segredos', () => {
       { actor: null, requestId: 'nao-e-uuid' },
       { action: 'USER_UPDATED', entityType: 'profile' },
     );
-    expect(created[0]).toMatchObject({
-      data: { requestId: null, actorProfileId: null, details: {} },
-    });
+    // Valores: autor, perfil do autor, ação, tipo, entidade, setor, detalhes (JSON), requestId, ipHash.
+    expect(created[0]?.values).toEqual([
+      null,
+      null,
+      'USER_UPDATED',
+      'profile',
+      null,
+      null,
+      '{}',
+      null,
+      null,
+    ]);
   });
 
   it('o IP vira HMAC-SHA256 determinístico e só com segredo configurado', () => {

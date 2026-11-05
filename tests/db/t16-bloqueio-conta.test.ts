@@ -1,41 +1,39 @@
 /**
- * T16 — Bloqueio de conta desativada (RF09, RN11, RN24), integração com PostgreSQL real.
+ * T16 — Bloqueio de conta desativada (RF09, RN11, RN24), integração com MySQL real.
  * Procedimento da Seção 12: desativar usuário com token válido → 403 ACCOUNT_DISABLED; desativar a
- * si ou o último SA → 422. Também: histórico mantido, reativação e compensação no Supabase Auth.
+ * si ou o último SA → 422. Também: histórico mantido, reativação, login e renovação bloqueados.
  */
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { DEFAULT_PASSWORD, FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
   auditRowsFor,
   buildAuthApp,
   createAuthScenario,
+  DEFAULT_PASSWORD,
   openConnections,
 } from '../support/auth-scenario.js';
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
+  ({ db, database } = await openConnections());
 });
 
 beforeEach(async () => {
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -53,7 +51,7 @@ async function profileRow(id: string) {
     full_name: string;
     email: string;
   }>(
-    'SELECT is_active, deactivated_at, deactivated_by, full_name, email FROM profiles WHERE id = $1',
+    'SELECT is_active, deactivated_at, deactivated_by, full_name, email FROM profiles WHERE id = ?',
     [id],
   );
   return rows[0];
@@ -79,19 +77,16 @@ describe('T16 — desativação com token ainda válido', () => {
       expect(next.status).toBe(403);
       expect(errorOf(next).code).toBe('ACCOUNT_DISABLED');
     }
-    // Bloqueio também no Supabase Auth (ban_duration): sem login nem renovação.
-    expect(fake.users.get(target.authUserId)?.banned).toBe(true);
-    expect(fake.signIn(target.email, DEFAULT_PASSWORD)).toBeNull();
-  });
-
-  it('mesmo sem o bloqueio no Supabase, o perfil inativo é recusado a cada requisição', async () => {
-    const target = scenario.users.ou;
-    await setActive(target.profileId, false).expect(200);
-    fake.setBannedState(target.authUserId, false); // simula bloqueio ainda não propagado
-
-    const next = await request(app).get('/api/v1/me').set('Authorization', scenario.bearer('ou'));
-    expect(next.status).toBe(403);
-    expect(errorOf(next).code).toBe('ACCOUNT_DISABLED');
+    // Sem login nem renovação enquanto a conta estiver desativada.
+    const signIn = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: target.email, password: DEFAULT_PASSWORD });
+    expect(signIn.status).toBe(403);
+    expect(errorOf(signIn).code).toBe('ACCOUNT_DISABLED');
+    const refresh = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: scenario.tokensOf('ge').refreshToken });
+    expect(refresh.status).toBe(403);
   });
 
   it('o histórico permanece: perfil, vínculos, autoria e auditoria (sem exclusão física)', async () => {
@@ -105,7 +100,7 @@ describe('T16 — desativação com token ainda válido', () => {
       email: target.email,
     });
     expect(row?.deactivated_at).toBeInstanceOf(Date);
-    const links = await db.query('SELECT 1 FROM profile_sectors WHERE profile_id = $1', [
+    const links = await db.query('SELECT 1 FROM profile_sectors WHERE profile_id = ?', [
       target.profileId,
     ]);
     expect(links.rowCount).toBe(1);
@@ -160,15 +155,15 @@ describe('T16 — regras de desativação (RN24)', () => {
     const statuses = [first.status, second.status];
     expect(statuses).toContain(200);
     const { rows } = await db.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM profiles WHERE hospital_id = $1 AND role = 'superadmin' AND is_active",
+      "SELECT COUNT(*) AS n FROM profiles WHERE hospital_id = ? AND role = 'superadmin' AND is_active",
       [scenario.fx.hospitalId],
     );
     expect(rows[0]?.n).toBe(1);
   });
 });
 
-describe('T16 — reativação e consistência com o Supabase Auth', () => {
-  it('reativação libera o acesso na requisição seguinte e remove o bloqueio', async () => {
+describe('T16 — reativação', () => {
+  it('reativação libera o acesso na requisição seguinte e o login volta a funcionar', async () => {
     const target = scenario.users.vi;
     await setActive(target.profileId, false).expect(200);
     expect(
@@ -182,7 +177,10 @@ describe('T16 — reativação e consistência com o Supabase Auth', () => {
       deactivated_at: null,
       deactivated_by: null,
     });
-    expect(fake.users.get(target.authUserId)?.banned).toBe(false);
+    const signIn = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: target.email, password: DEFAULT_PASSWORD });
+    expect(signIn.status).toBe(200);
     expect(
       (await request(app).get('/api/v1/me').set('Authorization', scenario.bearer('vi'))).status,
     ).toBe(200);
@@ -191,25 +189,10 @@ describe('T16 — reativação e consistência com o Supabase Auth', () => {
     expect(actions).toEqual(['USER_DEACTIVATED', 'USER_REACTIVATED']);
   });
 
-  it('falha ao bloquear no Supabase Auth desfaz a desativação (503, nada gravado)', async () => {
-    const target = scenario.users.ge;
-    fake.failNext('setBanned');
-
-    const response = await setActive(target.profileId, false);
-
-    expect(response.status).toBe(503);
-    expect((await profileRow(target.profileId))?.is_active).toBe(true);
-    expect(await auditRowsFor(db, target.profileId)).toHaveLength(0);
-    expect(
-      (await request(app).get('/api/v1/me').set('Authorization', scenario.bearer('ge'))).status,
-    ).toBe(200);
-  });
-
   it('repetir a desativação de quem já está inativo não gera novo registro', async () => {
     const response = await setActive(scenario.users.disabled.profileId, false);
     expect(response.status).toBe(200);
     expect(await auditRowsFor(db, scenario.users.disabled.profileId)).toHaveLength(0);
-    expect(fake.calls.filter((call) => call.operation === 'setBanned')).toHaveLength(0);
   });
 
   it('o e-mail é imutável (campo desconhecido no PATCH → 400)', async () => {

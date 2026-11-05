@@ -1,5 +1,5 @@
 /**
- * Pesquisa pública — E01 e E02 com PostgreSQL real (ET06):
+ * Pesquisa pública — E01 e E02 com MySQL real (ET06):
  * T01 (parte de API): pesquisa sem login nem cookies; slug inexistente 404; inativa 410.
  * T03 (parte de API): E02 sem npsScore → 400 sem gravação.
  * T04: NPS 9 e duas específicas → 201; 1 linha em responses e 2 em response_answers.
@@ -12,9 +12,8 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { computeNps } from '../../src/modules/dashboard/nps.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -33,8 +32,7 @@ import {
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 
 interface PublicSurvey {
@@ -78,28 +76,27 @@ async function publishSurvey(app: App, surveySlug: string): Promise<string> {
 }
 
 const responsesOfVersion = (versionId: string) =>
-  countRows(db, 'SELECT 1 FROM responses WHERE survey_version_id = $1', [versionId]);
+  countRows(db, 'SELECT 1 FROM responses WHERE survey_version_id = ?', [versionId]);
 const answersOfVersion = (versionId: string) =>
-  countRows(db, 'SELECT 1 FROM response_answers WHERE survey_version_id = $1', [versionId]);
+  countRows(db, 'SELECT 1 FROM response_answers WHERE survey_version_id = ?', [versionId]);
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  const app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  const app = buildAuthApp(database);
   await publishSurvey(app, slug);
   survey = dataOf<PublicSurvey>(await request(app).get(`/api/v1/public/surveys/${slug}`));
   specifics = survey.stages.flatMap((stage) => stage.questions.map((question) => question.id));
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
 describe('T01 — E01 sem login nem cookies; 404 e 410', () => {
   it('devolve a versão vigente por etapas, com cache público de 60 s e sem dados internos', async () => {
-    const app = buildAuthApp(prisma, fake);
+    const app = buildAuthApp(database);
     const response = await request(app).get(`/api/v1/public/surveys/${slug}`);
     expect(response.status).toBe(200);
     expect(response.headers['cache-control']).toBe('public, max-age=60');
@@ -136,7 +133,7 @@ describe('T01 — E01 sem login nem cookies; 404 e 410', () => {
   });
 
   it('slug inexistente ou inválido → 404; pesquisa inativa → 410 com mensagem', async () => {
-    const app = buildAuthApp(prisma, fake);
+    const app = buildAuthApp(database);
     expect((await request(app).get('/api/v1/public/surveys/nao-existe-mesmo')).status).toBe(404);
     expect((await request(app).get('/api/v1/public/surveys/Slug_Invalido')).status).toBe(404);
 
@@ -155,7 +152,7 @@ describe('T01 — E01 sem login nem cookies; 404 e 410', () => {
 describe('T03, T04 e T06 — validação no backend e persistência', () => {
   let app: App;
   beforeAll(() => {
-    app = buildAuthApp(prisma, fake);
+    app = buildAuthApp(database);
   });
 
   it('T04: NPS 9 e duas específicas → 201; 1 resposta e 2 notas, na mesma versão', async () => {
@@ -178,12 +175,16 @@ describe('T03, T04 e T06 — validação no backend e persistência', () => {
     expect(await responsesOfVersion(survey.surveyVersionId)).toBe((before[0] ?? 0) + 1);
     expect(await answersOfVersion(survey.surveyVersionId)).toBe((before[1] ?? 0) + 2);
     const { rows } = await db.query<{ nps_score: number; origin: string; scores: number[] }>(
-      `SELECT r.nps_score, r.origin, array_agg(a.score ORDER BY a.score) AS scores
+      `SELECT r.nps_score, r.origin, JSON_ARRAYAGG(a.score) AS scores
        FROM responses r JOIN response_answers a ON a.response_id = r.id
-       WHERE r.id = $1 GROUP BY r.id`,
+       WHERE r.id = ? GROUP BY r.id`,
       [data.responseId],
     );
-    expect(rows[0]).toEqual({ nps_score: 9, origin: 'link', scores: [4, 5] });
+    expect({ ...rows[0], scores: [...(rows[0]?.scores ?? [])].sort() }).toEqual({
+      nps_score: 9,
+      origin: 'link',
+      scores: [4, 5],
+    });
 
     // Específicas são opcionais (RN02); nota baixa conforme a RN05.
     const withoutSpecifics = await submitResponse(app, {
@@ -270,7 +271,7 @@ describe('T03, T04 e T06 — validação no backend e persistência', () => {
 
 describe('T10 — idempotência do envio (RN13)', () => {
   it('repetição devolve o original (200), conteúdo diferente → 409 e 5 envios concorrentes → 1 linha', async () => {
-    const app = buildAuthApp(prisma, fake);
+    const app = buildAuthApp(database);
     const key = crypto.randomUUID();
     const body = {
       surveyVersionId: survey.surveyVersionId,
@@ -287,9 +288,7 @@ describe('T10 — idempotência do envio (RN13)', () => {
 
     const reused = await submitResponse(app, { ...body, npsScore: 7 }, key);
     expect([reused.status, errorOf(reused).code]).toEqual([409, 'IDEMPOTENCY_KEY_REUSED']);
-    expect(await countRows(db, 'SELECT 1 FROM responses WHERE idempotency_key = $1', [key])).toBe(
-      1,
-    );
+    expect(await countRows(db, 'SELECT 1 FROM responses WHERE idempotency_key = ?', [key])).toBe(1);
 
     const concurrentKey = crypto.randomUUID();
     const results = await Promise.all(
@@ -303,7 +302,7 @@ describe('T10 — idempotência do envio (RN13)', () => {
     expect(results.every((result) => [200, 201].includes(result.status))).toBe(true);
     expect(new Set(results.map((result) => dataOf<Submitted>(result).responseId)).size).toBe(1);
     expect(
-      await countRows(db, 'SELECT 1 FROM responses WHERE idempotency_key = $1', [concurrentKey]),
+      await countRows(db, 'SELECT 1 FROM responses WHERE idempotency_key = ?', [concurrentKey]),
     ).toBe(1);
   });
 });
@@ -312,7 +311,7 @@ describe('RN26 — versão substituída aceita respostas por 24 horas', () => {
   it('v1 aceita até 24 h após a publicação da v2; depois, 409 SURVEY_VERSION_OUTDATED', async () => {
     const start = new Date();
     const clock = adjustableClock(start);
-    const app = buildAuthApp(prisma, fake, clock);
+    const app = buildAuthApp(database, clock);
     const id = await publishSurvey(app, `versoes-${suffix}`);
     const v1 = dataOf<PublicSurvey>(
       await request(app).get(`/api/v1/public/surveys/versoes-${suffix}`),
@@ -350,10 +349,10 @@ describe('T05 — computeNps e o SQL da Seção 8 (RN03)', () => {
         ...Array<number>(detractors).fill(0),
       ];
       const { rows } = await db.query<{ nps: string | null }>(
-        `SELECT ROUND(100.0 * (COUNT(*) FILTER (WHERE s >= 9) - COUNT(*) FILTER (WHERE s <= 6))
+        `SELECT ROUND(100.0 * (COUNT(CASE WHEN s >= 9 THEN 1 END) - COUNT(CASE WHEN s <= 6 THEN 1 END))
                     / NULLIF(COUNT(*), 0), 1) AS nps
-       FROM unnest($1::int[]) AS s`,
-        [scores],
+       FROM JSON_TABLE(?, '$[*]' COLUMNS (s INT PATH '$')) AS t`,
+        [JSON.stringify(scores)],
       );
       const sql = rows[0]?.nps === null || rows[0]?.nps === undefined ? null : Number(rows[0].nps);
       expect(computeNps({ promoters, passives, detractors })).toBe(expected);

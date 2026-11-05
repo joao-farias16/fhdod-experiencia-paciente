@@ -4,9 +4,11 @@
  */
 import { createHmac } from 'node:crypto';
 
-import type { Prisma, PrismaClient, TransactionClient, UserRole } from '../../lib/prisma.js';
+import type { Queryable } from '../../lib/database.js';
+import type { JsonValue, UserRole } from '../../lib/domain-types.js';
 import { addDays, startOfLocalDay } from '../../utils/dates.js';
 import { type LocalPeriod, resolvePeriod } from '../../utils/validation.js';
+import { insertAuditLog, listAuditLogRecords } from './audit.repository.js';
 import type { ListAuditLogsQuery } from './audit.schemas.js';
 
 /**
@@ -131,27 +133,25 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * auditoria falhar, a operação é desfeita; audit_logs aceita somente inserção (RN16).
  */
 export async function recordAudit(
-  tx: Pick<TransactionClient, 'auditLog'>,
+  tx: Queryable,
   context: AuditContext,
   entry: AuditEntry,
 ): Promise<void> {
   const details = entry.details ?? {};
   assertSafeDetails(details);
-  await tx.auditLog.create({
-    data: {
-      actorProfileId: context.actor?.profileId ?? null,
-      actorRole: context.actor?.role ?? null,
-      action: entry.action,
-      entityType: entry.entityType,
-      entityId: entry.entityId ?? null,
-      sectorId: entry.sectorId ?? null,
-      details,
-      requestId:
-        context.requestId !== undefined && UUID_PATTERN.test(context.requestId)
-          ? context.requestId
-          : null,
-      ipHash: context.ipHash ?? null,
-    },
+  await insertAuditLog(tx, {
+    actorProfileId: context.actor?.profileId ?? null,
+    actorRole: context.actor?.role ?? null,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId ?? null,
+    sectorId: entry.sectorId ?? null,
+    details,
+    requestId:
+      context.requestId !== undefined && UUID_PATTERN.test(context.requestId)
+        ? context.requestId.toLowerCase()
+        : null,
+    ipHash: context.ipHash ?? null,
   });
 }
 
@@ -169,7 +169,7 @@ export interface AuditLogDto {
   entityType: string;
   entityId: string | null;
   sectorId: string | null;
-  details: Prisma.JsonValue;
+  details: JsonValue;
   requestId: string | null;
 }
 
@@ -179,53 +179,30 @@ export interface AuditLogDto {
  * do SA (ou sem autor). O IP (HMAC) não é devolvido.
  */
 export async function listAuditLogs(
-  prisma: Pick<PrismaClient, 'auditLog'>,
+  db: Queryable,
   hospitalId: string,
   query: ListAuditLogsQuery,
   now: Date,
 ): Promise<{ items: AuditLogDto[]; total: number; period: LocalPeriod }> {
   const period = resolvePeriod(query, now);
-  const where: Prisma.AuditLogWhereInput = {
-    OR: [{ actorProfileId: null }, { actorProfile: { hospitalId } }],
-    occurredAt: { gte: startOfLocalDay(period.from), lt: startOfLocalDay(addDays(period.to, 1)) },
-    ...(query.actorProfileId === undefined ? {} : { actorProfileId: query.actorProfileId }),
-    ...(query.action === undefined ? {} : { action: query.action }),
-    ...(query.entityType === undefined ? {} : { entityType: query.entityType }),
-    ...(query.entityId === undefined ? {} : { entityId: query.entityId }),
-  };
-  const [rows, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-      select: {
-        id: true,
-        occurredAt: true,
-        actorProfileId: true,
-        actorRole: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        sectorId: true,
-        details: true,
-        requestId: true,
-        actorProfile: { select: { fullName: true } },
-      },
-    }),
-    prisma.auditLog.count({ where }),
-  ]);
+  const { items: rows, total } = await listAuditLogRecords(db, {
+    hospitalId,
+    from: startOfLocalDay(period.from),
+    toExclusive: startOfLocalDay(addDays(period.to, 1)),
+    actorProfileId: query.actorProfileId,
+    action: query.action,
+    entityType: query.entityType,
+    entityId: query.entityId,
+    offset: (query.page - 1) * query.pageSize,
+    limit: query.pageSize,
+  });
   const items = rows.map((row): AuditLogDto => ({
-    id: row.id.toString(),
+    id: row.id,
     occurredAt: row.occurredAt.toISOString(),
     actor:
       row.actorProfileId === null
         ? null
-        : {
-            id: row.actorProfileId,
-            fullName: row.actorProfile?.fullName ?? '',
-            role: row.actorRole,
-          },
+        : { id: row.actorProfileId, fullName: row.actorFullName ?? '', role: row.actorRole },
     action: row.action,
     entityType: row.entityType,
     entityId: row.entityId,

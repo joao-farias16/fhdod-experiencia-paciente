@@ -1,10 +1,28 @@
-import type { PrismaClient, TransactionClient } from '../../lib/prisma.js';
+import { randomUUID } from 'node:crypto';
+
+import type { Database, Queryable } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { isSectorInScope, resourceNotFound, sectorOutOfScope, sectorWhere } from '../auth/scope.js';
+import {
+  isSectorInScope,
+  resolveSectorFilter,
+  resourceNotFound,
+  sectorOutOfScope,
+} from '../auth/scope.js';
+import { findSectorState } from '../sectors/sectors.repository.js';
 import { sectorInactive } from '../sectors/sectors.service.js';
+import {
+  findTeam,
+  findTeamIdByCode,
+  insertTeam,
+  type JourneyStageRecord,
+  listJourneyStageRecords,
+  listTeamRecords,
+  type TeamRecord,
+  updateTeamRow,
+} from './teams.repository.js';
 import type { CreateTeamInput, ListTeamsQuery, UpdateTeamInput } from './teams.schemas.js';
 
 export interface TeamDto {
@@ -16,22 +34,6 @@ export interface TeamDto {
   name: string;
   isActive: boolean;
   deactivatedAt: string | null;
-}
-
-const teamSelect = {
-  id: true,
-  sectorId: true,
-  code: true,
-  name: true,
-  isActive: true,
-  deactivatedAt: true,
-  sector: { select: { code: true, name: true, isActive: true, hospitalId: true } },
-} as const;
-
-type TeamRecord = NonNullable<Awaited<ReturnType<typeof findTeam>>>;
-
-function findTeam(client: Pick<TransactionClient, 'team'>, id: string) {
-  return client.team.findUnique({ where: { id }, select: teamSelect });
 }
 
 function toTeamDto(team: TeamRecord): TeamDto {
@@ -55,48 +57,39 @@ function codeConflict(): HttpError {
 
 /** E13 — equipes dos setores do escopo; filtro de setor fora do escopo → 403 (RN10, RF17). */
 export async function listTeams(
-  prisma: Pick<PrismaClient, 'team'>,
+  db: Queryable,
   auth: AuthContext,
   filters: ListTeamsQuery,
 ): Promise<TeamDto[]> {
-  const teams = await prisma.team.findMany({
-    where: {
-      ...sectorWhere(auth.scope, filters.sectorId === undefined ? undefined : [filters.sectorId]),
-      sector: { hospitalId: auth.hospitalId },
-      ...(filters.isActive === undefined ? {} : { isActive: filters.isActive }),
-    },
-    orderBy: [{ sector: { name: 'asc' } }, { name: 'asc' }, { id: 'asc' }],
-    select: teamSelect,
+  const teams = await listTeamRecords(db, auth.hospitalId, {
+    sectorIds: resolveSectorFilter(
+      auth.scope,
+      filters.sectorId === undefined ? undefined : [filters.sectorId],
+    ),
+    isActive: filters.isActive,
   });
   return teams.map(toTeamDto);
 }
 
 /** E14 — cadastro de equipe (RF16): setor no escopo (403), ativo (422) e código único (409). */
 export async function createTeam(
-  prisma: PrismaClient,
+  db: Database,
   auth: AuthContext,
   audit: AuditContext,
   input: CreateTeamInput,
 ): Promise<TeamDto> {
   if (!isSectorInScope(auth.scope, input.sectorId)) throw sectorOutOfScope();
   try {
-    return await prisma.$transaction(async (tx) => {
-      const sector = await tx.sector.findFirst({
-        where: { id: input.sectorId, hospitalId: auth.hospitalId },
-        select: { isActive: true },
-      });
+    return await db.transaction(async (tx) => {
+      const sector = await findSectorState(tx, auth.hospitalId, input.sectorId);
       if (sector === null) throw resourceNotFound();
       if (!sector.isActive) throw sectorInactive();
-      const existing = await tx.team.findUnique({
-        where: { sectorId_code: { sectorId: input.sectorId, code: input.code } },
-        select: { id: true },
-      });
-      if (existing !== null) throw codeConflict();
+      if ((await findTeamIdByCode(tx, input.sectorId, input.code)) !== null) throw codeConflict();
 
-      const team = await tx.team.create({
-        data: { sectorId: input.sectorId, code: input.code, name: input.name },
-        select: teamSelect,
-      });
+      const id = randomUUID();
+      await insertTeam(tx, { id, sectorId: input.sectorId, code: input.code, name: input.name });
+      const team = await findTeam(tx, id);
+      if (team === null) throw resourceNotFound();
       await recordAudit(tx, audit, {
         action: 'TEAM_CREATED',
         entityType: 'team',
@@ -117,14 +110,14 @@ export async function createTeam(
  * nem novas atribuições; as atribuições anteriores são mantidas (RN11).
  */
 export async function updateTeam(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
   patch: UpdateTeamInput,
 ): Promise<TeamDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const current = await findTeam(tx, id);
     if (current?.sector.hospitalId !== auth.hospitalId) throw resourceNotFound();
     if (!isSectorInScope(auth.scope, current.sectorId)) throw resourceNotFound();
@@ -138,15 +131,14 @@ export async function updateTeam(
     if (changedFields.length === 0) return toTeamDto(current);
     if (isActive && !current.isActive && !current.sector.isActive) throw sectorInactive();
 
-    const updated = await tx.team.update({
-      where: { id },
-      data: {
-        name,
-        isActive,
-        ...(isActive === current.isActive ? {} : { deactivatedAt: isActive ? null : clock.now() }),
-      },
-      select: teamSelect,
+    await updateTeamRow(tx, id, {
+      name,
+      isActive,
+      deactivatedAt:
+        isActive === current.isActive ? current.deactivatedAt : isActive ? null : clock.now(),
     });
+    const updated = await findTeam(tx, id);
+    if (updated === null) throw resourceNotFound();
     await recordAudit(tx, audit, {
       action:
         isActive === current.isActive
@@ -163,22 +155,12 @@ export async function updateTeam(
   });
 }
 
-export interface JourneyStageDto {
-  id: string;
-  code: string;
-  name: string;
-  position: number;
-  isActive: boolean;
-}
+export type JourneyStageDto = JourneyStageRecord;
 
 /** E16 — etapas da jornada do hospital, ordenadas (mantidas pelo seed, Seção 4.3). */
 export async function listJourneyStages(
-  prisma: Pick<PrismaClient, 'journeyStage'>,
+  db: Queryable,
   auth: AuthContext,
 ): Promise<JourneyStageDto[]> {
-  return prisma.journeyStage.findMany({
-    where: { hospitalId: auth.hospitalId },
-    orderBy: [{ position: 'asc' }],
-    select: { id: true, code: true, name: true, position: true, isActive: true },
-  });
+  return listJourneyStageRecords(db, auth.hospitalId);
 }

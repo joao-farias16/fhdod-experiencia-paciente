@@ -3,5 +3,4 @@ dist
 coverage
 package-lock.json
 *.tsbuildinfo
-src/generated
-prisma/migrations
+database/**/*.sql

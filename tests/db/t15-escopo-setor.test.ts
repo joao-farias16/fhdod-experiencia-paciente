@@ -1,5 +1,5 @@
 /**
- * T15 — Restrição por setor (RF08, RF13, RN10, RN18), integração com PostgreSQL real.
+ * T15 — Restrição por setor (RF08, RF13, RN10, RN18), integração com MySQL real.
  * Procedimento da Seção 12: AS e GE restritos em E10, E22, E28, E34 e E23 de outro setor → só o
  * escopo; 403 SECTOR_OUT_OF_SCOPE em filtro; 404 em recurso.
  *
@@ -9,8 +9,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -23,23 +22,21 @@ import {
 import { type Db, insertResponse } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
   // Uma resposta também no setor B (o cenário da ET02 só tem resposta no setor A).
   await insertResponse(db, { versionId: scenario.fx.versionB1, sectorId: scenario.fx.sectorB });
   await insertResponse(db, { versionId: scenario.fx.versionB1, sectorId: scenario.fx.sectorB });
-  app = buildAuthApp(prisma, fake);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -226,7 +223,7 @@ describe('T15 — E28, E29 e E34 (endpoints reais desde a ET08 e a ET09)', () =>
     const own = await get(app, `/api/v1/reports/export?type=responses&${DAY}`, 'geB');
     expect(own.status).toBe(200);
     const { rows } = await db.query<{ details: { sectorIds: string[]; rows: number } }>(
-      `SELECT details FROM audit_logs WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = $1
+      `SELECT details FROM audit_logs WHERE action = 'REPORT_EXPORTED' AND actor_profile_id = ?
        ORDER BY id DESC LIMIT 1`,
       [scenario.users.geB.profileId],
     );
@@ -246,7 +243,7 @@ describe('T15 — administração do escopo (E07 e E08)', () => {
 
   async function linksOf(profileId: string): Promise<string[]> {
     const { rows } = await db.query<{ sector_id: string }>(
-      'SELECT sector_id FROM profile_sectors WHERE profile_id = $1 ORDER BY sector_id',
+      'SELECT sector_id FROM profile_sectors WHERE profile_id = ? ORDER BY sector_id',
       [profileId],
     );
     return rows.map((row) => row.sector_id);
@@ -273,18 +270,20 @@ describe('T15 — administração do escopo (E07 e E08)', () => {
   });
 
   it('associação a setor inativo → 422 SECTOR_INACTIVE; inexistente → 422 INVALID_SCOPE', async () => {
+    const email = `inativo.${Date.now()}@example.com`;
     const create = await request(app)
       .post('/api/v1/admin/users')
       .set('Authorization', scenario.bearer('sa'))
       .send({
         fullName: 'Pessoa Fictícia',
-        email: `inativo.${Date.now()}@example.com`,
+        email,
         role: 'sector_admin',
         sectorIds: [scenario.sectorC],
       });
     expect(create.status).toBe(422);
     expect(errorOf(create).code).toBe('SECTOR_INACTIVE');
-    expect(fake.calls.filter((c) => c.operation === 'createUser')).toHaveLength(0);
+    // Nenhum perfil (nem credencial) é gravado quando a validação do escopo falha.
+    expect((await db.query('SELECT 1 FROM profiles WHERE email = ?', [email])).rowCount).toBe(0);
 
     const add = await patch('sa', scenario.users.geB.profileId, {
       sectorIds: [scenario.fx.sectorB, scenario.sectorC],

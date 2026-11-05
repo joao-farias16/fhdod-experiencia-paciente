@@ -6,14 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: [
-      '**/node_modules/',
-      '**/dist/',
-      '**/coverage/',
-      '**/*.tsbuildinfo',
-      // Prisma Client gerado por `prisma generate` (não versionado).
-      'src/generated/',
-    ],
+    ignores: ['**/node_modules/', '**/dist/', '**/coverage/', '**/*.tsbuildinfo'],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -33,14 +26,6 @@ export default tseslint.config(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       eqeqeq: ['error', 'always'],
       'no-console': 'error',
-      // RNF11: $queryRawUnsafe é proibido; consultas devem ser parametrizadas.
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'MemberExpression[property.name=/^\\$(queryRawUnsafe|executeRawUnsafe)$/]',
-          message: 'Use $queryRaw/$executeRaw parametrizados (RNF11).',
-        },
-      ],
     },
   },
   {
@@ -51,6 +36,22 @@ export default tseslint.config(
   {
     files: ['**/*.ts'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // Código de produção: SQL de query/execute somente pelo template `sql`.
+    files: ['src/**/*.ts'],
+    rules: {
+      // RNF11: SQL sempre parametrizado. Texto montado com interpolação de template literal
+      // passado direto a query/execute é proibido: use o template `sql` (src/lib/sql.ts).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.property.name=/^(query|execute)$/] > TemplateLiteral.arguments:first-child[expressions.length>0]',
+          message: 'SQL interpolado em query/execute: use o template `sql` parametrizado (RNF11).',
+        },
+      ],
+    },
   },
   {
     // RNF21: serviços e regras de domínio não dependem do Express.
@@ -65,7 +66,7 @@ export default tseslint.config(
     },
   },
   {
-    // RNF21: rotas e controladores não acessam o Prisma (somente tipos para as dependências).
+    // RNF21: rotas e controladores não acessam o banco (somente tipos para as dependências).
     files: ['src/**/*.routes.ts', 'src/**/*.controller.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
@@ -73,9 +74,15 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/lib/prisma.js', '**/generated/**', '@prisma/*'],
+              group: [
+                '**/lib/database.js',
+                '**/lib/sql.js',
+                '**/*.repository.js',
+                'mysql2',
+                'mysql2/*',
+              ],
               allowTypeImports: true,
-              message: 'Controladores sem Prisma (RNF21): use os serviços.',
+              message: 'Controladores sem acesso ao banco (RNF21): use os serviços.',
             },
           ],
         },
@@ -84,7 +91,7 @@ export default tseslint.config(
   },
   {
     // Scripts de linha de comando (seed e utilitários de banco) informam o progresso no terminal.
-    files: ['prisma/**/*.ts', 'scripts/**/*.ts'],
+    files: ['scripts/**/*.ts'],
     rules: { 'no-console': 'off' },
   },
   prettier,

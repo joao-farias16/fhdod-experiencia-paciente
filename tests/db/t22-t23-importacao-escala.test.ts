@@ -1,14 +1,13 @@
 /**
  * T22 — Importação válida de escala e T23 — Rejeição de arquivos inválidos (RF22, RF23, RN19,
- * RN20), integração com PostgreSQL real.
+ * RN20), integração com MySQL real.
  * T22: CSV válido de 60 linhas com turno noturno; confirmar duas vezes → validated; 60 turnos; 409.
  * T23: cabeçalho, data, hora, equipe, escopo, sobreposições, 1,2 MB e .xlsx inválidos → erro na
  * linha ou 413/415; nada gravado. Também: expiração em 30 minutos e revalidação na confirmação.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -32,8 +31,7 @@ import {
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 
 interface RosterImport {
@@ -48,25 +46,24 @@ interface RosterImport {
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
 const shiftsOfSector = (sectorId: string) =>
-  countRows(db, 'SELECT 1 FROM shifts WHERE sector_id = $1', [sectorId]);
+  countRows(db, 'SELECT 1 FROM shifts WHERE sector_id = ?', [sectorId]);
 const shiftsOfImport = (importId: string) =>
-  countRows(db, 'SELECT 1 FROM shifts WHERE import_id = $1', [importId]);
+  countRows(db, 'SELECT 1 FROM shifts WHERE import_id = ?', [importId]);
 
 describe('T22 — importação válida de escala', () => {
   let app: App;
   beforeAll(() => {
-    app = buildAuthApp(prisma, fake);
+    app = buildAuthApp(database);
   });
 
   it('60 linhas com turno noturno: pré-valida sem gravar, confirma 60 turnos e recusa a 2ª confirmação', async () => {
@@ -119,7 +116,7 @@ describe('T22 — importação válida de escala', () => {
       source: string;
     }>(
       `SELECT starts_at, ends_at, period, source FROM shifts
-       WHERE import_id = $1 AND team_id = $2 ORDER BY starts_at LIMIT 1`,
+       WHERE import_id = ? AND team_id = ? ORDER BY starts_at LIMIT 1`,
       [result.id, scenario.fx.teamA2],
     );
     expect(rows[0]).toMatchObject({ period: 'night', source: 'import' });
@@ -145,7 +142,7 @@ describe('T22 — importação válida de escala', () => {
 describe('T23 — rejeição de arquivos inválidos (nada gravado)', () => {
   let app: App;
   beforeAll(() => {
-    app = buildAuthApp(prisma, fake);
+    app = buildAuthApp(database);
   });
 
   it('erros por linha e coluna: data, hora, duração, turno, equipe, escopo, campo e sobreposições', async () => {
@@ -250,11 +247,9 @@ describe('T23 — rejeição de arquivos inválidos (nada gravado)', () => {
   });
 
   it('erros de arquivo: 1,2 MB (413), .xlsx (415), vazio, codificação, linhas demais, sem arquivo', async () => {
-    const importsBefore = await countRows(
-      db,
-      'SELECT 1 FROM shift_imports WHERE uploaded_by = $1',
-      [scenario.users.sa2.profileId],
-    );
+    const importsBefore = await countRows(db, 'SELECT 1 FROM shift_imports WHERE uploaded_by = ?', [
+      scenario.users.sa2.profileId,
+    ]);
     const big = Buffer.alloc(1.2 * 1024 * 1024, 'SETOR-A;A1;01/01/2027;MANHA;07:00;13:00\n');
     const tooLarge = await uploadRoster(app, scenario, 'sa2', big);
     expect([tooLarge.status, errorOf(tooLarge).code]).toEqual([413, 'FILE_TOO_LARGE']);
@@ -283,7 +278,7 @@ describe('T23 — rejeição de arquivos inválidos (nada gravado)', () => {
 
     // Nenhum desses arquivos gerou registro de importação.
     expect(
-      await countRows(db, 'SELECT 1 FROM shift_imports WHERE uploaded_by = $1', [
+      await countRows(db, 'SELECT 1 FROM shift_imports WHERE uploaded_by = ?', [
         scenario.users.sa2.profileId,
       ]),
     ).toBe(importsBefore);
@@ -301,7 +296,7 @@ describe('T22/T23 — confirmação: 30 minutos e revalidação (RN19)', () => {
   const clock = adjustableClock();
   let app: App;
   beforeAll(() => {
-    app = buildAuthApp(prisma, fake, clock);
+    app = buildAuthApp(database, clock);
   });
 
   const validate = async (line: string) =>
@@ -363,7 +358,7 @@ describe('T22/T23 — confirmação: 30 minutos e revalidação (RN19)', () => {
     expect(await shiftsOfImport(second.id)).toBe(0);
     // A importação continua "validated": a confirmação falhou inteira (tudo ou nada).
     const { rows } = await db.query<{ status: string }>(
-      'SELECT status FROM shift_imports WHERE id = $1',
+      'SELECT status FROM shift_imports WHERE id = ?',
       [second.id],
     );
     expect(rows[0]?.status).toBe('validated');

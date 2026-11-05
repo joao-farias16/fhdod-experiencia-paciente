@@ -39,15 +39,6 @@ export function resolveSectorFilter(
   return scope.all ? undefined : scope.sectorIds;
 }
 
-/** Condição Prisma `{ sectorId: { in } }` (ou `{}`) para a coluna de setor do recurso. */
-export function sectorWhere(
-  scope: SectorScope,
-  requested?: readonly string[],
-): { sectorId?: { in: string[] } } {
-  const sectorIds = resolveSectorFilter(scope, requested);
-  return sectorIds === undefined ? {} : { sectorId: { in: [...sectorIds] } };
-}
-
 /**
  * Recurso individual de um setor fora do escopo → 404, sem revelar sua existência (RN10).
  * Use também quando o recurso não existe, para que as duas situações sejam indistinguíveis.
