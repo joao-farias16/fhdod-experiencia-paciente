@@ -46,10 +46,12 @@ Convenções importantes:
 5. Crie o primeiro superadministrador pela linha de comando (a senha é gravada como hash e deve ser trocada no primeiro acesso):
 
    ```bash
-   ADMIN_EMAIL=nome@dominio ADMIN_NAME="Nome Completo" ADMIN_PASSWORD=SenhaInicial123 npm run db:create-admin
+   ADMIN_EMAIL=nome@dominio ADMIN_NAME="Nome Completo" ADMIN_PASSWORD='<senha-inicial>' npm run db:create-admin
    ```
 
-   (No PowerShell: `$env:ADMIN_EMAIL='nome@dominio'; $env:ADMIN_NAME='Nome'; $env:ADMIN_PASSWORD='SenhaInicial123'; npm run db:create-admin`.)
+   (No PowerShell: `$env:ADMIN_EMAIL='nome@dominio'; $env:ADMIN_NAME='Nome'; $env:ADMIN_PASSWORD='<senha-inicial>'; npm run db:create-admin`.)
+
+   Troque `<senha-inicial>` por uma senha de 10 a 72 caracteres com letras e números (RN28); ela não deve ser registrada em arquivos versionados.
 
 6. (Recomendado em produção) Edite as senhas em `database/seguranca/usuarios.sql` e execute-o: a API passa a usar `fhdod_app` (sem `DROP`, portanto sem `TRUNCATE`) e as migrations, `fhdod_migracao`.
 

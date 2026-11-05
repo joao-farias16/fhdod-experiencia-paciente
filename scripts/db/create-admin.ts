@@ -5,8 +5,9 @@
  * obrigatória no primeiro acesso (RF04).
  *
  * Uso (variáveis só na linha de comando, nunca versionadas):
- *   ADMIN_EMAIL=nome@dominio ADMIN_NAME="Nome Completo" ADMIN_PASSWORD=SenhaInicial123 \
+ *   ADMIN_EMAIL=nome@dominio ADMIN_NAME="Nome Completo" ADMIN_PASSWORD='<senha-inicial>' \
  *     npm run db:create-admin
+ * Troque <senha-inicial> por uma senha de 10 a 72 caracteres com letras e números (RN28).
  * Opcional: ADMIN_HOSPITAL_SHORT_NAME (padrão: o único hospital cadastrado).
  * Recusa a criação se o e-mail já existir. Funciona também com servidor remoto (instalação na
  * nuvem): não apaga nem altera dados existentes.
