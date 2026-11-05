@@ -1,10 +1,15 @@
 # Arquitetura do FHDOD (D03)
 
-Este documento descreve como o código está organizado no backend e no frontend, onde fica cada responsabilidade e as convenções que as próximas etapas devem seguir. Os contratos dos endpoints ficam nos documentos por tema ([autenticação](autenticacao-e-permissoes.md), [setores, escalas e pesquisas](setores-escalas-e-pesquisas.md), [manifestações, dashboard e relatórios](manifestacoes-dashboard-relatorios.md)); o banco, em [`modelo-de-dados.md`](modelo-de-dados.md) e [`padroes-banco-de-dados.md`](padroes-banco-de-dados.md).
+Este documento descreve como os dois projetos (API e frontend) estão organizados e se comunicam, onde fica cada responsabilidade e as convenções que as próximas etapas devem seguir. Os contratos dos endpoints ficam nos documentos por tema ([autenticação](autenticacao-e-permissoes.md), [setores, escalas e pesquisas](setores-escalas-e-pesquisas.md), [manifestações, dashboard e relatórios](manifestacoes-dashboard-relatorios.md)); o banco, em [`modelo-de-dados.md`](modelo-de-dados.md) e [`padroes-banco-de-dados.md`](padroes-banco-de-dados.md).
 
 ## Visão geral
 
-O repositório é um monorepo com npm workspaces: `backend` (API REST em Express 5) e `frontend` (React 19 + Vite) têm dependências, scripts e testes próprios e conversam apenas por HTTP (`/api/v1`). Ferramentas comuns (ESLint, Prettier, TypeScript base, commitlint, CI) ficam na raiz.
+Desde a Etapa 2 do novo cronograma, backend e frontend são **projetos separados**:
+
+- **API (backend)** — ocupa a **raiz** deste repositório: Express 5 + TypeScript + Prisma, com um único `package.json`/`package-lock.json`, `tsconfig.json`, ESLint, Prettier, Vitest, commitlint/husky e o `.env` da API.
+- **Frontend** — fica temporariamente em `frontend/`, como projeto **independente**: React 19 + Vite, com `package.json`, `package-lock.json`, `tsconfig*.json`, `vite.config.ts`, `eslint.config.js`, `.prettierrc.json`, `.gitignore`, `.env.example`, `.nvmrc` e README próprios. Não usa nenhum arquivo fora da própria pasta e pode ser movido para outro repositório sem ajustes (verificado copiando a pasta para fora do repositório e executando instalação, typecheck, lint, testes e build).
+
+Não há `package.json` que gerencie os dois projetos; o ESLint e o Prettier da raiz ignoram `frontend/`, e a CI tem um job para cada projeto. Os dois conversam **apenas por HTTP** (veja [Comunicação entre frontend e API](#comunicação-entre-frontend-e-api)).
 
 Os dois lados seguem a mesma ideia: **organização por domínio** (um módulo/feature por assunto do sistema, com os mesmos nomes dos dois lados) e uma camada pequena de código compartilhado, que só recebe o que é usado por mais de um domínio.
 
@@ -25,7 +30,7 @@ Os dois lados seguem a mesma ideia: **organização por domínio** (um módulo/f
 ## Backend
 
 ```text
-backend/
+(raiz do repositório)
 ├── src/
 │   ├── server.ts        processo: lê o .env, valida o ambiente, cria Prisma e Supabase, sobe o HTTP
 │   ├── app.ts           createApp(deps): middlewares globais, /api/v1, 404 e tratamento de erros
@@ -135,4 +140,17 @@ Uma feature pode importar o `-api.ts` de outra quando usa dados daquele domínio
 - `app/routes.tsx` define as rotas. A pesquisa pública (`/p/:slug`) e a área administrativa são carregadas sob demanda; o supabase-js e a sessão existem só na área administrativa (`app/AdminArea.tsx`, que aplica `RequireAuth`/`RequirePermission` de `features/auth/RouteGuards.tsx` a cada tela). A permissão exibida é só conveniência: a decisão é sempre do backend.
 - Estado do servidor: TanStack Query (cache, invalidação após mutações com `useInvalidateAdmin`); estado de sessão: `AuthProvider`/`auth-context`; estado da pesquisa pública em andamento: `sessionStorage` (`survey-storage.ts`). Não há biblioteca de estado global.
 - Formulários: React Hook Form; erros da API vão para os campos com `applyApiError` e, fora dos campos, viram aviso com `failureOf` (`lib/errors.ts`).
-- Comunicação: `lib/api-client.ts` (`apiRequest`, `apiDownload`), com o token no cabeçalho `Authorization`, sem cookies; em desenvolvimento, o Vite encaminha `/api` ao backend.
+- Comunicação: `lib/api-client.ts` (`apiRequest`, `apiDownload`), com o token no cabeçalho `Authorization`, sem cookies; o endereço vem de `VITE_API_URL`, lido só em `lib/env.ts` (veja a seção seguinte).
+
+## Comunicação entre frontend e API
+
+- **Somente HTTP.** O frontend chama os endpoints `/api/v1` da API; não importa código da API, não acessa o banco nem o Prisma. A E2E também respeita essa fronteira: aciona os comandos `npm run dev:no-watch` e `npm run e2e:fixture` da API (pasta definida por `FHDOD_API_DIR`), sem importar arquivos dela.
+- **Endereço da API:** `VITE_API_URL` (sem `/api/v1`; local `http://localhost:3333`). `lib/env.ts` valida a variável (http/https; https obrigatório em produção) e monta a base `VITE_API_URL + /api/v1`; `lib/api-client.ts` é o único lugar que faz `fetch` na API. Vazia, a base é `/api/v1` na mesma origem — em desenvolvimento, o proxy do Vite (`vite.config.ts`) encaminha `/api` para `http://localhost:3333`; o proxy é só um recurso de desenvolvimento e o build não depende dele.
+- **CORS:** a API aceita só as origens listadas em `CORS_ORIGIN` (separadas por vírgula; local `http://localhost:5173`), com métodos e cabeçalhos explícitos (`Authorization`, `Content-Type`, `Idempotency-Key`, `X-Request-Id`) e expõe `X-Request-Id`, `Retry-After`, `Idempotent-Replayed` e `Content-Disposition`. Origens desconhecidas não recebem `Access-Control-Allow-Origin`, e em produção todas as origens precisam usar HTTPS (validação do ambiente na inicialização).
+- **Autenticação:** o frontend obtém a sessão no Supabase Auth com a chave **publicável** e envia o access token no cabeçalho `Authorization: Bearer`; a API valida o token com a chave secreta, que existe só no backend.
+- **Portas locais:** API `3333`, frontend `5173`; na E2E, API `3334` (banco de teste) e frontend `5174`.
+
+| Terminal     | Pasta               | Comando       | Endereço                |
+| ------------ | ------------------- | ------------- | ----------------------- |
+| 1 — API      | raiz do repositório | `npm run dev` | `http://localhost:3333` |
+| 2 — Frontend | `frontend/`         | `npm run dev` | `http://localhost:5173` |

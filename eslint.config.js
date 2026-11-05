@@ -1,24 +1,21 @@
-// Configuração única do ESLint (flat config) para backend e frontend.
+// Configuração do ESLint (flat config) da API. O frontend (pasta frontend/) é um projeto
+// independente, com o próprio eslint.config.js, e por isso fica fora desta configuração.
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
     ignores: [
+      // Projeto independente (lint próprio em frontend/eslint.config.js).
+      'frontend/',
       '**/node_modules/',
       '**/dist/',
       '**/coverage/',
       '**/*.tsbuildinfo',
-      // Relatórios e artefatos gerados pelo Playwright (E2E).
-      '**/playwright-report/',
-      '**/test-results/',
-      '**/playwright/.cache/',
       // Prisma Client gerado por `prisma generate` (não versionado).
-      'backend/src/generated/',
+      'src/generated/',
     ],
   },
   js.configs.recommended,
@@ -55,12 +52,12 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['backend/**/*.ts'],
+    files: ['**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   {
     // RNF21: serviços e regras de domínio não dependem do Express.
-    files: ['backend/src/**/*.service.ts', 'backend/src/**/*.filters.ts'],
+    files: ['src/**/*.service.ts', 'src/**/*.filters.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
@@ -72,7 +69,7 @@ export default tseslint.config(
   },
   {
     // RNF21: rotas e controladores não acessam o Prisma (somente tipos para as dependências).
-    files: ['backend/src/**/*.routes.ts', 'backend/src/**/*.controller.ts'],
+    files: ['src/**/*.routes.ts', 'src/**/*.controller.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
@@ -90,33 +87,8 @@ export default tseslint.config(
   },
   {
     // Scripts de linha de comando (seed e utilitários de banco) informam o progresso no terminal.
-    files: ['backend/prisma/**/*.ts', 'backend/scripts/**/*.ts'],
+    files: ['prisma/**/*.ts', 'scripts/**/*.ts'],
     rules: { 'no-console': 'off' },
-  },
-  {
-    files: ['frontend/**/*.{ts,tsx}'],
-    languageOptions: { globals: globals.browser },
-    plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
-    },
-  },
-  {
-    // RNF: React sem dangerouslySetInnerHTML (Seção 10, XSS).
-    files: ['frontend/**/*.tsx'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-          message: 'dangerouslySetInnerHTML é proibido (Seção 10 — XSS).',
-        },
-      ],
-    },
   },
   prettier,
 );

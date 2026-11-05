@@ -70,21 +70,21 @@ A pesquisa pública fica num pedaço de JavaScript próprio, sem o cliente do Su
 
 ## Testes
 
-| Teste | Arquivos                                                                                                                                             |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T22   | `backend/tests/db/t22-t23-importacao-escala.test.ts`; `frontend/src/features/shifts/shifts.test.tsx`; `frontend/e2e/escalas-e-pesquisas.spec.ts`     |
-| T23   | `backend/tests/db/t22-t23-importacao-escala.test.ts`; `frontend/src/features/shifts/shifts.test.tsx`                                                 |
-| T24   | `backend/tests/db/t24-setores-equipes-turnos.test.ts`; `frontend/src/features/sectors/sectors.test.tsx`                                              |
-| T25   | `backend/tests/db/t25-atribuicao.test.ts`                                                                                                            |
-| T26   | `backend/tests/db/t26-pesquisas.test.ts`; `frontend/src/features/surveys/SurveyEditorPage.test.tsx`                                                  |
-| T02   | `backend/tests/db/t26-pesquisas.test.ts` (URLs exatas); `frontend/e2e/escalas-e-pesquisas.spec.ts` (decodificação com jsqr)                          |
-| T01   | `backend/tests/db/publica-e01-e02.test.ts`; `frontend/e2e/pesquisa-publica.spec.ts`                                                                  |
-| T03   | `backend/tests/db/publica-e01-e02.test.ts`; `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts` |
-| T04   | `backend/tests/db/publica-e01-e02.test.ts`                                                                                                           |
-| T05   | `backend/tests/unit/regras-escala-pesquisa.test.ts`; `backend/tests/db/publica-e01-e02.test.ts` (SQL da Seção 8)                                     |
-| T06   | `backend/tests/db/publica-e01-e02.test.ts`                                                                                                           |
-| T10   | `backend/tests/db/publica-e01-e02.test.ts`; `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`                                          |
-| T27   | `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts`                                             |
-| T28   | `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts`                                             |
+| Teste | Arquivos                                                                                                                                     |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| T22   | `tests/db/t22-t23-importacao-escala.test.ts`; `frontend/src/features/shifts/shifts.test.tsx`; `frontend/e2e/escalas-e-pesquisas.spec.ts`     |
+| T23   | `tests/db/t22-t23-importacao-escala.test.ts`; `frontend/src/features/shifts/shifts.test.tsx`                                                 |
+| T24   | `tests/db/t24-setores-equipes-turnos.test.ts`; `frontend/src/features/sectors/sectors.test.tsx`                                              |
+| T25   | `tests/db/t25-atribuicao.test.ts`                                                                                                            |
+| T26   | `tests/db/t26-pesquisas.test.ts`; `frontend/src/features/surveys/SurveyEditorPage.test.tsx`                                                  |
+| T02   | `tests/db/t26-pesquisas.test.ts` (URLs exatas); `frontend/e2e/escalas-e-pesquisas.spec.ts` (decodificação com jsqr)                          |
+| T01   | `tests/db/publica-e01-e02.test.ts`; `frontend/e2e/pesquisa-publica.spec.ts`                                                                  |
+| T03   | `tests/db/publica-e01-e02.test.ts`; `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts` |
+| T04   | `tests/db/publica-e01-e02.test.ts`                                                                                                           |
+| T05   | `tests/unit/regras-escala-pesquisa.test.ts`; `tests/db/publica-e01-e02.test.ts` (SQL da Seção 8)                                             |
+| T06   | `tests/db/publica-e01-e02.test.ts`                                                                                                           |
+| T10   | `tests/db/publica-e01-e02.test.ts`; `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`                                          |
+| T27   | `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts`                                     |
+| T28   | `frontend/src/features/public-survey/PublicSurveyPage.test.tsx`; `frontend/e2e/pesquisa-publica.spec.ts`                                     |
 
 T14 e T15 também passaram a chamar as rotas reais E13, E16, E17, E22 e E23. Resultados das execuções: [`plano-e-relatorio-de-testes.md`](plano-e-relatorio-de-testes.md).

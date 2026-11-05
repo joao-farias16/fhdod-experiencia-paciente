@@ -1,10 +1,9 @@
+# Projeto independente (formatação própria em frontend/.prettierrc.json)
+frontend
 node_modules
 dist
 coverage
 package-lock.json
 *.tsbuildinfo
-backend/src/generated
-backend/prisma/migrations
-playwright-report
-test-results
-playwright/.cache
+src/generated
+prisma/migrations

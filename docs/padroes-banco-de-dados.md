@@ -4,16 +4,16 @@ Como o banco do FHDOD é criado, alterado, populado e testado. Modelo e dicioná
 
 ## Pilha e versões
 
-| Item                | Versão / configuração                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| PostgreSQL          | 17 (Supabase CLI local: imagem `supabase/postgres:17.11.0.004`; CI: `postgres:17`)                          |
-| Prisma CLI e Client | 7.10.1 (`prisma`, `@prisma/client`), gerador `prisma-client` (ESM, saída em `backend/src/generated/prisma`) |
-| Adaptador do driver | `@prisma/adapter-pg` 7.10.1 + `pg` 8 (o Prisma 7 conecta por adaptador)                                     |
-| Recurso em prévia   | `previewFeatures = ["partialIndexes"]` (índices parciais com `where: raw(...)`)                             |
-| Seed                | `@faker-js/faker` 10 (`fakerPT_BR`, `faker.seed(2026)`), executado com `tsx`                                |
-| Banco local         | Supabase CLI 2.121.0 (devDependency da raiz), Docker                                                        |
+| Item                | Versão / configuração                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| PostgreSQL          | 17 (Supabase CLI local: imagem `supabase/postgres:17.11.0.004`; CI: `postgres:17`)                  |
+| Prisma CLI e Client | 7.10.1 (`prisma`, `@prisma/client`), gerador `prisma-client` (ESM, saída em `src/generated/prisma`) |
+| Adaptador do driver | `@prisma/adapter-pg` 7.10.1 + `pg` 8 (o Prisma 7 conecta por adaptador)                             |
+| Recurso em prévia   | `previewFeatures = ["partialIndexes"]` (índices parciais com `where: raw(...)`)                     |
+| Seed                | `@faker-js/faker` 10 (`fakerPT_BR`, `faker.seed(2026)`), executado com `tsx`                        |
+| Banco local         | Supabase CLI 2.121.0 (devDependency da raiz), Docker                                                |
 
-O Prisma Client é gerado no `npm ci` (script `postinstall` do backend) e **não é versionado** (`backend/src/generated/` está no `.gitignore`, no ESLint e no Prettier).
+O Prisma Client é gerado no `npm ci` (script `postinstall` da API) e **não é versionado** (`src/generated/` está no `.gitignore`, no ESLint e no Prettier).
 
 ## Convenções
 
@@ -36,17 +36,17 @@ O Prisma Client é gerado no `npm ci` (script `postinstall` do backend) e **não
 | `SEED_REFERENCE_DATE`                 | opcional (AAAA-MM-DD): fixa a data de referência para reproduzir exatamente o mesmo conjunto.                                         |
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | usadas pelo seed para criar as contas de demonstração; vazias ⇒ perfis sem conta no Auth.                                             |
 
-Valores locais estão em [`backend/.env.example`](../backend/.env.example). O `.env` real nunca é versionado.
+Valores locais estão em [`.env.example`](../.env.example) (raiz). O `.env` real nunca é versionado.
 
 ## Ambiente local (Supabase CLI)
 
 ```bash
-npm ci                 # instala tudo e gera o Prisma Client
+npm ci                 # instala as dependências da API e gera o Prisma Client
 npm run db:start       # npx supabase start — PostgreSQL 54322, gateway/Auth 54321, Studio 54323
-cp backend/.env.example backend/.env   # e preencha SUPABASE_SECRET_KEY com `npx supabase status -o env`
+cp .env.example .env   # e preencha SUPABASE_SECRET_KEY com `npx supabase status -o env`
 npm run db:migrate     # aplica as migrations (prisma migrate dev)
 npm run db:seed        # seed determinístico
-npm run db:seed:verify -w backend      # confere as contagens no banco
+npm run db:seed:verify # confere as contagens no banco
 npm run db:stop        # para os contêineres (os dados ficam no volume)
 ```
 
@@ -61,22 +61,24 @@ npm run db:stop        # para os contêineres (os dados ficam no volume)
 
 ## Scripts
 
-| Raiz                 | Backend (`-w backend`) | Comando                                                                                     |
-| -------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
-| `npm run db:start`   | —                      | `supabase start`                                                                            |
-| `npm run db:stop`    | —                      | `supabase stop`                                                                             |
-| —                    | `db:generate`          | `prisma generate` (também no `postinstall`)                                                 |
-| —                    | `db:validate`          | `prisma validate`                                                                           |
-| —                    | `db:format`            | `prisma format`                                                                             |
-| `npm run db:migrate` | `db:migrate`           | `prisma migrate dev` (desenvolvimento)                                                      |
-| —                    | `db:migrate:create`    | `prisma migrate dev --create-only` (migration para editar)                                  |
-| `npm run db:deploy`  | `db:deploy`            | `prisma migrate deploy` (CI e publicação)                                                   |
-| —                    | `db:status`            | `prisma migrate status`                                                                     |
-| —                    | `db:diff`              | `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` |
-| `npm run db:seed`    | `db:seed`              | `tsx prisma/seed.ts`                                                                        |
-| —                    | `db:seed:verify`       | contagens e relações por consulta ao banco (somente leitura)                                |
-| `npm run db:reset`   | `db:reset`             | **somente local**: `prisma migrate reset --force` + seed                                    |
-| —                    | `test:db`              | testes com PostgreSQL real (`tests/db`)                                                     |
+Todos os scripts ficam no `package.json` da raiz (API) e são executados com `npm run <script>` na raiz do repositório.
+
+| Script              | Comando                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `db:start`          | `supabase start`                                                                            |
+| `db:stop`           | `supabase stop`                                                                             |
+| `db:generate`       | `prisma generate` (também no `postinstall`)                                                 |
+| `db:validate`       | `prisma validate`                                                                           |
+| `db:format`         | `prisma format`                                                                             |
+| `db:migrate`        | `prisma migrate dev` (desenvolvimento)                                                      |
+| `db:migrate:create` | `prisma migrate dev --create-only` (migration para editar)                                  |
+| `db:deploy`         | `prisma migrate deploy` (CI e publicação)                                                   |
+| `db:status`         | `prisma migrate status`                                                                     |
+| `db:diff`           | `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` |
+| `db:seed`           | `tsx prisma/seed.ts`                                                                        |
+| `db:seed:verify`    | contagens e relações por consulta ao banco (somente leitura)                                |
+| `db:reset`          | **somente local**: `prisma migrate reset --force` + seed                                    |
+| `test:db`           | testes com PostgreSQL real (`tests/db`)                                                     |
 
 ## Migrations
 
@@ -92,7 +94,7 @@ Regras:
 
 1. Todo o esquema vem das migrations; nada é feito só no painel do Supabase.
 2. **Migration aplicada não é editada.** Correção = nova migration (por exemplo, a identidade de `audit_logs.id` foi feita na migration 3, sem alterar a 2).
-3. Para SQL que o Prisma não gera: `npm run db:migrate:create -w backend -- --name <nome>`, editar o `migration.sql` gerado e aplicar com `npm run db:migrate`.
+3. Para SQL que o Prisma não gera: `npm run db:migrate:create -- --name <nome>`, editar o `migration.sql` gerado e aplicar com `npm run db:migrate`.
 4. Antes do PR: `npm run db:validate`, aplicar em banco vazio e `npm run db:diff` (deve sair com código 0 — "No difference detected").
 5. Publicação usa somente `prisma migrate deploy` (Tabela 26). **Nenhuma migration é aplicada no Supabase remoto sem autorização do responsável.**
 
@@ -115,7 +117,7 @@ O `prisma migrate diff` ignora o que o schema não representa; por isso ele conf
 
 ## Seed determinístico
 
-Arquivo: [`backend/prisma/seed.ts`](../backend/prisma/seed.ts). Somente dados fictícios.
+Arquivo: [`prisma/seed.ts`](../prisma/seed.ts). Somente dados fictícios.
 
 | Conjunto          | Quantidade | Regra                                                                                                                                                                 |
 | ----------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -136,7 +138,7 @@ Arquivo: [`backend/prisma/seed.ts`](../backend/prisma/seed.ts). Somente dados fi
 - **Idempotência:** se o hospital `FHDOD-DEMO` já existe, nada é gravado ("Seed já aplicado"). Se houver outros dados, o seed para com erro.
 - **Reinicialização:** `npm run db:reset` (somente local) — confere que `DATABASE_URL` e `DIRECT_URL` são locais, executa `prisma migrate reset --force` e o seed.
 - **Segurança:** recusa `DATABASE_URL`/`SUPABASE_URL` remotos sem `SEED_ALLOW_REMOTE=true`; a senha vem de `SEED_DEMO_PASSWORD`; as contas são criadas pela API de administração do Supabase Auth **local** (idempotente: reaproveita a conta existente).
-- **Verificação:** `npm run db:seed:verify -w backend` executa as consultas de contagem e coerência e termina com código 1 se algo divergir. Resultados reais em [`evidencias/ET02/`](evidencias/ET02/).
+- **Verificação:** `npm run db:seed:verify` executa as consultas de contagem e coerência e termina com código 1 se algo divergir. Resultados reais em [`evidencias/ET02/`](evidencias/ET02/).
 
 ## Segurança no banco
 
@@ -157,7 +159,7 @@ Arquivo: [`backend/prisma/seed.ts`](../backend/prisma/seed.ts). Somente dados fi
 
 ## Testes de banco
 
-`npm run test -w backend` executa dois projetos do Vitest: `unidade-e-integracao` (sem banco) e `banco` (PostgreSQL real). O projeto `banco` exige `TEST_DATABASE_URL` local, cria o banco se necessário, aplica `prisma migrate deploy` e roda cada teste numa transação desfeita (ROLLBACK). Inclui o **T32** e as verificações de estrutura, CHECK, UQ parciais, gatilhos, RLS e privilégios. Detalhes e resultados: [`plano-e-relatorio-de-testes.md`](plano-e-relatorio-de-testes.md).
+`npm test` (na raiz) executa dois projetos do Vitest: `unidade-e-integracao` (sem banco) e `banco` (PostgreSQL real). O projeto `banco` exige `TEST_DATABASE_URL` local, cria o banco se necessário, aplica `prisma migrate deploy` e roda cada teste numa transação desfeita (ROLLBACK). Inclui o **T32** e as verificações de estrutura, CHECK, UQ parciais, gatilhos, RLS e privilégios. Detalhes e resultados: [`plano-e-relatorio-de-testes.md`](plano-e-relatorio-de-testes.md).
 
 ## Backup e retenção
 

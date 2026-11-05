@@ -13,7 +13,6 @@ build/
 out/
 *.tsbuildinfo
 .vite/
-frontend/vite.config.*.timestamp-*
 .cache/
 .eslintcache
 .stylelintcache
@@ -49,7 +48,7 @@ service-account*.json
 secrets/
 
 # Prisma Client gerado por `prisma generate` (recriado no npm ci pelo postinstall)
-backend/src/generated/
+src/generated/
 
 # Supabase CLI (estado local; supabase/config.toml é versionado)
 supabase/.branches/

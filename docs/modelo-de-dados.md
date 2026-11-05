@@ -1,6 +1,6 @@
 # Modelo de dados (D05) — ET02
 
-Implementação da Seção 8 e das Tabelas 16 e 17 da especificação (v1.1). O esquema é criado **somente** pelas migrations versionadas em [`backend/prisma/migrations`](../backend/prisma/migrations) e espelhado em [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma). Padrões, migrations e seed: [`padroes-banco-de-dados.md`](padroes-banco-de-dados.md). Mapeamento Prisma × tabelas e consultas: [`mapeamento-classes-e-consultas.md`](mapeamento-classes-e-consultas.md).
+Implementação da Seção 8 e das Tabelas 16 e 17 da especificação (v1.1). O esquema é criado **somente** pelas migrations versionadas em [`prisma/migrations`](../prisma/migrations) e espelhado em [`prisma/schema.prisma`](../prisma/schema.prisma). Padrões, migrations e seed: [`padroes-banco-de-dados.md`](padroes-banco-de-dados.md). Mapeamento Prisma × tabelas e consultas: [`mapeamento-classes-e-consultas.md`](mapeamento-classes-e-consultas.md).
 
 ## Visão geral
 

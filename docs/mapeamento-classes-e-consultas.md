@@ -11,7 +11,7 @@ const prisma = createPrismaClient(env.DATABASE_URL);
 const app = createApp({ env, logger, prisma }); // createApp(deps) recebe o Prisma (Seção 7)
 ```
 
-- O cliente é gerado em `backend/src/generated/prisma` (`import { PrismaClient, Prisma } from '../generated/prisma/client.js'`).
+- O cliente é gerado em `src/generated/prisma` (`import { PrismaClient, Prisma } from '../generated/prisma/client.js'`).
 - Hoje o backend usa o Prisma só na verificação de saúde (E43: `SELECT 1` com limite de 2 s → 503 `SERVICE_UNAVAILABLE`). Os repositórios dos módulos entram a partir da ET03, seguindo `docs/arquitetura.md` (controladores sem Prisma; serviços com transações).
 - Testes HTTP sem banco injetam um dublê tipado como `Pick<PrismaClient, '$queryRaw'>`; os testes em `tests/db` usam o cliente real.
 

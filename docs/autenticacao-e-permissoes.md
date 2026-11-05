@@ -56,7 +56,7 @@ Tokens sem o formato JWT nem chegam ao Supabase. `createApp(deps)` recebe o veri
 
 ## Perfis e matriz de permissões (Tabela 13)
 
-Fonte única: `backend/src/modules/auth/permissions.ts` (`PERMISSIONS`, `ROLE_PERMISSIONS`, `ENDPOINTS`). O E04 devolve a lista de permissões do perfil; o frontend monta o menu a partir dela, mas **ocultar menus não é controle de acesso** — toda rota é verificada no backend.
+Fonte única: `src/modules/auth/permissions.ts` (API) (`PERMISSIONS`, `ROLE_PERMISSIONS`, `ENDPOINTS`). O E04 devolve a lista de permissões do perfil; o frontend monta o menu a partir dela, mas **ocultar menus não é controle de acesso** — toda rota é verificada no backend.
 
 | Recurso (endpoints)                         | SA        | AS              | GE  | OU                  | VI              |
 | ------------------------------------------- | --------- | --------------- | --- | ------------------- | --------------- |
@@ -191,10 +191,10 @@ Cada registro traz autor e perfil, entidade, `request_id` (o mesmo `X-Request-Id
 
 | Módulo   | Variável                        | Uso                                                                                        |
 | -------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| backend  | `SUPABASE_URL`                  | **obrigatória**; https em produção                                                         |
-| backend  | `SUPABASE_SECRET_KEY`           | **obrigatória**; chave secreta, somente no servidor                                        |
-| backend  | `AUDIT_IP_SECRET`               | HMAC do IP na auditoria; opcional localmente, **obrigatória em produção** (32+ caracteres) |
-| backend  | `SUPABASE_PUBLISHABLE_KEY`      | somente `npm run test:supabase` (testes com o Supabase local)                              |
+| API      | `SUPABASE_URL`                  | **obrigatória**; https em produção                                                         |
+| API      | `SUPABASE_SECRET_KEY`           | **obrigatória**; chave secreta, somente no servidor                                        |
+| API      | `AUDIT_IP_SECRET`               | HMAC do IP na auditoria; opcional localmente, **obrigatória em produção** (32+ caracteres) |
+| API      | `SUPABASE_PUBLISHABLE_KEY`      | somente `npm run test:supabase` (testes com o Supabase local)                              |
 | frontend | `VITE_SUPABASE_URL`             | URL do projeto Supabase                                                                    |
 | frontend | `VITE_SUPABASE_PUBLISHABLE_KEY` | chave **publicável** (nunca a secreta)                                                     |
 
@@ -202,11 +202,11 @@ Valores locais: `npx supabase status -o env` (`API_URL`, `SECRET_KEY`, `PUBLISHA
 
 ## Testes da ET03
 
-| Comando                            | Conteúdo                                                                                                         |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `npm run test -w backend`          | unidade (regras, Supabase simulado, env) e integração com PostgreSQL real e verificador falso: T12–T17 e E06–E08 |
-| `npm run test:supabase -w backend` | T12, T13 e T16 contra o **Supabase Auth local real** (cria e exclui contas fictícias)                            |
-| `npm run test -w frontend`         | componentes e fluxos (login, sessão, logout, TL02, TL16, TL17)                                                   |
-| `npm run test:e2e -w frontend`     | Playwright (Chrome instalado) em 1440 px e 360 px, backend nas portas 3334/5174 ligado ao banco de **teste**     |
+| Comando                          | Conteúdo                                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `npm test` (raiz)                | unidade (regras, Supabase simulado, env) e integração com PostgreSQL real e verificador falso: T12–T17 e E06–E08 |
+| `npm run test:supabase` (raiz)   | T12, T13 e T16 contra o **Supabase Auth local real** (cria e exclui contas fictícias)                            |
+| `npm test` (`frontend/`)         | componentes e fluxos (login, sessão, logout, TL02, TL16, TL17)                                                   |
+| `npm run test:e2e` (`frontend/`) | Playwright (Chrome instalado) em 1440 px e 360 px; API na 3334 (banco de **teste**) e frontend na 5174           |
 
 Os testes de integração usam um hospital exclusivo por cenário no banco de teste (`TEST_DATABASE_URL`). Como `audit_logs` aceita só inserção, esses dados não são apagados; o banco de teste é local e descartável. As rotas-sonda do T15 (E22, E23, E28 e E34, de etapas futuras) usam a mesma cadeia de middlewares e os serviços de escopo de produção sobre as tabelas reais; as etapas que implementarem esses endpoints devem repetir os cenários contra as rotas definitivas.

@@ -15,7 +15,7 @@
 
 ## Checklist
 
-- [ ] `npm run check` passa localmente (formatação, lint, typecheck, testes e build)
+- [ ] `npm run check` passa localmente na raiz (API) e, se o frontend mudou, também em `frontend/`
 - [ ] Testes adicionados ou atualizados para o comportamento alterado
 - [ ] Documentação atualizada (README, `docs/`, OpenAPI quando houver)
 - [ ] Migration revisada (quando houver)
