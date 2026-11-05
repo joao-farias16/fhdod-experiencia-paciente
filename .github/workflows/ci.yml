@@ -5,8 +5,8 @@
 # ET03: T12–T17 rodam no passo de testes com PostgreSQL real e verificador de token falso (sem
 # Supabase na CI); a suíte contra o Supabase Auth local (`npm run test:supabase`) é executada
 # localmente pelo responsável.
-# Etapa 2 (separação): a API ocupa a raiz do repositório e o frontend (pasta frontend/) é um projeto
-# independente, com dependências, lockfile e verificações próprios (job `frontend`).
+# Etapa 2 (separação): o repositório contém somente a API (backend), na raiz; o frontend é mantido
+# em repositório próprio, com CI própria.
 name: CI
 
 on:
@@ -150,53 +150,10 @@ jobs:
           cat health.json
           grep -q '"status":"ok"' health.json
 
-  frontend:
-    name: Frontend — formatação, lint, typecheck, testes e build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: frontend/.nvmrc
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Instalar dependências (somente as do frontend)
-        run: npm ci
-
-      - name: Formatação (Prettier)
-        run: npm run format:check
-
-      - name: Lint (ESLint)
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Testes (Vitest)
-        run: npm run test
-
-      - name: Build de produção
-        env:
-          VITE_APP_ENV: production
-          VITE_API_URL: https://api.fhdod.example
-        run: npm run build
-
   dependencias:
     name: Auditoria de dependências (npm audit)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      matrix:
-        projeto: ['.', 'frontend']
-    defaults:
-      run:
-        working-directory: ${{ matrix.projeto }}
     steps:
       - uses: actions/checkout@v7
 
@@ -204,7 +161,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: ${{ matrix.projeto }}/package-lock.json
+          cache-dependency-path: package-lock.json
 
       # Política: falha com vulnerabilidades de severidade alta ou crítica.
       - name: npm audit

@@ -1,5 +1,3 @@
-# Projeto independente (formatação própria em frontend/.prettierrc.json)
-frontend
 node_modules
 dist
 coverage

@@ -1,5 +1,4 @@
-// Configuração do ESLint (flat config) da API. O frontend (pasta frontend/) é um projeto
-// independente, com o próprio eslint.config.js, e por isso fica fora desta configuração.
+// Configuração do ESLint (flat config) da API.
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
@@ -8,8 +7,6 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
-      // Projeto independente (lint próprio em frontend/eslint.config.js).
-      'frontend/',
       '**/node_modules/',
       '**/dist/',
       '**/coverage/',
