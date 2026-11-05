@@ -1,9 +1,20 @@
-import type { PrismaClient, TransactionClient } from '../../lib/prisma.js';
+import { randomUUID } from 'node:crypto';
+
+import type { Database, Queryable } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
 import { resourceNotFound } from '../auth/scope.js';
+import {
+  findSector,
+  findSectorIdByCode,
+  findSectorIdByName,
+  insertSector,
+  listSectorRecords,
+  type SectorRecord,
+  updateSectorRow,
+} from './sectors.repository.js';
 import type { CreateSectorInput, UpdateSectorInput } from './sectors.schemas.js';
 
 export interface SectorDto {
@@ -22,27 +33,6 @@ export interface ListSectorsFilters {
   search?: string | undefined;
 }
 
-const sectorSelect = {
-  id: true,
-  code: true,
-  name: true,
-  description: true,
-  isActive: true,
-  deactivatedAt: true,
-  _count: {
-    select: {
-      teams: { where: { isActive: true } },
-      surveyConfigs: { where: { isActive: true } },
-    },
-  },
-} as const;
-
-function findSector(client: Pick<TransactionClient, 'sector'>, hospitalId: string, id: string) {
-  return client.sector.findFirst({ where: { id, hospitalId }, select: sectorSelect });
-}
-
-type SectorRecord = NonNullable<Awaited<ReturnType<typeof findSector>>>;
-
 function toSectorDto(sector: SectorRecord): SectorDto {
   return {
     id: sector.id,
@@ -51,8 +41,8 @@ function toSectorDto(sector: SectorRecord): SectorDto {
     description: sector.description,
     isActive: sector.isActive,
     deactivatedAt: sector.deactivatedAt?.toISOString() ?? null,
-    activeTeams: sector._count.teams,
-    activeSurveys: sector._count.surveyConfigs,
+    activeTeams: sector.activeTeams,
+    activeSurveys: sector.activeSurveys,
   };
 }
 
@@ -79,20 +69,12 @@ function nameConflict(): HttpError {
 
 /** Nome único no hospital sem distinguir maiúsculas (índice sectors_hospital_id_lower_name_key). */
 async function assertNameAvailable(
-  tx: Pick<TransactionClient, 'sector'>,
+  tx: Queryable,
   hospitalId: string,
   name: string,
   exceptId?: string,
 ): Promise<void> {
-  const existing = await tx.sector.findFirst({
-    where: {
-      hospitalId,
-      name: { equals: name, mode: 'insensitive' },
-      ...(exceptId === undefined ? {} : { id: { not: exceptId } }),
-    },
-    select: { id: true },
-  });
-  if (existing !== null) throw nameConflict();
+  if ((await findSectorIdByName(tx, hospitalId, name, exceptId)) !== null) throw nameConflict();
 }
 
 /** Corrida entre duas requisições: a restrição do banco decide qual conflito informar. */
@@ -108,55 +90,42 @@ function translateUniqueViolation(error: unknown): never {
  * O escopo é aplicado na própria consulta: usuário restrito vê apenas os setores associados.
  */
 export async function listSectors(
-  prisma: Pick<PrismaClient, 'sector'>,
+  db: Queryable,
   auth: AuthContext,
   filters: ListSectorsFilters,
 ): Promise<SectorDto[]> {
-  const sectors = await prisma.sector.findMany({
-    where: {
-      hospitalId: auth.hospitalId,
-      ...(auth.scope.all ? {} : { id: { in: [...auth.scope.sectorIds] } }),
-      ...(filters.isActive === undefined ? {} : { isActive: filters.isActive }),
-      ...(filters.search === undefined
-        ? {}
-        : {
-            OR: [
-              { name: { contains: filters.search, mode: 'insensitive' } },
-              { code: { contains: filters.search, mode: 'insensitive' } },
-            ],
-          }),
-    },
-    orderBy: [{ name: 'asc' }, { id: 'asc' }],
-    select: sectorSelect,
+  const sectors = await listSectorRecords(db, auth.hospitalId, {
+    sectorIds: auth.scope.all ? undefined : auth.scope.sectorIds,
+    isActive: filters.isActive,
+    search: filters.search,
   });
   return sectors.map(toSectorDto);
 }
 
 /** E11 — cadastro de setor (RF12): código e nome únicos no hospital; auditoria na transação. */
 export async function createSector(
-  prisma: PrismaClient,
+  db: Database,
   auth: AuthContext,
   audit: AuditContext,
   input: CreateSectorInput,
 ): Promise<SectorDto> {
   try {
-    return await prisma.$transaction(async (tx) => {
-      const byCode = await tx.sector.findFirst({
-        where: { hospitalId: auth.hospitalId, code: input.code },
-        select: { id: true },
-      });
-      if (byCode !== null) throw codeConflict();
+    return await db.transaction(async (tx) => {
+      if ((await findSectorIdByCode(tx, auth.hospitalId, input.code)) !== null) {
+        throw codeConflict();
+      }
       await assertNameAvailable(tx, auth.hospitalId, input.name);
 
-      const created = await tx.sector.create({
-        data: {
-          hospitalId: auth.hospitalId,
-          code: input.code,
-          name: input.name,
-          description: input.description ?? null,
-        },
-        select: sectorSelect,
+      const id = randomUUID();
+      await insertSector(tx, {
+        id,
+        hospitalId: auth.hospitalId,
+        code: input.code,
+        name: input.name,
+        description: input.description ?? null,
       });
+      const created = await findSector(tx, auth.hospitalId, id);
+      if (created === null) throw resourceNotFound();
       await recordAudit(tx, audit, {
         action: 'SECTOR_CREATED',
         entityType: 'sector',
@@ -176,7 +145,7 @@ export async function createSector(
  * (RN11): bloqueia novas respostas, turnos e importações do setor, mantendo o histórico.
  */
 export async function updateSector(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
@@ -184,7 +153,7 @@ export async function updateSector(
   patch: UpdateSectorInput,
 ): Promise<SectorDto> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       const current = await findSector(tx, auth.hospitalId, id);
       if (current === null) throw resourceNotFound();
 
@@ -199,18 +168,15 @@ export async function updateSector(
       if (changedFields.length === 0) return toSectorDto(current);
       if (name !== current.name) await assertNameAvailable(tx, auth.hospitalId, name, id);
 
-      const updated = await tx.sector.update({
-        where: { id },
-        data: {
-          name,
-          description,
-          isActive,
-          ...(isActive === current.isActive
-            ? {}
-            : { deactivatedAt: isActive ? null : clock.now() }),
-        },
-        select: sectorSelect,
+      await updateSectorRow(tx, id, {
+        name,
+        description,
+        isActive,
+        deactivatedAt:
+          isActive === current.isActive ? current.deactivatedAt : isActive ? null : clock.now(),
       });
+      const updated = await findSector(tx, auth.hospitalId, id);
+      if (updated === null) throw resourceNotFound();
       await recordAudit(tx, audit, {
         action:
           isActive === current.isActive

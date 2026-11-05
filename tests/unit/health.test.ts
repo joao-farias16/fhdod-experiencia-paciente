@@ -12,9 +12,7 @@ describe('healthRouter (E43)', () => {
   it('responde 503 quando o banco não responde dentro do limite (2 s em produção)', async () => {
     const app = express();
     app.use(requestLogger(createLogger({ LOG_LEVEL: 'silent', NODE_ENV: 'test' })));
-    app.use(
-      healthRouter({ clock: fixedClock, prisma: databaseStub('slow'), databaseTimeoutMs: 50 }),
-    );
+    app.use(healthRouter({ clock: fixedClock, db: databaseStub('slow'), databaseTimeoutMs: 50 }));
     app.use(errorHandler);
 
     const startedAt = Date.now();

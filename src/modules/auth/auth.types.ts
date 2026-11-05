@@ -1,4 +1,4 @@
-import type { UserRole } from '../../lib/prisma.js';
+import type { UserRole } from '../../lib/domain-types.js';
 
 /**
  * Escopo de setores do usuário autenticado (RN18, RF08): global (SA sempre; GE, OU e VI com
@@ -9,65 +9,35 @@ export type SectorScope = { all: true } | { all: false; sectorIds: readonly stri
 /** Identidade e autorização carregadas a cada requisição autenticada (req.auth, Seção 6). */
 export interface AuthContext {
   profileId: string;
-  authUserId: string;
+  /** Sessão de login (auth_sessions) à qual o token de acesso pertence. */
+  sessionId: string;
   hospitalId: string;
   role: UserRole;
   scope: SectorScope;
   mustChangePassword: boolean;
-  /** Emissão do token (claim iat, lido após a validação pelo Supabase); usado no E05. */
-  tokenIssuedAt?: Date | undefined;
 }
 
 /**
- * Resultado da validação do token Bearer no Supabase Auth (auth.getUser):
- * - `valid`: token válido do usuário `authUserId`;
- * - `banned`: token íntegro de um usuário bloqueado no Supabase (desativação, RF09);
- * - `invalid`: ausente, malformado, expirado, revogado (signOut) ou de usuário inexistente.
+ * Configuração da autenticação própria (Etapa 3): assinatura HS256 dos tokens de acesso, validade
+ * dos tokens e custo do bcrypt. Vem das variáveis JWT_*, REFRESH_TOKEN_TTL_DAYS e BCRYPT_ROUNDS.
  */
-export type TokenVerification =
-  | { status: 'valid'; authUserId: string; issuedAt?: Date | undefined }
-  | { status: 'banned'; authUserId: string }
-  | { status: 'invalid' };
-
-/** Verificador de token injetado em createApp, permitindo testes sem Supabase (Seção 7). */
-export interface TokenVerifier {
-  verify(accessToken: string): Promise<TokenVerification>;
+export interface AuthConfig {
+  jwtSecret: string;
+  accessTokenTtlSeconds: number;
+  refreshTokenTtlDays: number;
+  bcryptRounds: number;
 }
 
-/** O e-mail já existe no Supabase Auth (E07 → 409). */
-export class AuthEmailAlreadyRegisteredError extends Error {
-  constructor() {
-    super('E-mail já cadastrado no Supabase Auth.');
-    this.name = 'AuthEmailAlreadyRegisteredError';
-  }
-}
-
-/** O Supabase Auth recusou a senha pela própria política (equivalente à RN28 → 400). */
-export class AuthWeakPasswordError extends Error {
-  constructor() {
-    super('Senha recusada pela política do Supabase Auth.');
-    this.name = 'AuthWeakPasswordError';
-  }
-}
-
-/** Falha de comunicação ou erro inesperado do Supabase Auth (→ 503). */
-export class AuthServiceUnavailableError extends Error {
-  constructor(readonly operation: string) {
-    super(`Supabase Auth indisponível (${operation}).`);
-    this.name = 'AuthServiceUnavailableError';
-  }
-}
-
-/**
- * Operações administrativas do Supabase Auth usadas pelo backend (chave secreta, somente no
- * servidor). Senhas nunca são gravadas na aplicação: ficam apenas no Supabase Auth.
- */
-export interface AuthAdmin {
-  /** Cria a conta com e-mail confirmado e senha temporária; devolve o id do usuário no Auth. */
-  createUser(input: { email: string; password: string }): Promise<{ authUserId: string }>;
-  /** Exclui a conta (somente compensação de cadastro que falhou no banco). */
-  deleteUser(authUserId: string): Promise<void>;
-  updatePassword(authUserId: string, password: string): Promise<void>;
-  /** Bloqueia (ban_duration) ou libera o login e a renovação de sessão. */
-  setBanned(authUserId: string, banned: boolean): Promise<void>;
+/** Tokens devolvidos por E44 (login) e E45 (renovação). */
+export interface SessionTokens {
+  accessToken: string;
+  tokenType: 'Bearer';
+  /** Validade do token de acesso, em segundos. */
+  expiresIn: number;
+  /** Instante (ISO 8601) em que o token de acesso expira. */
+  expiresAt: string;
+  /** Token de renovação de uso único (rotativo). */
+  refreshToken: string;
+  /** Instante (ISO 8601) em que a sessão expira, se não for renovada. */
+  refreshTokenExpiresAt: string;
 }

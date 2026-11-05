@@ -1,0 +1,13 @@
+
+> fhdod-experiencia-paciente@0.1.0 test
+> vitest run --project unidade-e-integracao --project banco
+
+
+ RUN  v5.0.3 C:/Users/faria/OneDrive/Documentos/GitHub/fhdod-experiencia-paciente
+
+
+ Test Files  27 passed (27)
+      Tests  731 passed (731)
+   Start at  19:15:55
+   Duration  85.62s (import 52%, tests 45%, transform 3%)
+

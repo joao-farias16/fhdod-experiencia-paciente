@@ -1,5 +1,5 @@
 /**
- * Middlewares e serviços da ET03 sem banco: 503 para banco ou Supabase indisponível (Tabela 18),
+ * Middlewares e serviços da ET03 sem banco: 503 para MySQL indisponível (Tabela 18),
  * negativa de autorização sempre 403 mesmo se a auditoria falhar, rota pública no catálogo e
  * período padrão do E41 (RN25).
  */
@@ -7,8 +7,9 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
+import type { Database } from '../../src/lib/database.js';
 import { createLogger } from '../../src/lib/logger.js';
-import { Prisma, type PrismaClient } from '../../src/lib/prisma.js';
+import type { SqlStatement } from '../../src/lib/sql.js';
 import {
   auditAuthorizationDenials,
   requirePermission,
@@ -17,7 +18,6 @@ import {
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { requestLogger } from '../../src/middlewares/request-logger.js';
 import { listAuditLogsQuerySchema } from '../../src/modules/audit/audit.schemas.js';
-import { AuthServiceUnavailableError } from '../../src/modules/auth/auth.types.js';
 import { AuthorizationDeniedError } from '../../src/utils/errors.js';
 import { resolvePeriod } from '../../src/utils/validation.js';
 import { errorOf } from '../support/app.js';
@@ -33,32 +33,34 @@ function appThatThrows(error: unknown) {
 }
 
 describe('errorHandler — indisponibilidade (Tabela 18)', () => {
+  const mysqlError = (code: string, message: string, extra: object = {}) =>
+    Object.assign(new Error(message), { code, ...extra });
+
   it.each([
-    ['Supabase Auth', new AuthServiceUnavailableError('getUser')],
+    ['conexão recusada', mysqlError('ECONNREFUSED', 'connect ECONNREFUSED 127.0.0.1:3306')],
     [
-      'inicialização do Prisma',
-      new Prisma.PrismaClientInitializationError('sem conexão', '7.10.1'),
+      'acesso negado',
+      mysqlError('ER_ACCESS_DENIED_ERROR', "Access denied for user 'x'", { errno: 1045 }),
     ],
     [
-      'banco inacessível (P1001)',
-      new Prisma.PrismaClientKnownRequestError('inacessível', {
-        code: 'P1001',
-        clientVersion: '7.10.1',
-      }),
+      'banco inexistente',
+      mysqlError('ER_BAD_DB_ERROR', "Unknown database 'fhdod'", { errno: 1049 }),
     ],
+    ['conexão perdida', mysqlError('PROTOCOL_CONNECTION_LOST', 'Connection lost', { fatal: true })],
   ])('%s → 503 SERVICE_UNAVAILABLE sem detalhes internos', async (_case, error) => {
     const response = await request(appThatThrows(error)).get('/falha');
     expect(response.status).toBe(503);
     expect(errorOf(response).code).toBe('SERVICE_UNAVAILABLE');
-    expect(response.text).not.toMatch(/inacessível|sem conexão|getUser/);
+    expect(response.text).not.toMatch(/ECONNREFUSED|Access denied|Unknown database|3306/);
   });
 
-  it('outro erro conhecido do Prisma continua 500', async () => {
-    const error = new Prisma.PrismaClientKnownRequestError('único', {
-      code: 'P2002',
-      clientVersion: '7.10.1',
+  it('violação de restrição não tratada continua 500 (sem a mensagem do MySQL)', async () => {
+    const error = mysqlError('ER_DUP_ENTRY', "Duplicate entry 'x' for key 'sectors.y'", {
+      errno: 1062,
     });
-    expect((await request(appThatThrows(error)).get('/falha')).status).toBe(500);
+    const response = await request(appThatThrows(error)).get('/falha');
+    expect(response.status).toBe(500);
+    expect(response.text).not.toContain('Duplicate entry');
   });
 });
 
@@ -69,7 +71,7 @@ describe('negativas de autorização', () => {
     app.use((req, _res, next) => {
       req.auth = {
         profileId: '00000000-0000-4000-8000-000000000001',
-        authUserId: '00000000-0000-4000-8000-000000000002',
+        sessionId: '00000000-0000-4000-8000-000000000002',
         hospitalId: '00000000-0000-4000-8000-000000000003',
         role: 'viewer',
         scope: { all: true },
@@ -88,17 +90,15 @@ describe('negativas de autorização', () => {
       error.audited = true;
       throw error;
     });
-    const created: unknown[] = [];
-    const prisma = {
-      auditLog: {
-        create: (args: unknown) => {
-          if (auditFails) return Promise.reject(new Error('banco fora'));
-          created.push(args);
-          return Promise.resolve();
-        },
+    const created: SqlStatement[] = [];
+    const db = {
+      execute: (statement: SqlStatement) => {
+        if (auditFails) return Promise.reject(new Error('banco fora'));
+        created.push(statement);
+        return Promise.resolve({ affectedRows: 1, insertId: 1 });
       },
-    } as unknown as Pick<PrismaClient, 'auditLog'>;
-    app.use(auditAuthorizationDenials({ prisma, ipSecret: undefined }));
+    } as unknown as Database;
+    app.use(auditAuthorizationDenials({ db, ipSecret: undefined }));
     app.use(errorHandler);
     return { app, created };
   }
@@ -113,9 +113,15 @@ describe('negativas de autorização', () => {
     expect((await request(app).get('/restrita')).status).toBe(403);
     expect((await request(app).get('/ja-auditada')).status).toBe(403);
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({
-      data: { action: 'AUTHORIZATION_DENIED', entityId: 'E41', ipHash: null },
-    });
+    expect(created[0]?.text).toContain('INSERT INTO audit_logs');
+    // Ordem dos valores: autor, perfil, ação, tipo, entidade, setor, detalhes, requestId, ipHash.
+    expect(created[0]?.values.slice(2, 6)).toEqual([
+      'AUTHORIZATION_DENIED',
+      'endpoint',
+      'E41',
+      null,
+    ]);
+    expect(created[0]?.values.at(-1)).toBeNull();
   });
 
   it('falha ao auditar não libera o acesso: continua 403', async () => {

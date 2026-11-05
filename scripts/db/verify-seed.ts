@@ -3,19 +3,19 @@
  * Uso: `npm run db:seed:verify [-- --out caminho.md]`. Somente leitura.
  * Termina com código 1 se alguma verificação divergir do esperado.
  *
- * A "impressão digital" (md5 por tabela, sem auth_user_id, que depende do Supabase Auth local)
- * permite comparar duas execuções do seed com a mesma SEED_REFERENCE_DATE.
+ * A "impressão digital" (md5 por tabela, sem password_hash, que usa sal aleatório) permite
+ * comparar duas execuções do seed com a mesma SEED_REFERENCE_DATE.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-import pg from 'pg';
+import { loadDatabaseEnv } from '../../src/lib/env.js';
+import { connect, describeEnv, loadDotEnv } from './connection.js';
 
-import { describeUrl } from './guard.js';
+loadDotEnv();
 
-if (existsSync('.env')) {
-  process.loadEnvFile('.env');
-}
+/** Data e hora no fuso do hospital (America/Sao_Paulo = UTC−3, sem horário de verão desde 2019). */
+const LOCAL = (column: string) => `CONVERT_TZ(${column}, '+00:00', '-03:00')`;
 
 interface Check {
   name: string;
@@ -77,12 +77,12 @@ const CHECKS: Check[] = [
   },
   {
     name: 'Dias locais distintos com turnos',
-    sql: "SELECT count(DISTINCT (starts_at AT TIME ZONE 'America/Sao_Paulo')::date) FROM shifts",
+    sql: `SELECT count(DISTINCT DATE(${LOCAL('starts_at')})) FROM shifts`,
     expected: 150,
   },
   {
     name: 'Turnos de reforço do PA (sobreposição entre equipes)',
-    sql: "SELECT count(*) FROM shifts sh JOIN sectors s ON s.id = sh.sector_id WHERE s.code = 'PA' AND (sh.starts_at AT TIME ZONE 'America/Sao_Paulo')::time = '10:00'",
+    sql: `SELECT count(*) FROM shifts sh JOIN sectors s ON s.id = sh.sector_id WHERE s.code = 'PA' AND TIME_FORMAT(${LOCAL('sh.starts_at')}, '%H:%i') = '10:00'`,
     expected: (value) => value > 0,
     expectedLabel: '> 0',
   },
@@ -153,7 +153,7 @@ const CHECKS: Check[] = [
   },
   {
     name: 'Protocolos no formato FHD-AAAA-NNNNNN',
-    sql: "SELECT count(*) FROM manifestations WHERE protocol ~ '^FHD-[0-9]{4}-[0-9]{6}$'",
+    sql: "SELECT count(*) FROM manifestations WHERE REGEXP_LIKE(protocol, '^FHD-[0-9]{4}-[0-9]{6}$', 'c')",
     expected: 180,
   },
   {
@@ -182,48 +182,48 @@ const CHECKS: Check[] = [
 const DISTRIBUTIONS: { title: string; sql: string }[] = [
   {
     title: 'Respostas por setor',
-    sql: 'SELECT s.code AS chave, count(r.id)::int AS total FROM sectors s LEFT JOIN responses r ON r.sector_id = s.id GROUP BY s.code ORDER BY s.code',
+    sql: 'SELECT s.code AS chave, count(r.id) AS total FROM sectors s LEFT JOIN responses r ON r.sector_id = s.id GROUP BY s.code ORDER BY s.code',
   },
   {
     title: 'Respostas por status de atribuição',
-    sql: 'SELECT attribution_status::text AS chave, count(*)::int AS total FROM responses GROUP BY 1 ORDER BY 1',
+    sql: 'SELECT attribution_status AS chave, count(*) AS total FROM responses GROUP BY 1 ORDER BY 1',
   },
   {
     title: 'Respostas por origem',
-    sql: 'SELECT origin::text AS chave, count(*)::int AS total FROM responses GROUP BY 1 ORDER BY 1',
+    sql: 'SELECT origin AS chave, count(*) AS total FROM responses GROUP BY 1 ORDER BY 1',
   },
   {
     title: 'Respostas por versão do PA',
-    sql: "SELECT 'v' || v.version_number AS chave, count(r.id)::int AS total FROM survey_versions v JOIN sectors s ON s.id = v.sector_id LEFT JOIN responses r ON r.survey_version_id = v.id WHERE s.code = 'PA' GROUP BY v.version_number ORDER BY v.version_number",
+    sql: "SELECT CONCAT('v', v.version_number) AS chave, count(r.id) AS total FROM survey_versions v JOIN sectors s ON s.id = v.sector_id LEFT JOIN responses r ON r.survey_version_id = v.id WHERE s.code = 'PA' GROUP BY v.version_number ORDER BY v.version_number",
   },
   {
     title: 'Manifestações por tipo',
-    sql: 'SELECT type::text AS chave, count(*)::int AS total FROM manifestations GROUP BY 1 ORDER BY 1',
+    sql: 'SELECT type AS chave, count(*) AS total FROM manifestations GROUP BY 1 ORDER BY 1',
   },
   {
     title: 'Manifestações por status',
-    sql: 'SELECT status::text AS chave, count(*)::int AS total FROM manifestations GROUP BY 1 ORDER BY 1',
+    sql: 'SELECT status AS chave, count(*) AS total FROM manifestations GROUP BY 1 ORDER BY 1',
   },
   {
     title: 'Contatos por canal',
-    sql: "SELECT CASE WHEN phone IS NOT NULL AND email IS NOT NULL THEN 'telefone e e-mail' WHEN phone IS NOT NULL THEN 'somente telefone' ELSE 'somente e-mail' END AS chave, count(*)::int AS total FROM manifestation_contacts GROUP BY 1 ORDER BY 1",
+    sql: "SELECT CASE WHEN phone IS NOT NULL AND email IS NOT NULL THEN 'telefone e e-mail' WHEN phone IS NOT NULL THEN 'somente telefone' ELSE 'somente e-mail' END AS chave, count(*) AS total FROM manifestation_contacts GROUP BY 1 ORDER BY 1",
   },
   {
     title: 'Linha do tempo por tipo de evento',
-    sql: 'SELECT kind::text AS chave, count(*)::int AS total FROM manifestation_notes GROUP BY 1 ORDER BY 1',
+    sql: 'SELECT kind AS chave, count(*) AS total FROM manifestation_notes GROUP BY 1 ORDER BY 1',
   },
   {
     title: 'Outras contagens',
-    sql: "SELECT 'response_answers' AS chave, count(*)::int AS total FROM response_answers UNION ALL SELECT 'manifestation_notes', count(*)::int FROM manifestation_notes UNION ALL SELECT 'profile_sectors', count(*)::int FROM profile_sectors UNION ALL SELECT 'shift_imports', count(*)::int FROM shift_imports UNION ALL SELECT 'shifts', count(*)::int FROM shifts",
+    sql: "SELECT 'response_answers' AS chave, count(*) AS total FROM response_answers UNION ALL SELECT 'manifestation_notes', count(*) FROM manifestation_notes UNION ALL SELECT 'profile_sectors', count(*) FROM profile_sectors UNION ALL SELECT 'shift_imports', count(*) FROM shift_imports UNION ALL SELECT 'shifts', count(*) FROM shifts",
   },
 ];
 
-const NPS_SQL = `SELECT count(*)::int AS total,
-  count(*) FILTER (WHERE nps_score >= 9)::int AS promoters,
-  count(*) FILTER (WHERE nps_score IN (7, 8))::int AS passives,
-  count(*) FILTER (WHERE nps_score <= 6)::int AS detractors,
-  ROUND(100.0 * (count(*) FILTER (WHERE nps_score >= 9) - count(*) FILTER (WHERE nps_score <= 6))
-    / NULLIF(count(*), 0), 1)::text AS nps
+const NPS_SQL = `SELECT count(*) AS total,
+  count(CASE WHEN nps_score >= 9 THEN 1 END) AS promoters,
+  count(CASE WHEN nps_score IN (7, 8) THEN 1 END) AS passives,
+  count(CASE WHEN nps_score <= 6 THEN 1 END) AS detractors,
+  CAST(ROUND(100.0 * (count(CASE WHEN nps_score >= 9 THEN 1 END) - count(CASE WHEN nps_score <= 6 THEN 1 END))
+    / NULLIF(count(*), 0), 1) AS CHAR) AS nps
 FROM responses`;
 
 const FINGERPRINT_TABLES: [string, string][] = [
@@ -245,30 +245,45 @@ const FINGERPRINT_TABLES: [string, string][] = [
   ['manifestation_notes', 'id'],
 ];
 
+/** Colunas da tabela para a impressão digital (sem password_hash e sem colunas geradas). */
+async function fingerprintColumns(
+  connection: Awaited<ReturnType<typeof connect>>,
+  table: string,
+): Promise<string[]> {
+  const [rows] = await connection.query(
+    `SELECT column_name AS name FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = ? AND extra NOT LIKE '%GENERATED%'
+       AND column_name <> 'password_hash'
+     ORDER BY ordinal_position`,
+    [table],
+  );
+  return (rows as { name: string }[]).map((row) => row.name);
+}
+
 async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl === undefined || databaseUrl === '')
-    throw new Error('DATABASE_URL não definida.');
+  const env = loadDatabaseEnv();
   const outIndex = process.argv.indexOf('--out');
   const outPath = outIndex >= 0 ? process.argv[outIndex + 1] : undefined;
 
-  const client = new pg.Client({ connectionString: databaseUrl });
-  await client.connect();
+  const connection = await connect(env);
+  await connection.query('SET SESSION group_concat_max_len = 1073741824');
+  const query = async <T>(sql: string): Promise<T[]> => {
+    const [rows] = await connection.query(sql);
+    return rows as T[];
+  };
   const lines: string[] = [];
   let failures = 0;
   try {
-    const meta = await client.query<{ now: string; version: string }>(
-      "SELECT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS now, current_setting('server_version') AS version",
+    const meta = await query<{ now: string; version: string }>(
+      "SELECT DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%dT%H:%i:%sZ') AS now, VERSION() AS version",
     );
-    lines.push(`# Verificação do seed — ${meta.rows[0]?.now ?? ''}`, '');
-    lines.push(
-      `- Banco: \`${describeUrl(databaseUrl)}\` (PostgreSQL ${meta.rows[0]?.version ?? '?'})`,
-    );
+    lines.push(`# Verificação do seed — ${meta[0]?.now ?? ''}`, '');
+    lines.push(`- Banco: \`${describeEnv(env)}\` (MySQL ${meta[0]?.version ?? '?'})`);
     lines.push('- Comando: `npm run db:seed:verify`', '');
     lines.push('| Verificação | Esperado | Obtido | Resultado |', '| --- | --- | --- | --- |');
     for (const check of CHECKS) {
-      const { rows } = await client.query<{ count: string }>(check.sql);
-      const value = Number(rows[0]?.count ?? Number.NaN);
+      const rows = await query<Record<string, unknown>>(check.sql);
+      const value = Number(Object.values(rows[0] ?? {})[0] ?? Number.NaN);
       const ok =
         typeof check.expected === 'number' ? value === check.expected : check.expected(value);
       if (!ok) failures += 1;
@@ -278,22 +293,21 @@ async function main(): Promise<void> {
     }
 
     for (const distribution of DISTRIBUTIONS) {
-      const { rows } = await client.query<{ chave: string; total: number }>(distribution.sql);
+      const rows = await query<{ chave: string; total: number }>(distribution.sql);
       lines.push('', `## ${distribution.title}`, '', '| Item | Total |', '| --- | --- |');
-      for (const row of rows) lines.push(`| ${row.chave} | ${row.total} |`);
+      for (const row of rows) lines.push(`| ${row.chave} | ${String(row.total)} |`);
     }
 
-    const nps = await client.query<{
+    const [n] = await query<{
       total: number;
       promoters: number;
       passives: number;
       detractors: number;
       nps: string | null;
     }>(NPS_SQL);
-    const n = nps.rows[0];
     lines.push('', '## NPS geral do conjunto (consulta da Seção 8)', '');
     lines.push(
-      `Total ${n?.total ?? 0}; promotores ${n?.promoters ?? 0}; passivos ${n?.passives ?? 0}; detratores ${n?.detractors ?? 0}; NPS ${n?.nps ?? 'nulo'}.`,
+      `Total ${String(n?.total ?? 0)}; promotores ${String(n?.promoters ?? 0)}; passivos ${String(n?.passives ?? 0)}; detratores ${String(n?.detractors ?? 0)}; NPS ${n?.nps ?? 'nulo'}.`,
     );
 
     lines.push(
@@ -304,8 +318,10 @@ async function main(): Promise<void> {
       '| --- | --- |',
     );
     for (const [table, orderBy] of FINGERPRINT_TABLES) {
-      const { rows } = await client.query<{ md5: string | null }>(
-        `SELECT md5(string_agg((to_jsonb(t) - 'auth_user_id')::text, '|' ORDER BY ${orderBy})) AS md5 FROM ${table} t`,
+      const columns = await fingerprintColumns(connection, table);
+      const object = columns.map((column) => `'${column}', t.\`${column}\``).join(', ');
+      const rows = await query<{ md5: string | null }>(
+        `SELECT MD5(GROUP_CONCAT(JSON_OBJECT(${object}) ORDER BY ${orderBy} SEPARATOR '|')) AS md5 FROM ${table} t`,
       );
       lines.push(`| ${table} | \`${rows[0]?.md5 ?? '(vazia)'}\` |`);
     }
@@ -315,7 +331,7 @@ async function main(): Promise<void> {
       failures === 0 ? '**Resultado: APROVADO**' : `**Resultado: REPROVADO (${failures})**`,
     );
   } finally {
-    await client.end();
+    await connection.end();
   }
 
   const report = `${lines.join('\n')}\n`;

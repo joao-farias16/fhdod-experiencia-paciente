@@ -1,12 +1,10 @@
 # Integração contínua do FHDOD (Seção 13 da especificação; Tabela 26).
 # ET01: segredos, formatação, lint, typecheck, testes, build, saúde da API e auditoria de dependências.
-# ET02: PostgreSQL 17, validação do schema Prisma, `prisma migrate deploy`, `prisma migrate diff
-# --exit-code`, seed com verificação das contagens e testes de integração com banco real (T32).
-# ET03: T12–T17 rodam no passo de testes com PostgreSQL real e verificador de token falso (sem
-# Supabase na CI); a suíte contra o Supabase Auth local (`npm run test:supabase`) é executada
-# localmente pelo responsável.
-# Etapa 2 (separação): o repositório contém somente a API (backend), na raiz; o frontend é mantido
-# em repositório próprio, com CI própria.
+# Etapa 2 (separação): o repositório contém somente a API (backend); o frontend tem CI própria.
+# Etapa 3 (MySQL): banco MySQL 8.4 LTS como serviço da CI; migrations SQL de database/migrations
+# aplicadas em banco vazio, conferência do database/schema.sql, seed de demonstração com
+# verificação das contagens e testes de integração (MySQL real, autenticação própria, T12–T37 e
+# T32). Prisma, Supabase e PostgreSQL não são mais usados.
 name: CI
 
 on:
@@ -48,29 +46,34 @@ jobs:
         run: ./gitleaks git --redact --verbose --exit-code 1 .
 
   qualidade:
-    name: API — formatação, lint, typecheck, banco, testes e build
+    name: API — formatação, lint, typecheck, banco MySQL, testes e build
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
-      postgres:
-        image: postgres:17
+      mysql:
+        image: mysql:8.4
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
+          # Banco descartável do serviço da CI (credenciais públicas, sem dados reais).
+          MYSQL_ROOT_PASSWORD: fhdod_ci_root
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pfhdod_ci_root"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 20
     env:
-      # Banco descartável do serviço da CI (credenciais públicas, sem dados reais).
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod
-      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/fhdod
-      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod_test
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASSWORD: fhdod_ci_root # gitleaks:allow — senha do contêiner descartável da CI
+      DB_NAME: fhdod
+      TEST_DB_NAME: fhdod_test
       SEED_ALLOW_REMOTE: 'false'
+      # Senha fictícia das contas @example.com do seed (somente neste banco descartável).
+      SEED_DEMO_PASSWORD: DemoCi2026 # gitleaks:allow — valor fictício
+      SEED_REFERENCE_DATE: '2026-11-05'
+      BCRYPT_ROUNDS: '10'
     steps:
       - uses: actions/checkout@v7
 
@@ -79,35 +82,29 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Instalar dependências (gera o Prisma Client no postinstall)
+      - name: Instalar dependências
         run: npm ci
 
-      # Simula os papéis do Supabase e os privilégios padrão que ele concede, para que a migration
-      # de segurança comprove a revogação (verificado nos testes de banco).
-      - name: Preparar bancos e papéis anon/authenticated
-        env:
-          PGPASSWORD: postgres
+      - name: Versão do MySQL do serviço
+        run: mysql -h 127.0.0.1 -uroot -p"$DB_PASSWORD" -e "SELECT VERSION();"
+
+      - name: Conferir database/schema.sql × migrations
+        run: npm run db:schema:check
+
+      - name: Criar o banco e aplicar as migrations em banco vazio
         run: |
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE anon NOLOGIN;
-          CREATE ROLE authenticated NOLOGIN;
-          CREATE DATABASE fhdod;
-          CREATE DATABASE fhdod_test;
-          SQL
-          for db in fhdod fhdod_test; do
-            psql -h localhost -U postgres -d "$db" -v ON_ERROR_STOP=1 -c               "GRANT USAGE ON SCHEMA public TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated;"
-          done
+          npm run db:create
+          npm run db:migrate
+          npm run db:migrate:status
 
-      - name: Validar o schema Prisma
-        run: npm run db:validate
+      - name: Importar database/schema.sql num banco novo (mesmo fluxo do MySQL Workbench)
+        run: |
+          mysql -h 127.0.0.1 -uroot -p"$DB_PASSWORD" -e "CREATE DATABASE fhdod_workbench CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_cs;"
+          sed 's/^USE fhdod;/USE fhdod_workbench;/' database/schema.sql | mysql -h 127.0.0.1 -uroot -p"$DB_PASSWORD"
+          mysql -h 127.0.0.1 -uroot -p"$DB_PASSWORD" fhdod_workbench < database/seeds/001_dados_base.sql
+          DB_NAME=fhdod_workbench npm run db:migrate:status
 
-      - name: Aplicar migrations em banco vazio (prisma migrate deploy)
-        run: npm run db:deploy
-
-      - name: Conferir migrations × schema.prisma (prisma migrate diff --exit-code)
-        run: npm run db:diff
-
-      - name: Seed determinístico e verificação das contagens
+      - name: Seed de demonstração e verificação das contagens
         run: |
           npm run db:seed
           npm run db:seed:verify
@@ -121,24 +118,21 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Testes (Vitest; backend com PostgreSQL real em TEST_DATABASE_URL)
+      - name: Testes (Vitest; integração com MySQL real no banco TEST_DB_NAME)
         run: npm run test
 
       - name: Build
         run: npm run build
 
-      - name: Verificar GET /api/v1/health com o build da API
+      - name: Verificar login e GET /api/v1/health com o build da API
         env:
           NODE_ENV: production
           PORT: '3333'
           CORS_ORIGIN: https://fhdod.example
           LOG_LEVEL: warn
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fhdod
-          # A rota de saúde não usa o Supabase; valores fictícios só para a validação do ambiente.
-          SUPABASE_URL: https://supabase-indisponivel.example
-          SUPABASE_SECRET_KEY: valor-ficticio-da-ci
+          # Valores fictícios só para a validação do ambiente de produção.
+          JWT_SECRET: segredo-ficticio-da-ci-para-os-tokens-jwt # gitleaks:allow — valor fictício
           AUDIT_IP_SECRET: valor-ficticio-da-ci-com-mais-de-32-caracteres # gitleaks:allow — valor fictício
-          # ET05/ET06: obrigatórias em produção (links/QR Code e token de manifestação), fictícias aqui.
           PUBLIC_APP_URL: https://fhdod.example
           MANIFESTATION_TOKEN_SECRET: token-ficticio-da-ci-com-mais-de-32-caracteres # gitleaks:allow — valor fictício
         run: |
@@ -149,6 +143,9 @@ jobs:
           done
           cat health.json
           grep -q '"status":"ok"' health.json
+          status=$(curl -s -o login.json -w '%{http_code}' -X POST http://localhost:3333/api/v1/auth/login             -H 'Content-Type: application/json'             -d "{\"email\":\"superadmin@example.com\",\"password\":\"$SEED_DEMO_PASSWORD\"}")
+          test "$status" = "200"
+          grep -q '"accessToken"' login.json
 
   dependencias:
     name: Auditoria de dependências (npm audit)

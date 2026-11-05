@@ -22,7 +22,7 @@ export function publicSurveyRouter(deps: PublicSurveyDeps): Router {
   const show: RequestHandler = async (req, res) => {
     const slug = String(req.params.slug);
     if (!isPublicSlug(slug)) throw surveyNotFound();
-    const survey = await getPublicSurvey(deps.prisma, slug);
+    const survey = await getPublicSurvey(deps.db, slug);
     res.set('Cache-Control', 'public, max-age=60').status(200).json({ data: survey });
   };
 

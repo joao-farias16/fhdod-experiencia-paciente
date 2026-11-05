@@ -27,7 +27,7 @@ export function surveysRouter(deps: SurveysRoutesDeps): Router {
 
   const list: RequestHandler = async (req, res) => {
     const query = parseInput(listSurveysQuerySchema, req.query);
-    const { items, total } = await listSurveys(deps.prisma, authOf(req), query);
+    const { items, total } = await listSurveys(deps.db, authOf(req), query);
     res
       .status(200)
       .json({ data: items, meta: { page: query.page, pageSize: query.pageSize, total } });

@@ -1,51 +1,66 @@
 /**
- * T13 — Troca e redefinição de senha (RF03, RF04, RN28), integração com PostgreSQL real.
+ * T13 — Troca e redefinição de senha (RF03, RF04, RN28), integração com MySQL real.
  * Procedimento da Seção 12: endpoint com troca pendente → 403; E05 com senha fraca → 400 e
  * válida → 204; E09 → flag e auditoria sem senha; a senha anterior deixa de autenticar.
+ * Com a autenticação própria (Etapa 3), o login real (E44) comprova qual senha autentica.
  */
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { isPasswordCompliant } from '../../src/modules/auth/password-policy.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
   auditRowsFor,
   buildAuthApp,
   createAuthScenario,
+  DEFAULT_PASSWORD,
   openConnections,
 } from '../support/auth-scenario.js';
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
 
+/** Login real (E44): devolve o token de acesso ou null. */
+async function signIn(email: string, password: string): Promise<string | null> {
+  const response = await request(app).post('/api/v1/auth/login').send({ email, password });
+  return response.status === 200
+    ? (response.body as { data: { accessToken: string } }).data.accessToken
+    : null;
+}
+
+async function passwordHashOf(profileId: string): Promise<string> {
+  const { rows } = await db.query<{ password_hash: string }>(
+    'SELECT password_hash FROM profiles WHERE id = ?',
+    [profileId],
+  );
+  return rows[0]?.password_hash ?? '';
+}
+
 async function mustChange(profileId: string): Promise<boolean> {
   const { rows } = await db.query<{ must_change_password: boolean }>(
-    'SELECT must_change_password FROM profiles WHERE id = $1',
+    'SELECT must_change_password FROM profiles WHERE id = ?',
     [profileId],
   );
   return rows[0]?.must_change_password ?? false;
 }
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
+  ({ db, database } = await openConnections());
 });
 
 beforeEach(async () => {
   // Cenário e aplicação novos por teste: o limite de E05 (5 a cada 15 min) fica isolado.
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -100,6 +115,7 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
     ['longa (73 caracteres)', `A1${'b'.repeat(71)}`],
     ['vazia', ''],
   ])('senha fraca %s → 400 VALIDATION_ERROR sem gravar nada', async (_case, newPassword) => {
+    const hashBefore = await passwordHashOf(scenario.users.pending.profileId);
     const response = await request(app)
       .post('/api/v1/me/password')
       .set('Authorization', scenario.bearer('pending'))
@@ -113,7 +129,7 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
     expect(
       await auditRowsFor(db, scenario.users.pending.profileId, 'PASSWORD_CHANGED'),
     ).toHaveLength(0);
-    expect(fake.calls.filter((call) => call.operation === 'updatePassword')).toHaveLength(0);
+    expect(await passwordHashOf(scenario.users.pending.profileId)).toBe(hashBefore);
   });
 
   it('rejeita campos desconhecidos e corpo ausente (Zod estrito)', async () => {
@@ -133,7 +149,7 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
     expect(empty.status).toBe(400);
   });
 
-  it('senha válida → 204; atualiza o Supabase, libera o acesso e audita sem a senha', async () => {
+  it('senha válida → 204; grava o novo hash, libera o acesso e audita sem a senha', async () => {
     const newPassword = 'NovaSenhaSegura2026'; // gitleaks:allow — senha fictícia de teste
     const response = await request(app)
       .post('/api/v1/me/password')
@@ -143,7 +159,9 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
     expect(response.status).toBe(204);
     expect(response.text).toBe('');
     expect(await mustChange(scenario.users.pending.profileId)).toBe(false);
-    expect(fake.users.get(scenario.users.pending.authUserId)?.password).toBe(newPassword);
+    expect(await passwordHashOf(scenario.users.pending.profileId)).toMatch(/^\$2[aby]\$/);
+    expect(await signIn(scenario.users.pending.email, newPassword)).not.toBeNull();
+    expect(await signIn(scenario.users.pending.email, DEFAULT_PASSWORD)).toBeNull();
 
     const audit = await auditRowsFor(db, scenario.users.pending.profileId, 'PASSWORD_CHANGED');
     expect(audit).toHaveLength(1);
@@ -172,18 +190,32 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
     expect(audit.map((row) => row.details)).toEqual([{ mandatory: false }]);
   });
 
-  it('falha no Supabase Auth desfaz a transação (flag e auditoria preservadas) → 503', async () => {
-    fake.failNext('updatePassword');
+  it('nova senha igual à atual → 400 sem gravar (flag e auditoria preservadas)', async () => {
     const response = await request(app)
       .post('/api/v1/me/password')
       .set('Authorization', scenario.bearer('pending'))
-      .send({ newPassword: 'NovaSenhaSegura2026' }); // gitleaks:allow — senha fictícia de teste
+      .send({ newPassword: DEFAULT_PASSWORD });
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(400);
+    expect(errorOf(response).details[0]?.field).toBe('newPassword');
     expect(await mustChange(scenario.users.pending.profileId)).toBe(true);
     expect(
       await auditRowsFor(db, scenario.users.pending.profileId, 'PASSWORD_CHANGED'),
     ).toHaveLength(0);
+  });
+
+  it('a troca encerra as outras sessões do usuário e mantém a atual', async () => {
+    const other = await signIn(scenario.users.ge.email, DEFAULT_PASSWORD);
+    expect(other).not.toBeNull();
+    const response = await request(app)
+      .post('/api/v1/me/password')
+      .set('Authorization', scenario.bearer('ge'))
+      .send({ newPassword: 'TrocaVoluntaria99' });
+    expect(response.status).toBe(204);
+
+    const me = (auth: string) => request(app).get('/api/v1/me').set('Authorization', auth);
+    expect((await me(scenario.bearer('ge'))).status).toBe(200);
+    expect((await me(`Bearer ${other ?? ''}`)).status).toBe(401);
   });
 
   it('limita E05 a 5 tentativas a cada 15 minutos por perfil (429 com Retry-After)', async () => {
@@ -214,8 +246,7 @@ describe('T13 — E05 POST /api/v1/me/password', () => {
 describe('T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03)', () => {
   it('gera senha temporária de 16 caracteres, marca a troca e audita sem a senha', async () => {
     const target = scenario.users.ou;
-    const oldPassword = fake.users.get(target.authUserId)?.password ?? '';
-    expect(fake.signIn(target.email, oldPassword)).not.toBeNull();
+    expect(await signIn(target.email, DEFAULT_PASSWORD)).not.toBeNull();
 
     const response = await request(app)
       .post(`/api/v1/admin/users/${target.profileId}/reset-password`)
@@ -229,8 +260,8 @@ describe('T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03)', () =>
 
     expect(await mustChange(target.profileId)).toBe(true);
     // A senha anterior deixa de autenticar; a temporária autentica.
-    expect(fake.signIn(target.email, oldPassword)).toBeNull();
-    expect(fake.signIn(target.email, temporaryPassword)).not.toBeNull();
+    expect(await signIn(target.email, DEFAULT_PASSWORD)).toBeNull();
+    expect(await signIn(target.email, temporaryPassword)).not.toBeNull();
 
     const audit = await auditRowsFor(db, target.profileId, 'USER_PASSWORD_RESET');
     expect(audit).toHaveLength(1);
@@ -262,9 +293,7 @@ describe('T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03)', () =>
       .set('Authorization', scenario.bearer('sa'));
     const { temporaryPassword } = (reset.body as { data: { temporaryPassword: string } }).data;
 
-    // Espera virar o segundo, pois o iat do token tem precisão de segundos.
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
-    const token = fake.signIn(target.email, temporaryPassword);
+    const token = await signIn(target.email, temporaryPassword);
     expect(token).not.toBeNull();
     const auth = `Bearer ${token ?? ''}`;
 
@@ -285,7 +314,6 @@ describe('T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03)', () =>
   it('sessão anterior à redefinição não consegue concluir a troca obrigatória (401)', async () => {
     const target = scenario.users.geB;
     const oldSession = scenario.bearer('geB');
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
     await request(app)
       .post(`/api/v1/admin/users/${target.profileId}/reset-password`)
       .set('Authorization', scenario.bearer('sa'))
@@ -330,17 +358,24 @@ describe('T13 — E09 POST /api/v1/admin/users/:id/reset-password (RF03)', () =>
     expect(invalid.status).toBe(400);
   });
 
-  it('falha no Supabase Auth: nada é marcado nem auditado (503)', async () => {
-    fake.failNext('updatePassword');
-    const response = await request(app)
-      .post(`/api/v1/admin/users/${scenario.users.ou.profileId}/reset-password`)
-      .set('Authorization', scenario.bearer('sa'));
+  it('a redefinição encerra todas as sessões abertas do usuário (password_reset)', async () => {
+    const target = scenario.users.ou;
+    const extra = await signIn(target.email, DEFAULT_PASSWORD);
+    await request(app)
+      .post(`/api/v1/admin/users/${target.profileId}/reset-password`)
+      .set('Authorization', scenario.bearer('sa'))
+      .expect(200);
 
-    expect(response.status).toBe(503);
-    expect(response.text).not.toMatch(/temporaryPassword/);
-    expect(await mustChange(scenario.users.ou.profileId)).toBe(false);
-    expect(await auditRowsFor(db, scenario.users.ou.profileId, 'USER_PASSWORD_RESET')).toHaveLength(
-      0,
+    for (const auth of [scenario.bearer('ou'), `Bearer ${extra ?? ''}`]) {
+      expect((await request(app).get('/api/v1/me').set('Authorization', auth)).status).toBe(401);
+    }
+    const { rows } = await db.query<{ active: number; reset: number }>(
+      `SELECT COUNT(CASE WHEN revoked_at IS NULL THEN 1 END) AS active,
+              COUNT(CASE WHEN revoked_reason = 'password_reset' THEN 1 END) AS reset
+       FROM auth_sessions WHERE profile_id = ?`,
+      [target.profileId],
     );
+    expect(Number(rows[0]?.active)).toBe(0);
+    expect(Number(rows[0]?.reset)).toBeGreaterThanOrEqual(2);
   });
 });

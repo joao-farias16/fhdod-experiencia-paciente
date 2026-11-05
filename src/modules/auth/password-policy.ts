@@ -2,12 +2,12 @@ import { randomInt } from 'node:crypto';
 
 import { z } from 'zod';
 
-/** RN28: mínimo de 10 caracteres; E05: máximo de 72 (limite do bcrypt no Supabase Auth). */
+/** RN28: mínimo de 10 caracteres; E05: máximo de 72 (limite de 72 bytes do bcrypt). */
 export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 72;
 export const TEMPORARY_PASSWORD_LENGTH = 16;
 
-// Letras ASCII, como o requisito `letters_digits` do Supabase Auth (supabase/config.toml).
+// Letras ASCII e dígitos (exigência "letters_digits" mantida da política anterior).
 const HAS_LETTER = /[A-Za-z]/;
 const HAS_DIGIT = /[0-9]/;
 
@@ -20,7 +20,12 @@ export const passwordSchema = z
   .min(PASSWORD_MIN_LENGTH, `A senha deve ter ao menos ${PASSWORD_MIN_LENGTH} caracteres.`)
   .max(PASSWORD_MAX_LENGTH, `A senha deve ter no máximo ${PASSWORD_MAX_LENGTH} caracteres.`)
   .refine((value) => HAS_LETTER.test(value), 'A senha deve conter ao menos uma letra.')
-  .refine((value) => HAS_DIGIT.test(value), 'A senha deve conter ao menos um número.');
+  .refine((value) => HAS_DIGIT.test(value), 'A senha deve conter ao menos um número.')
+  // O bcrypt considera só os primeiros 72 bytes: letras acentuadas ocupam 2 bytes em UTF-8.
+  .refine(
+    (value) => Buffer.byteLength(value, 'utf8') <= PASSWORD_MAX_LENGTH,
+    'A senha é longa demais (use menos caracteres acentuados).',
+  );
 
 export function isPasswordCompliant(value: string): boolean {
   return passwordSchema.safeParse(value).success;

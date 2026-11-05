@@ -1,9 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * Três projetos de teste. `npm test` roda `unidade-e-integracao` e `banco`; o projeto `supabase`
- * (Supabase Auth LOCAL real) roda só com `npm run test:supabase`, pois exige `npm run db:start`
- * e as chaves locais no .env da raiz.
+ * Dois projetos de teste, ambos em `npm test`: `unidade-e-integracao` (sem banco) e `banco`
+ * (MySQL real no banco de testes TEST_DB_*, recriado e migrado pelo global-setup a cada execução).
  */
 const databaseTest = {
   globalSetup: ['tests/support/global-setup.ts'],
@@ -24,19 +23,15 @@ export default defineConfig({
         },
       },
       {
-        // Integração com PostgreSQL real (TEST_DATABASE_URL), em sequência: T32 e regras do banco.
+        // Integração com MySQL real (TEST_DB_*), em sequência: T12–T37, T32 e regras do banco.
         extends: true,
         test: { name: 'banco', include: ['tests/db/**/*.test.ts'], ...databaseTest },
-      },
-      {
-        extends: true,
-        test: { name: 'supabase', include: ['tests/supabase/**/*.test.ts'], ...databaseTest },
       },
     ],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/server.ts', 'src/generated/**'],
+      exclude: ['src/server.ts'],
     },
   },
 });

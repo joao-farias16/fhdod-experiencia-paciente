@@ -1,23 +1,29 @@
-import type { Logger } from 'pino';
+import { randomUUID } from 'node:crypto';
 
-import {
-  AUTH_TRANSACTION_OPTIONS,
-  type Prisma,
-  type PrismaClient,
-  type TransactionClient,
-  type UserRole,
-} from '../../lib/prisma.js';
+import type { Database, Queryable } from '../../lib/database.js';
+import type { UserRole } from '../../lib/domain-types.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isUniqueViolation } from '../../utils/errors.js';
 import { validationError } from '../../utils/validation.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
-import {
-  type AuthAdmin,
-  type AuthContext,
-  AuthEmailAlreadyRegisteredError,
-} from '../auth/auth.types.js';
+import { revokeProfileSessions, updatePasswordHash } from '../auth/auth.repository.js';
+import type { AuthConfig, AuthContext } from '../auth/auth.types.js';
 import { generateTemporaryPassword } from '../auth/password-policy.js';
+import { hashPassword } from '../auth/passwords.js';
 import { resourceNotFound } from '../auth/scope.js';
+import { findSectorsByIds } from '../sectors/sectors.repository.js';
+import {
+  deleteProfileSectors,
+  findProfileIdByEmail,
+  findUserById,
+  insertProfile,
+  insertProfileSectors,
+  listUserRecords,
+  lockTargetAndSuperadmins,
+  type SectorSummary,
+  updateProfileRow,
+  type UserRecord,
+} from './users.repository.js';
 import {
   type CreateUserInput,
   type ListUsersQuery,
@@ -25,10 +31,11 @@ import {
   type UpdateUserInput,
 } from './users.schemas.js';
 
+export type { SectorSummary };
+
 export interface UsersServiceDeps {
-  prisma: PrismaClient;
-  authAdmin: AuthAdmin;
-  logger: Logger;
+  db: Database;
+  authConfig: AuthConfig;
   clock: Clock;
 }
 
@@ -49,17 +56,14 @@ function selfModification(): HttpError {
  * com setores desativados depois podem ser mantidos (histórico, RF15).
  */
 async function assertAssignableSectors(
-  tx: Pick<TransactionClient, 'sector'>,
+  tx: Queryable,
   hospitalId: string,
   sectorIds: readonly string[],
   alreadyLinked: readonly string[] = [],
 ): Promise<void> {
   const newIds = sectorIds.filter((id) => !alreadyLinked.includes(id));
   if (newIds.length === 0) return;
-  const sectors = await tx.sector.findMany({
-    where: { id: { in: newIds }, hospitalId },
-    select: { id: true, isActive: true },
-  });
+  const sectors = await findSectorsByIds(tx, newIds, hospitalId);
   if (sectors.length !== newIds.length) {
     throw new HttpError(422, 'INVALID_SCOPE', 'Um ou mais setores informados não existem.', [
       { field: 'sectorIds', message: 'Escolha setores existentes.' },
@@ -72,120 +76,84 @@ async function assertAssignableSectors(
   }
 }
 
-/** Executa a compensação no Supabase Auth; uma falha é registrada sem dados pessoais. */
-async function compensate(logger: Logger, operation: string, action: () => Promise<void>) {
-  try {
-    await action();
-  } catch (error) {
-    logger.error({ err: error, operation }, 'Falha na compensação no Supabase Auth');
-  }
-}
-
 /** E06 — lista paginada com filtros (perfil, situação, setor e busca por nome ou e-mail). */
 export async function listUsers(
-  prisma: PrismaClient,
+  db: Queryable,
   actor: AuthContext,
   filters: ListUsersQuery,
 ): Promise<{ items: UserDto[]; total: number }> {
-  const { items, total } = await listUserRecords(prisma, actor.hospitalId, filters);
+  const { items, total } = await listUserRecords(db, actor.hospitalId, {
+    role: filters.role,
+    isActive: filters.isActive,
+    sectorId: filters.sectorId,
+    search: filters.search,
+    offset: (filters.page - 1) * filters.pageSize,
+    limit: filters.pageSize,
+  });
   return { items: items.map(toUserDto), total };
 }
 
 /**
- * E07 — cadastro (RF06): cria a conta no Supabase Auth com senha temporária e, em seguida, o
- * perfil, os vínculos de setor e a auditoria numa transação. Se a transação falhar, a conta do
- * Auth é excluída (compensação), sem deixar conta órfã.
+ * E07 — cadastro (RF06): gera a senha temporária (exibida uma única vez), grava o hash bcrypt, o
+ * perfil, os vínculos de setor e a auditoria numa única transação. O primeiro acesso exige a
+ * troca da senha (must_change_password).
  */
 export async function createUser(
-  { prisma, authAdmin, logger }: UsersServiceDeps,
+  { db, authConfig }: UsersServiceDeps,
   actor: AuthContext,
   audit: AuditContext,
   input: CreateUserInput,
 ): Promise<{ user: UserDto; temporaryPassword: string }> {
-  const existing = await prisma.profile.findUnique({
-    where: { email: input.email },
-    select: { id: true },
-  });
-  if (existing !== null) throw emailConflict();
-  await assertAssignableSectors(prisma, actor.hospitalId, input.sectorIds);
+  if ((await findProfileIdByEmail(db, input.email)) !== null) throw emailConflict();
+  await assertAssignableSectors(db, actor.hospitalId, input.sectorIds);
 
   const temporaryPassword = generateTemporaryPassword();
-  let authUserId: string;
+  const passwordHash = await hashPassword(temporaryPassword, authConfig.bcryptRounds);
   try {
-    ({ authUserId } = await authAdmin.createUser({
-      email: input.email,
-      password: temporaryPassword,
-    }));
-  } catch (error) {
-    if (error instanceof AuthEmailAlreadyRegisteredError) throw emailConflict();
-    throw error;
-  }
-
-  try {
-    const created = await prisma.$transaction(async (tx) => {
-      const profile = await tx.profile.create({
-        data: {
-          hospitalId: actor.hospitalId,
-          authUserId,
-          fullName: input.fullName,
-          email: input.email,
-          role: input.role,
-          allSectors: input.allSectors,
-          mustChangePassword: true,
-          createdById: actor.profileId,
-          sectorLinks: {
-            create: input.sectorIds.map((sectorId) => ({ sectorId, createdById: actor.profileId })),
-          },
-        },
-        select: userSelect,
+    const created = await db.transaction(async (tx) => {
+      const id = randomUUID();
+      await insertProfile(tx, {
+        id,
+        hospitalId: actor.hospitalId,
+        fullName: input.fullName,
+        email: input.email,
+        passwordHash,
+        role: input.role,
+        allSectors: input.allSectors,
+        mustChangePassword: true,
+        createdById: actor.profileId,
       });
+      await insertProfileSectors(tx, id, input.sectorIds, actor.profileId);
       await recordAudit(tx, audit, {
         action: 'USER_CREATED',
         entityType: 'profile',
-        entityId: profile.id,
+        entityId: id,
         details: { role: input.role, allSectors: input.allSectors, sectorIds: input.sectorIds },
       });
-      return profile;
-    }, AUTH_TRANSACTION_OPTIONS);
+      const record = await findUserById(tx, id);
+      if (record === null) throw resourceNotFound();
+      return record;
+    });
     return { user: toUserDto(created), temporaryPassword };
   } catch (error) {
-    await compensate(logger, 'deleteUser', () => authAdmin.deleteUser(authUserId));
-    if (isUniqueViolation(error)) throw emailConflict();
+    if (isUniqueViolation(error, 'profiles_email_key')) throw emailConflict();
     throw error;
   }
 }
 
-interface LockedTarget {
-  record: UserRecord;
-  authUserId: string;
-  hospitalId: string;
-}
-
 /**
- * Bloqueia (FOR UPDATE) o usuário-alvo e os SA ativos numa única instrução, em ordem de id,
- * evitando deadlocks e garantindo a contagem de SA ativos sob concorrência (RN24).
+ * Bloqueia (FOR UPDATE) o usuário-alvo e os SA ativos do hospital e lê o alvo (RN24).
  */
 async function lockTarget(
-  tx: TransactionClient,
+  tx: Queryable,
   targetId: string,
   hospitalId: string,
-): Promise<{ target: LockedTarget | null; activeSuperadmins: number }> {
-  const locked = await tx.$queryRaw<{ id: string; role: UserRole; is_active: boolean }[]>`
-    SELECT id, role, is_active FROM profiles
-    WHERE id = ${targetId}::uuid
-       OR (role = 'superadmin' AND is_active AND hospital_id = ${hospitalId}::uuid)
-    ORDER BY id
-    FOR UPDATE`;
+): Promise<{ target: UserRecord | null; activeSuperadmins: number }> {
+  const locked = await lockTargetAndSuperadmins(tx, targetId, hospitalId);
   const activeSuperadmins = locked.filter(
-    (row) => row.role === 'superadmin' && row.is_active,
+    (row) => row.role === 'superadmin' && row.isActive,
   ).length;
-  const record = await findUserById(tx, targetId);
-  if (record === null) return { target: null, activeSuperadmins };
-  const ids = await tx.profile.findUniqueOrThrow({
-    where: { id: targetId },
-    select: { authUserId: true, hospitalId: true },
-  });
-  return { target: { record, ...ids }, activeSuperadmins };
+  return { target: await findUserById(tx, targetId), activeSuperadmins };
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
@@ -198,7 +166,7 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
  */
 function mergeUpdate(current: UserRecord, patch: UpdateUserInput) {
   const role = patch.role ?? current.role;
-  const currentSectorIds = current.sectorLinks.map((link) => link.sector.id);
+  const currentSectorIds = current.sectors.map((sector) => sector.id);
   let allSectors = patch.allSectors;
   if (allSectors === undefined) {
     if (role === 'superadmin') allSectors = true;
@@ -219,184 +187,126 @@ function mergeUpdate(current: UserRecord, patch: UpdateUserInput) {
 
 /**
  * E08 — edição (RF07–RF09): nome, perfil, escopo e situação. O novo perfil vale na requisição
- * seguinte (o perfil é lido a cada requisição). Desativação e reativação também bloqueiam ou
- * liberam a conta no Supabase Auth; a chamada é o último passo da transação, que é desfeita se
- * ela falhar. Um único registro de auditoria por operação.
+ * seguinte (o perfil é lido a cada requisição). A desativação bloqueia imediatamente o uso dos
+ * tokens, a renovação e o login (403 ACCOUNT_DISABLED); a reativação libera de novo. Um único
+ * registro de auditoria por operação.
  */
 export async function updateUser(
-  { prisma, authAdmin, logger, clock }: UsersServiceDeps,
+  { db, clock }: UsersServiceDeps,
   actor: AuthContext,
   audit: AuditContext,
   targetId: string,
   patch: UpdateUserInput,
 ): Promise<UserDto> {
-  let banChangedTo: boolean | undefined;
-  let authUserIdForCompensation: string | undefined;
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const { target, activeSuperadmins } = await lockTarget(tx, targetId, actor.hospitalId);
-      if (target === null || target.hospitalId !== actor.hospitalId) throw resourceNotFound();
-      const current = target.record;
-      const next = mergeUpdate(current, patch);
+  return db.transaction(async (tx) => {
+    const { target, activeSuperadmins } = await lockTarget(tx, targetId, actor.hospitalId);
+    if (target === null || target.hospitalId !== actor.hospitalId) throw resourceNotFound();
+    const current = target;
+    const next = mergeUpdate(current, patch);
 
-      const nameChanged = next.fullName !== current.fullName;
-      const roleChanged = next.role !== current.role;
-      const scopeChanged =
-        next.allSectors !== current.allSectors || !sameSet(next.sectorIds, next.currentSectorIds);
-      const activeChanged = next.isActive !== current.isActive;
+    const nameChanged = next.fullName !== current.fullName;
+    const roleChanged = next.role !== current.role;
+    const scopeChanged =
+      next.allSectors !== current.allSectors || !sameSet(next.sectorIds, next.currentSectorIds);
+    const activeChanged = next.isActive !== current.isActive;
 
-      // RN24: sempre há ao menos um SA ativo; ninguém desativa a si nem altera o próprio perfil.
-      const losesSuperadmin =
-        current.role === 'superadmin' && current.isActive && (roleChanged || !next.isActive);
-      if (losesSuperadmin && activeSuperadmins <= 1) {
-        throw new HttpError(
-          422,
-          'LAST_SUPERADMIN',
-          'O sistema precisa de ao menos um superadministrador ativo.',
-        );
-      }
-      if (targetId === actor.profileId && (roleChanged || scopeChanged || activeChanged)) {
-        throw selfModification();
-      }
-      if (!nameChanged && !roleChanged && !scopeChanged && !activeChanged) {
-        return toUserDto(current);
-      }
-
-      const violations = scopeViolations(next.role, next.allSectors, next.sectorIds);
-      if (violations.length > 0) {
-        throw validationError(violations);
-      }
-      await assertAssignableSectors(tx, actor.hospitalId, next.sectorIds, next.currentSectorIds);
-
-      const removed = next.currentSectorIds.filter((id) => !next.sectorIds.includes(id));
-      const added = next.sectorIds.filter((id) => !next.currentSectorIds.includes(id));
-      if (removed.length > 0) {
-        await tx.profileSector.deleteMany({
-          where: { profileId: targetId, sectorId: { in: removed } },
-        });
-      }
-      if (added.length > 0) {
-        await tx.profileSector.createMany({
-          data: added.map((sectorId) => ({
-            profileId: targetId,
-            sectorId,
-            createdById: actor.profileId,
-          })),
-        });
-      }
-      const updated = await tx.profile.update({
-        where: { id: targetId },
-        data: {
-          fullName: next.fullName,
-          role: next.role,
-          allSectors: next.allSectors,
-          isActive: next.isActive,
-          ...(activeChanged
-            ? next.isActive
-              ? { deactivatedAt: null, deactivatedById: null }
-              : { deactivatedAt: clock.now(), deactivatedById: actor.profileId }
-            : {}),
-        },
-        select: userSelect,
-      });
-
-      const changedFields = [
-        ...(nameChanged ? ['fullName'] : []),
-        ...(roleChanged ? ['role'] : []),
-        ...(scopeChanged ? ['scope'] : []),
-        ...(activeChanged ? ['isActive'] : []),
-      ];
-      await recordAudit(tx, audit, {
-        action: activeChanged
-          ? next.isActive
-            ? 'USER_REACTIVATED'
-            : 'USER_DEACTIVATED'
-          : 'USER_UPDATED',
-        entityType: 'profile',
-        entityId: targetId,
-        details: {
-          changedFields,
-          ...(roleChanged ? { roleFrom: current.role, roleTo: next.role } : {}),
-          ...(scopeChanged
-            ? { allSectors: next.allSectors, sectorIdsAdded: added, sectorIdsRemoved: removed }
-            : {}),
-        },
-      });
-
-      if (activeChanged) {
-        authUserIdForCompensation = target.authUserId;
-        await authAdmin.setBanned(target.authUserId, !next.isActive);
-        banChangedTo = !next.isActive;
-      }
-      return toUserDto(updated);
-    }, AUTH_TRANSACTION_OPTIONS);
-  } catch (error) {
-    // Falha depois do bloqueio/liberação no Auth (por exemplo, no COMMIT): desfaz no Auth.
-    if (banChangedTo !== undefined && authUserIdForCompensation !== undefined) {
-      const authUserId = authUserIdForCompensation;
-      const revertTo = !banChangedTo;
-      await compensate(logger, 'setBanned', () => authAdmin.setBanned(authUserId, revertTo));
+    // RN24: sempre há ao menos um SA ativo; ninguém desativa a si nem altera o próprio perfil.
+    const losesSuperadmin =
+      current.role === 'superadmin' && current.isActive && (roleChanged || !next.isActive);
+    if (losesSuperadmin && activeSuperadmins <= 1) {
+      throw new HttpError(
+        422,
+        'LAST_SUPERADMIN',
+        'O sistema precisa de ao menos um superadministrador ativo.',
+      );
     }
-    throw error;
-  }
+    if (targetId === actor.profileId && (roleChanged || scopeChanged || activeChanged)) {
+      throw selfModification();
+    }
+    if (!nameChanged && !roleChanged && !scopeChanged && !activeChanged) {
+      return toUserDto(current);
+    }
+
+    const violations = scopeViolations(next.role, next.allSectors, next.sectorIds);
+    if (violations.length > 0) {
+      throw validationError(violations);
+    }
+    await assertAssignableSectors(tx, actor.hospitalId, next.sectorIds, next.currentSectorIds);
+
+    const removed = next.currentSectorIds.filter((id) => !next.sectorIds.includes(id));
+    const added = next.sectorIds.filter((id) => !next.currentSectorIds.includes(id));
+    await deleteProfileSectors(tx, targetId, removed);
+    await insertProfileSectors(tx, targetId, added, actor.profileId);
+    await updateProfileRow(tx, targetId, {
+      fullName: next.fullName,
+      role: next.role,
+      allSectors: next.allSectors,
+      isActive: next.isActive,
+      ...(activeChanged
+        ? { deactivation: next.isActive ? null : { at: clock.now(), by: actor.profileId } }
+        : {}),
+    });
+
+    const changedFields = [
+      ...(nameChanged ? ['fullName'] : []),
+      ...(roleChanged ? ['role'] : []),
+      ...(scopeChanged ? ['scope'] : []),
+      ...(activeChanged ? ['isActive'] : []),
+    ];
+    await recordAudit(tx, audit, {
+      action: activeChanged
+        ? next.isActive
+          ? 'USER_REACTIVATED'
+          : 'USER_DEACTIVATED'
+        : 'USER_UPDATED',
+      entityType: 'profile',
+      entityId: targetId,
+      details: {
+        changedFields,
+        ...(roleChanged ? { roleFrom: current.role, roleTo: next.role } : {}),
+        ...(scopeChanged
+          ? { allSectors: next.allSectors, sectorIdsAdded: added, sectorIdsRemoved: removed }
+          : {}),
+      },
+    });
+
+    const updated = await findUserById(tx, targetId);
+    if (updated === null) throw resourceNotFound();
+    return toUserDto(updated);
+  });
 }
 
 /**
- * E09 — redefinição assistida (RF03): gera senha temporária de 16 caracteres (CSPRNG), marca a
- * troca obrigatória e audita sem a senha. A troca no Supabase Auth é o último passo da transação;
- * ela revoga os tokens de renovação e a senha anterior deixa de autenticar.
+ * E09 — redefinição assistida (RF03): gera senha temporária de 16 caracteres (CSPRNG), grava o
+ * hash, marca a troca obrigatória, encerra todas as sessões do usuário (a senha e os tokens
+ * anteriores deixam de valer) e audita sem a senha.
  */
 export async function resetUserPassword(
-  { prisma, authAdmin }: UsersServiceDeps,
+  { db, authConfig, clock }: UsersServiceDeps,
   actor: AuthContext,
   audit: AuditContext,
   targetId: string,
 ): Promise<{ temporaryPassword: string }> {
-  return prisma.$transaction(async (tx) => {
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword, authConfig.bcryptRounds);
+  return db.transaction(async (tx) => {
     const { target } = await lockTarget(tx, targetId, actor.hospitalId);
     if (target === null || target.hospitalId !== actor.hospitalId) throw resourceNotFound();
     if (targetId === actor.profileId) throw selfModification();
-    if (!target.record.isActive) {
+    if (!target.isActive) {
       throw new HttpError(422, 'USER_INACTIVE', 'Reative o usuário antes de redefinir a senha.');
     }
-    await tx.profile.update({ where: { id: targetId }, data: { mustChangePassword: true } });
+    const now = clock.now();
+    await updatePasswordHash(tx, targetId, { passwordHash, mustChangePassword: true, at: now });
+    await revokeProfileSessions(tx, targetId, 'password_reset', now);
     await recordAudit(tx, audit, {
       action: 'USER_PASSWORD_RESET',
       entityType: 'profile',
       entityId: targetId,
       details: { changeRequired: true },
     });
-    const temporaryPassword = generateTemporaryPassword();
-    await authAdmin.updatePassword(target.authUserId, temporaryPassword);
     return { temporaryPassword };
-  }, AUTH_TRANSACTION_OPTIONS);
-}
-
-/** Campos de um usuário administrativo devolvidos pela API (sem identificadores do Auth). */
-export const userSelect = {
-  id: true,
-  fullName: true,
-  email: true,
-  role: true,
-  allSectors: true,
-  isActive: true,
-  mustChangePassword: true,
-  deactivatedAt: true,
-  createdAt: true,
-  updatedAt: true,
-  sectorLinks: {
-    select: { sector: { select: { id: true, code: true, name: true, isActive: true } } },
-    orderBy: { sector: { name: 'asc' } },
-  },
-} as const satisfies Prisma.ProfileSelect;
-
-export type UserRecord = Prisma.ProfileGetPayload<{ select: typeof userSelect }>;
-
-export interface SectorSummary {
-  id: string;
-  code: string;
-  name: string;
-  isActive: boolean;
+  });
 }
 
 export interface UserDto {
@@ -420,55 +330,11 @@ export function toUserDto(record: UserRecord): UserDto {
     email: record.email,
     role: record.role,
     allSectors: record.allSectors,
-    sectors: record.sectorLinks.map((link) => link.sector),
+    sectors: record.sectors,
     isActive: record.isActive,
     mustChangePassword: record.mustChangePassword,
     deactivatedAt: record.deactivatedAt?.toISOString() ?? null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
-}
-
-type Reader = Pick<PrismaClient, 'profile'> | Pick<TransactionClient, 'profile'>;
-
-function listWhere(hospitalId: string, filters: ListUsersQuery): Prisma.ProfileWhereInput {
-  return {
-    hospitalId,
-    ...(filters.role === undefined ? {} : { role: filters.role }),
-    ...(filters.isActive === undefined ? {} : { isActive: filters.isActive }),
-    ...(filters.sectorId === undefined
-      ? {}
-      : { sectorLinks: { some: { sectorId: filters.sectorId } } }),
-    ...(filters.search === undefined
-      ? {}
-      : {
-          OR: [
-            { fullName: { contains: filters.search, mode: 'insensitive' } },
-            { email: { contains: filters.search.toLowerCase() } },
-          ],
-        }),
-  };
-}
-
-export async function listUserRecords(
-  prisma: Reader,
-  hospitalId: string,
-  filters: ListUsersQuery,
-): Promise<{ items: UserRecord[]; total: number }> {
-  const where = listWhere(hospitalId, filters);
-  const [items, total] = await Promise.all([
-    prisma.profile.findMany({
-      where,
-      select: userSelect,
-      orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
-      skip: (filters.page - 1) * filters.pageSize,
-      take: filters.pageSize,
-    }),
-    prisma.profile.count({ where }),
-  ]);
-  return { items, total };
-}
-
-export function findUserById(prisma: Reader, id: string): Promise<UserRecord | null> {
-  return prisma.profile.findUnique({ where: { id }, select: userSelect });
 }

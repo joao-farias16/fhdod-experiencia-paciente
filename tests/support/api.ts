@@ -1,6 +1,6 @@
 /**
- * Apoio aos testes HTTP com PostgreSQL real: relógio ajustável, chamadas autenticadas, montagem do
- * CSV de escala e envio de respostas públicas. Usa o cenário de usuários de auth-support.
+ * Apoio aos testes HTTP com MySQL real: relógio ajustável, chamadas autenticadas, montagem do
+ * CSV de escala e envio de respostas públicas. Usa o cenário de usuários de auth-scenario.
  */
 import request from 'supertest';
 
@@ -86,17 +86,17 @@ export function submitResponse(
 }
 
 export async function countRows(db: Db, sql: string, params: unknown[] = []): Promise<number> {
-  const { rows } = await db.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM (${sql}) t`,
+  const { rows } = await db.query<{ n: number | string }>(
+    'SELECT COUNT(*) AS n FROM (' + sql + ') t',
     params,
   );
-  return rows[0]?.n ?? 0;
+  return Number(rows[0]?.n ?? 0);
 }
 
 /** Ações de auditoria registradas para uma entidade, em ordem. */
 export async function auditActionsOf(db: Db, entityId: string): Promise<string[]> {
   const { rows } = await db.query<{ action: string }>(
-    'SELECT action FROM audit_logs WHERE entity_id = $1 ORDER BY id',
+    'SELECT action FROM audit_logs WHERE entity_id = ? ORDER BY id',
     [entityId],
   );
   return rows.map((row) => row.action);

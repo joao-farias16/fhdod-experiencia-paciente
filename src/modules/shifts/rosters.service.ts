@@ -1,14 +1,16 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import type { PrismaClient, TransactionClient } from '../../lib/prisma.js';
+import type { Database, Queryable } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { HttpError, isConstraintViolation } from '../../utils/errors.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
 import { isSectorInScope, resourceNotFound, sectorOutOfScope } from '../auth/scope.js';
+import { findSectorsByCodes, findSectorsByIds } from '../sectors/sectors.repository.js';
 import { sectorInactive } from '../sectors/sectors.service.js';
+import { findTeamsByIds, findTeamsOfSectors } from '../teams/teams.repository.js';
 import {
   assertCsvFile,
   findOverlapsInFile,
@@ -21,13 +23,18 @@ import {
   validateRosterRows,
 } from './roster-csv.js';
 import { overlaps, SHIFT_PERIODS } from './shift-rules.js';
+import {
+  findActiveShiftsOfTeams,
+  findTeamSummaries,
+  insertShiftImport,
+  insertShifts,
+  lockShiftImport,
+  markShiftImportCommitted,
+} from './shifts.repository.js';
 import { shiftOverlap, teamInactive } from './shifts.service.js';
 
 /** RN19: a importação validada pode ser confirmada em até 30 minutos. */
 export const ROSTER_CONFIRMATION_MINUTES = 30;
-
-/** Transação da confirmação: até 2.000 inserções e revalidação completa. */
-const TRANSACTION_OPTIONS = { timeout: 30_000, maxWait: 5_000 } as const;
 
 export interface RosterSummaryItem {
   sectorCode: string;
@@ -66,18 +73,15 @@ function safeFileName(name: string): string {
 
 /** Setores do hospital e equipes citados no arquivo, com a situação e o escopo do usuário. */
 async function loadReference(
-  tx: Pick<TransactionClient, 'sector' | 'team'>,
+  tx: Queryable,
   auth: AuthContext,
   sectorCodes: readonly string[],
 ): Promise<RosterReference> {
-  const sectors = await tx.sector.findMany({
-    where: { hospitalId: auth.hospitalId, code: { in: [...new Set(sectorCodes)] } },
-    select: { id: true, code: true, isActive: true },
-  });
-  const teams = await tx.team.findMany({
-    where: { sectorId: { in: sectors.map((sector) => sector.id) } },
-    select: { id: true, sectorId: true, code: true, isActive: true },
-  });
+  const sectors = await findSectorsByCodes(tx, auth.hospitalId, [...new Set(sectorCodes)]);
+  const teams = await findTeamsOfSectors(
+    tx,
+    sectors.map((sector) => sector.id),
+  );
   return {
     sectors: new Map(
       sectors.map((sector) => [
@@ -100,21 +104,18 @@ async function loadReference(
 
 /** Turnos não cancelados já cadastrados que se sobrepõem às linhas (OVERLAP_EXISTING). */
 async function findExistingOverlaps(
-  tx: Pick<TransactionClient, 'shift'>,
+  tx: Queryable,
   staged: readonly StagedShift[],
 ): Promise<StagedShift[]> {
   if (staged.length === 0) return [];
   const starts = staged.map((row) => row.startsAt).sort();
   const ends = staged.map((row) => row.endsAt).sort();
-  const existing = await tx.shift.findMany({
-    where: {
-      teamId: { in: [...new Set(staged.map((row) => row.teamId))] },
-      cancelledAt: null,
-      startsAt: { lt: new Date(ends.at(-1) ?? '') },
-      endsAt: { gt: new Date(starts[0] ?? '') },
-    },
-    select: { teamId: true, startsAt: true, endsAt: true },
-  });
+  const existing = await findActiveShiftsOfTeams(
+    tx,
+    [...new Set(staged.map((row) => row.teamId))],
+    new Date(ends.at(-1) ?? ''),
+    new Date(starts[0] ?? ''),
+  );
   return staged.filter((row) =>
     existing.some(
       (shift) =>
@@ -142,20 +143,17 @@ function dedupe(errors: readonly RosterError[]): RosterError[] {
 }
 
 async function summarize(
-  client: Pick<TransactionClient, 'team'>,
+  client: Queryable,
   staged: readonly StagedShift[],
 ): Promise<RosterSummaryItem[]> {
   const counts = new Map<string, number>();
   for (const row of staged) counts.set(row.teamId, (counts.get(row.teamId) ?? 0) + 1);
   if (counts.size === 0) return [];
-  const teams = await client.team.findMany({
-    where: { id: { in: [...counts.keys()] } },
-    select: { id: true, code: true, name: true, sector: { select: { code: true, name: true } } },
-  });
+  const teams = await findTeamSummaries(client, [...counts.keys()]);
   return teams
     .map((team) => ({
-      sectorCode: team.sector.code,
-      sectorName: team.sector.name,
+      sectorCode: team.sectorCode,
+      sectorName: team.sectorName,
       teamCode: team.code,
       teamName: team.name,
       shifts: counts.get(team.id) ?? 0,
@@ -186,7 +184,7 @@ const errorsSchema = z.array(
  * `rejected` (erros por linha e coluna). Erros de arquivo → 400/413/415 sem registro.
  */
 export async function validateRosterImport(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
@@ -198,7 +196,7 @@ export async function validateRosterImport(
   const now = clock.now();
   const totalRows = parsed.rows.length;
 
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     let errors: RosterError[];
     let staged: StagedShift[] = [];
     let rejectedLines: Set<number>;
@@ -230,21 +228,24 @@ export async function validateRosterImport(
     const rejectedRows = rejectedLines.size;
     const status = rejectedRows === 0 ? 'validated' : 'rejected';
     const sectorIds = [...new Set(staged.map((row) => row.sectorId))];
-    const created = await tx.shiftImport.create({
-      data: {
-        uploadedById: auth.profileId,
-        fileName,
-        fileSha256: createHash('sha256').update(file.buffer).digest('hex'),
-        status,
-        totalRows,
-        acceptedRows: totalRows - rejectedRows,
-        rejectedRows,
-        errors: errors.map((error) => ({ ...error })),
-        stagedRows: status === 'validated' ? staged.map((row) => ({ ...row })) : [],
-        createdAt: now,
-        expiresAt: new Date(now.getTime() + ROSTER_CONFIRMATION_MINUTES * 60_000),
-      },
-      select: { id: true, createdAt: true, expiresAt: true },
+    const created = {
+      id: randomUUID(),
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + ROSTER_CONFIRMATION_MINUTES * 60_000),
+    };
+    await insertShiftImport(tx, {
+      id: created.id,
+      uploadedById: auth.profileId,
+      fileName,
+      fileSha256: createHash('sha256').update(file.buffer).digest('hex'),
+      status,
+      totalRows,
+      acceptedRows: totalRows - rejectedRows,
+      rejectedRows,
+      errors,
+      stagedRows: status === 'validated' ? staged : [],
+      createdAt: created.createdAt,
+      expiresAt: created.expiresAt,
     });
     await recordAudit(tx, audit, {
       action: status === 'validated' ? 'ROSTER_IMPORT_VALIDATED' : 'ROSTER_IMPORT_REJECTED',
@@ -275,18 +276,15 @@ export async function validateRosterImport(
  * (RN19, tudo ou nada). Confirmada, expirada, rejeitada ou sobreposta → 409; inativos → 422.
  */
 export async function confirmRosterImport(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
 ): Promise<RosterImportDto> {
   try {
-    return await prisma.$transaction(async (tx) => {
-      const [locked] = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM shift_imports WHERE id = ${id}::uuid FOR UPDATE`;
-      const current =
-        locked === undefined ? null : await tx.shiftImport.findUnique({ where: { id } });
+    return await db.transaction(async (tx) => {
+      const current = await lockShiftImport(tx, id);
       if (current?.uploadedById !== auth.profileId) throw resourceNotFound();
 
       if (current.status === 'committed') {
@@ -313,25 +311,21 @@ export async function confirmRosterImport(
       if (sectorIds.some((sectorId) => !isSectorInScope(auth.scope, sectorId))) {
         throw sectorOutOfScope();
       }
-      const sectors = await tx.sector.findMany({
-        where: { id: { in: sectorIds } },
-        select: { isActive: true },
-      });
+      const sectors = await findSectorsByIds(tx, sectorIds);
       if (sectors.length !== sectorIds.length || sectors.some((sector) => !sector.isActive)) {
         throw sectorInactive();
       }
       const teamIds = [...new Set(staged.map((row) => row.teamId))];
-      const teams = await tx.team.findMany({
-        where: { id: { in: teamIds } },
-        select: { isActive: true },
-      });
+      const teams = await findTeamsByIds(tx, teamIds);
       if (teams.length !== teamIds.length || teams.some((team) => !team.isActive)) {
         throw teamInactive();
       }
       if ((await findExistingOverlaps(tx, staged)).length > 0) throw shiftOverlap();
 
-      const result = await tx.shift.createMany({
-        data: staged.map((row) => ({
+      const createdShifts = await insertShifts(
+        tx,
+        staged.map((row) => ({
+          id: randomUUID(),
           sectorId: row.sectorId,
           teamId: row.teamId,
           period: row.period,
@@ -341,17 +335,15 @@ export async function confirmRosterImport(
           importId: id,
           createdById: auth.profileId,
         })),
-      });
-      const updated = await tx.shiftImport.update({
-        where: { id },
-        data: { status: 'committed', committedAt: now, committedById: auth.profileId },
-      });
+      );
+      await markShiftImportCommitted(tx, id, { at: now, by: auth.profileId });
+      const updated = current;
       await recordAudit(tx, audit, {
         action: 'ROSTER_IMPORT_COMMITTED',
         entityType: 'shift_import',
         entityId: id,
         sectorId: sectorIds.length === 1 ? sectorIds[0] : undefined,
-        details: { createdShifts: result.count },
+        details: { createdShifts },
       });
       return {
         id,
@@ -366,7 +358,7 @@ export async function confirmRosterImport(
         createdAt: updated.createdAt.toISOString(),
         committedAt: now.toISOString(),
       };
-    }, TRANSACTION_OPTIONS);
+    });
   } catch (error) {
     if (isConstraintViolation(error, 'shifts_no_overlap_per_team')) throw shiftOverlap();
     throw error;

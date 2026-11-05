@@ -1,4 +1,4 @@
-import type { ShiftPeriod } from '../../lib/prisma.js';
+import type { ShiftPeriod } from '../../lib/domain-types.js';
 import { addDays, localDateOf, localDateTimeToInstant, minutesOfDay } from '../../utils/dates.js';
 
 /**

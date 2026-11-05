@@ -1,6 +1,6 @@
 import { type RequestHandler, Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import { profileRateLimit } from '../../middlewares/rate-limit.js';
 import type { Clock } from '../../utils/dates.js';
 import { invalidField, parseInput } from '../../utils/validation.js';
@@ -15,7 +15,7 @@ import { exportReport } from './reports.service.js';
 import { XLSX_CONTENT_TYPE } from './xlsx.js';
 
 export interface ReportsRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   ipSecret: string | undefined;
 }
@@ -38,13 +38,13 @@ const requireReportPermission: RequestHandler = (req, res, next) => {
 };
 
 /** E34 — GET /reports/export (RF62–RF67): .xlsx como anexo, no-store, 10 a cada 10 min por perfil. */
-export function reportsRouter({ prisma, clock, ipSecret }: ReportsRoutesDeps): Router {
+export function reportsRouter({ db, clock, ipSecret }: ReportsRoutesDeps): Router {
   const router = Router();
 
   const download: RequestHandler = async (req, res) => {
     const query = parseInput(exportQuerySchema, req.query);
     const result = await exportReport(
-      prisma,
+      db,
       authOf(req),
       auditContextOf(req, ipSecret),
       query,

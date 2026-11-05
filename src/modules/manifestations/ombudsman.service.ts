@@ -1,18 +1,18 @@
+import { randomUUID } from 'node:crypto';
+
+import type { Database, Queryable } from '../../lib/database.js';
 import type {
   ManifestationEventKind,
   ManifestationPriority,
   ManifestationStatus,
   ManifestationType,
-  Prisma,
-  PrismaClient,
-  TransactionClient,
-} from '../../lib/prisma.js';
+} from '../../lib/domain-types.js';
 import { addDays, type Clock, startOfLocalDay } from '../../utils/dates.js';
 import { HttpError } from '../../utils/errors.js';
 import { resolvePeriod } from '../../utils/validation.js';
 import { type AuditContext, recordAudit } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
-import { resourceNotFound, sectorWhere } from '../auth/scope.js';
+import { resolveSectorFilter, resourceNotFound } from '../auth/scope.js';
 import {
   ACTIONS_MIN,
   canTransition,
@@ -22,6 +22,19 @@ import {
   STATUS_TRANSITIONS,
   type UpdateManifestationInput,
 } from './manifestations.schemas.js';
+import {
+  countManifestations,
+  deleteContactRow,
+  findContact,
+  findManifestationDetail,
+  findManifestationState,
+  findNote,
+  insertNotes,
+  listManifestationRows,
+  type ManifestationState,
+  type NoteInsert,
+  updateManifestationTreatment,
+} from './manifestations.repository.js';
 
 /** E35 — trecho da descrição exibido na lista (Seção 8). */
 export const EXCERPT_LENGTH = 120;
@@ -68,17 +81,6 @@ export interface ManifestationDetailDto extends Omit<ManifestationListItemDto, '
   timeline: TimelineEventDto[];
 }
 
-const SORTS: Record<
-  ListManifestationsQuery['sort'],
-  Prisma.ManifestationOrderByWithRelationInput[]
-> = {
-  received_desc: [{ receivedAt: 'desc' }, { id: 'desc' }],
-  received_asc: [{ receivedAt: 'asc' }, { id: 'asc' }],
-  // Enum manifestation_priority na ordem low, medium, high.
-  priority_desc: [{ priority: 'desc' }, { receivedAt: 'desc' }, { id: 'desc' }],
-  status_asc: [{ status: 'asc' }, { receivedAt: 'desc' }, { id: 'desc' }],
-};
-
 function excerptOf(description: string): string {
   return description.length <= EXCERPT_LENGTH ? description : description.slice(0, EXCERPT_LENGTH);
 }
@@ -88,7 +90,7 @@ function excerptOf(description: string): string {
  * caracteres e somente a existência do contato, nunca seus dados (Seção 8).
  */
 export async function listManifestations(
-  prisma: Pick<PrismaClient, 'manifestation'>,
+  db: Queryable,
   auth: AuthContext,
   query: ListManifestationsQuery,
   now: Date,
@@ -98,43 +100,24 @@ export async function listManifestations(
   period: { from: string; to: string };
 }> {
   const period = resolvePeriod(query, now);
-  const where: Prisma.ManifestationWhereInput = {
-    ...sectorWhere(auth.scope, query.sectorIds),
-    sector: { hospitalId: auth.hospitalId },
-    receivedAt: { gte: startOfLocalDay(period.from), lt: startOfLocalDay(addDays(period.to, 1)) },
-    ...(query.status === undefined ? {} : { status: { in: query.status } }),
-    ...(query.type === undefined ? {} : { type: { in: query.type } }),
-    ...(query.priority === undefined ? {} : { priority: { in: query.priority } }),
-    ...(query.protocol === undefined ? {} : { protocol: query.protocol }),
-    ...(query.hasContact === undefined
-      ? {}
-      : query.hasContact
-        ? { contact: { isNot: null } }
-        : { contact: { is: null } }),
+  const filters = {
+    hospitalId: auth.hospitalId,
+    sectorIds: resolveSectorFilter(auth.scope, query.sectorIds),
+    from: startOfLocalDay(period.from),
+    toExclusive: startOfLocalDay(addDays(period.to, 1)),
+    status: query.status,
+    type: query.type,
+    priority: query.priority,
+    protocol: query.protocol,
+    hasContact: query.hasContact,
   };
   const [rows, total] = await Promise.all([
-    prisma.manifestation.findMany({
-      where,
-      orderBy: SORTS[query.sort],
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-      select: {
-        id: true,
-        protocol: true,
-        receivedAt: true,
-        updatedAt: true,
-        type: true,
-        status: true,
-        priority: true,
-        description: true,
-        isAnonymous: true,
-        triggeredByLowScore: true,
-        sector: { select: { id: true, name: true } },
-        // Somente a chave do contato: nome, telefone e e-mail não são lidos (Seção 8).
-        contact: { select: { manifestationId: true } },
-      },
+    listManifestationRows(db, filters, {
+      sort: query.sort,
+      offset: (query.page - 1) * query.pageSize,
+      limit: query.pageSize,
     }),
-    prisma.manifestation.count({ where }),
+    countManifestations(db, filters),
   ]);
   return {
     items: rows.map((row) => ({
@@ -148,7 +131,7 @@ export async function listManifestations(
       priority: row.priority,
       excerpt: excerptOf(row.description),
       isAnonymous: row.isAnonymous,
-      hasContact: row.contact !== null,
+      hasContact: row.hasContact,
       triggeredByLowScore: row.triggeredByLowScore,
     })),
     total,
@@ -158,86 +141,24 @@ export async function listManifestations(
 
 /** Manifestação do escopo e do hospital; fora do escopo ou inexistente → 404 (RN10). */
 async function findInScope(
-  tx: Pick<PrismaClient, 'manifestation'> | TransactionClient,
+  tx: Queryable,
   auth: AuthContext,
   id: string,
-) {
-  const row = await tx.manifestation.findFirst({
-    where: { id, ...sectorWhere(auth.scope), sector: { hospitalId: auth.hospitalId } },
-    select: {
-      id: true,
-      sectorId: true,
-      status: true,
-      priority: true,
-      actionsTaken: true,
-      updatedAt: true,
-      contact: { select: { manifestationId: true } },
-    },
-  });
+): Promise<ManifestationState> {
+  const row = await findManifestationState(
+    tx,
+    id,
+    auth.hospitalId,
+    resolveSectorFilter(auth.scope),
+  );
   if (row === null) throw resourceNotFound();
   return row;
 }
 
-async function loadDetail(
-  tx: Pick<PrismaClient, 'manifestation'> | TransactionClient,
-  id: string,
-): Promise<ManifestationDetailDto> {
-  const row = await tx.manifestation.findUniqueOrThrow({
-    where: { id },
-    select: {
-      id: true,
-      protocol: true,
-      receivedAt: true,
-      resolvedAt: true,
-      updatedAt: true,
-      type: true,
-      status: true,
-      priority: true,
-      description: true,
-      actionsTaken: true,
-      isAnonymous: true,
-      triggeredByLowScore: true,
-      sector: { select: { id: true, name: true } },
-      contact: { select: { manifestationId: true } },
-      response: {
-        select: {
-          id: true,
-          submittedAt: true,
-          origin: true,
-          npsScore: true,
-          lowScore: true,
-          surveyVersion: { select: { title: true, versionNumber: true } },
-          answers: {
-            select: {
-              score: true,
-              surveyVersionQuestion: {
-                select: { text: true, journeyStageName: true, position: true },
-              },
-            },
-          },
-        },
-      },
-      notes: {
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        select: {
-          id: true,
-          kind: true,
-          content: true,
-          fromValue: true,
-          toValue: true,
-          createdAt: true,
-          author: { select: { id: true, fullName: true } },
-        },
-      },
-    },
-  });
-  const answers = [...row.response.answers]
-    .sort((a, b) => a.surveyVersionQuestion.position - b.surveyVersionQuestion.position)
-    .map((answer) => ({
-      questionText: answer.surveyVersionQuestion.text,
-      journeyStageName: answer.surveyVersionQuestion.journeyStageName,
-      score: answer.score,
-    }));
+async function loadDetail(tx: Queryable, id: string): Promise<ManifestationDetailDto> {
+  const detail = await findManifestationDetail(tx, id);
+  if (detail === null) throw resourceNotFound();
+  const row = detail.manifestation;
   return {
     id: row.id,
     protocol: row.protocol,
@@ -251,26 +172,16 @@ async function loadDetail(
     description: row.description,
     actionsTaken: row.actionsTaken,
     isAnonymous: row.isAnonymous,
-    hasContact: row.contact !== null,
+    hasContact: row.hasContact,
     triggeredByLowScore: row.triggeredByLowScore,
     allowedTransitions: STATUS_TRANSITIONS[row.status],
     response: {
-      id: row.response.id,
-      submittedAt: row.response.submittedAt.toISOString(),
-      origin: row.response.origin,
-      npsScore: row.response.npsScore,
-      lowScore: row.response.lowScore,
-      survey: row.response.surveyVersion,
-      answers,
+      ...detail.response,
+      submittedAt: detail.response.submittedAt.toISOString(),
     },
-    timeline: row.notes.map((note) => ({
-      id: note.id,
-      kind: note.kind,
-      content: note.content,
-      fromValue: note.fromValue,
-      toValue: note.toValue,
+    timeline: detail.timeline.map((note) => ({
+      ...note,
       createdAt: note.createdAt.toISOString(),
-      author: note.author,
     })),
   };
 }
@@ -280,12 +191,12 @@ async function loadDetail(
  * (RF45). Cada consulta é auditada na mesma transação (MANIFESTATION_VIEWED).
  */
 export async function getManifestation(
-  prisma: PrismaClient,
+  db: Database,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
 ): Promise<ManifestationDetailDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const found = await findInScope(tx, auth, id);
     await recordAudit(tx, audit, {
       action: 'MANIFESTATION_VIEWED',
@@ -312,14 +223,14 @@ function stale(): HttpError {
  * NOTE_REQUIRED. Cada mudança vira um evento na linha do tempo, na mesma transação da auditoria.
  */
 export async function updateManifestation(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
   patch: UpdateManifestationInput,
 ): Promise<ManifestationDetailDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const current = await findInScope(tx, auth, id);
     if (current.updatedAt.getTime() !== new Date(patch.updatedAt).getTime()) throw stale();
 
@@ -359,20 +270,23 @@ export async function updateManifestation(
     }
 
     const now = clock.now();
-    const updated = await tx.manifestation.updateMany({
-      where: { id, updatedAt: current.updatedAt },
-      data: {
-        ...(status === undefined ? {} : { status, resolvedAt: status === 'resolved' ? now : null }),
-        ...(priority === undefined ? {} : { priority }),
-        ...(actionsTaken === undefined ? {} : { actionsTaken }),
-        updatedById: auth.profileId,
-        updatedAt: now,
-      },
+    const updated = await updateManifestationTreatment(tx, id, current.updatedAt, {
+      ...(status === undefined ? {} : { status, resolvedAt: status === 'resolved' ? now : null }),
+      ...(priority === undefined ? {} : { priority }),
+      ...(actionsTaken === undefined ? {} : { actionsTaken }),
+      updatedById: auth.profileId,
+      updatedAt: now,
     });
-    if (updated.count !== 1) throw stale();
+    if (!updated) throw stale();
 
-    const events: Prisma.ManifestationNoteCreateManyInput[] = [];
-    const base = { manifestationId: id, authorId: auth.profileId, createdAt: now };
+    const events: Omit<NoteInsert, 'id' | 'createdAt'>[] = [];
+    const base = {
+      manifestationId: id,
+      authorId: auth.profileId,
+      content: null,
+      fromValue: null,
+      toValue: null,
+    };
     if (actionsTaken !== undefined) {
       events.push({ ...base, kind: 'actions_updated', content: actionsTaken });
     }
@@ -390,12 +304,14 @@ export async function updateManifestation(
     }
     // Mesmo instante para todos: a ordem por id não é cronológica, então os eventos de uma
     // alteração recebem milissegundos consecutivos na ordem acima.
-    await tx.manifestationNote.createMany({
-      data: events.map((event, index) => ({
+    await insertNotes(
+      tx,
+      events.map((event, index) => ({
         ...event,
+        id: randomUUID(),
         createdAt: new Date(now.getTime() + index),
       })),
-    });
+    );
     await recordAudit(tx, audit, {
       action: 'MANIFESTATION_UPDATED',
       entityType: 'manifestation',
@@ -416,33 +332,30 @@ export async function updateManifestation(
 
 /** E38 — nota interna não editável, exibida com autor e data (RF47). */
 export async function addNote(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
   content: string,
 ): Promise<TimelineEventDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const found = await findInScope(tx, auth, id);
-    const note = await tx.manifestationNote.create({
-      data: {
+    const noteId = randomUUID();
+    await insertNotes(tx, [
+      {
+        id: noteId,
         manifestationId: id,
         authorId: auth.profileId,
         kind: 'note',
         content,
+        fromValue: null,
+        toValue: null,
         createdAt: clock.now(),
       },
-      select: {
-        id: true,
-        kind: true,
-        content: true,
-        fromValue: true,
-        toValue: true,
-        createdAt: true,
-        author: { select: { id: true, fullName: true } },
-      },
-    });
+    ]);
+    const note = await findNote(tx, noteId);
+    if (note === null) throw resourceNotFound();
     await recordAudit(tx, audit, {
       action: 'MANIFESTATION_NOTE_ADDED',
       entityType: 'manifestation',
@@ -472,30 +385,22 @@ function contactNotFound(): HttpError {
  * auditoria gravado ANTES da leitura, na mesma transação (sem auditoria, nada é exibido).
  */
 export async function getContact(
-  prisma: PrismaClient,
+  db: Database,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
 ): Promise<ContactDto> {
-  return prisma.$transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const found = await findInScope(tx, auth, id);
-    if (found.contact === null) throw contactNotFound();
+    if (!found.hasContact) throw contactNotFound();
     await recordAudit(tx, audit, {
       action: 'MANIFESTATION_CONTACT_VIEWED',
       entityType: 'manifestation',
       entityId: id,
       sectorId: found.sectorId,
     });
-    const contact = await tx.manifestationContact.findUniqueOrThrow({
-      where: { manifestationId: id },
-      select: {
-        fullName: true,
-        phone: true,
-        email: true,
-        consentGivenAt: true,
-        purposeTextVersion: true,
-      },
-    });
+    const contact = await findContact(tx, id);
+    if (contact === null) throw contactNotFound();
     return {
       ...contact,
       consentGivenAt: contact.consentGivenAt.toISOString(),
@@ -509,26 +414,29 @@ export async function getContact(
  * manifestation_contacts, registra o evento contact_deleted com o motivo e audita. Sem contato → 404.
  */
 export async function deleteContact(
-  prisma: PrismaClient,
+  db: Database,
   clock: Clock,
   auth: AuthContext,
   audit: AuditContext,
   id: string,
   reason: (typeof CONTACT_DELETION_REASONS)[number],
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const found = await findInScope(tx, auth, id);
-    const removed = await tx.manifestationContact.deleteMany({ where: { manifestationId: id } });
-    if (found.contact === null || removed.count !== 1) throw contactNotFound();
-    await tx.manifestationNote.create({
-      data: {
+    const removed = await deleteContactRow(tx, id);
+    if (!found.hasContact || !removed) throw contactNotFound();
+    await insertNotes(tx, [
+      {
+        id: randomUUID(),
         manifestationId: id,
         authorId: auth.profileId,
         kind: 'contact_deleted',
+        content: null,
+        fromValue: null,
         toValue: reason,
         createdAt: clock.now(),
       },
-    });
+    ]);
     await recordAudit(tx, audit, {
       action: 'MANIFESTATION_CONTACT_DELETED',
       entityType: 'manifestation',

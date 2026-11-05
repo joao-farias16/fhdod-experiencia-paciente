@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { UserRole } from '../../lib/prisma.js';
+import type { UserRole } from '../../lib/domain-types.js';
 import type { ErrorDetail } from '../../utils/errors.js';
 import { paginationSchema, queryBoolean, uuidSchema } from '../../utils/validation.js';
 

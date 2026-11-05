@@ -1,5 +1,5 @@
 /**
- * T25 — Atribuição a turno e equipe (RF18, RF24, RN07, RN08), integração com PostgreSQL real pelo
+ * T25 — Atribuição a turno e equipe (RF18, RF24, RN07, RN08), integração com MySQL real pelo
  * endpoint público E02. Procedimento da Seção 12: origem link; QR sem turno; QR ambíguo; QR com
  * turno único; equipe inativa → not_qr_origin, no_shift, ambiguous, attributed, no_shift. A
  * resposta é sempre registrada, e atribuições anteriores permanecem (RF18, RF21).
@@ -9,8 +9,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import {
   type AuthScenario,
   buildAuthApp,
@@ -21,20 +20,19 @@ import { adjustableClock, type App, call, dataOf, submitResponse } from '../supp
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 const clock = adjustableClock(new Date('2026-09-01T12:00:00Z'));
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  const fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake, clock);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database, clock);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -61,7 +59,7 @@ async function respond(
   const { responseId } = dataOf<{ responseId: string }>(response);
   const { rows } = await db.query<Stored>(
     `SELECT attribution_status, shift_id, team_id, shift_period, submitted_at
-     FROM responses WHERE id = $1`,
+     FROM responses WHERE id = ?`,
     [responseId],
   );
   const row = rows[0];
@@ -124,7 +122,7 @@ describe('T25 — atribuição a turno e equipe pelo E02', () => {
       id: string;
       attribution_status: string;
       team_id: string | null;
-    }>('SELECT id, attribution_status, team_id FROM responses WHERE id = ANY($1)', [
+    }>('SELECT id, attribution_status, team_id FROM responses WHERE id IN (?)', [
       [single.id, afterCancel.id],
     ]);
     expect(rows.every((row) => row.attribution_status === 'attributed')).toBe(true);

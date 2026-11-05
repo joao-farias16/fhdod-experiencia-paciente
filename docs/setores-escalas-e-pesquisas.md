@@ -42,7 +42,7 @@ Todas as rotas `/admin/*` exigem `Authorization: Bearer`, passam por `authentica
 - **RN06/RN15 — versões.** A publicação cria a versão `n+1` com instantâneos de título, introdução, agradecimento, setor e perguntas ativas (pergunta geral primeiro; específicas por etapa e posição); a anterior recebe `superseded_at`. Respostas guardam a versão exibida.
 - **RN26 — versão substituída.** Aceita respostas por 24 horas se pesquisa e setor estiverem ativos; depois, 409 `SURVEY_VERSION_OUTDATED`.
 - **RN13 — idempotência.** `request_hash` = SHA-256 do JSON canônico (chaves ordenadas, respostas por `questionId`). Mesma chave e mesmo conteúdo → registro original (200 e `Idempotent-Replayed: true`); conteúdo diferente → 409 `IDEMPOTENCY_KEY_REUSED`; envios concorrentes resolvidos pela restrição `UNIQUE` de `idempotency_key`.
-- **RN05 — nota baixa.** `lowScore` = NPS de 0 a 6 ou alguma específica 1 ou 2 (`modules/dashboard/nps.ts`, que também traz `computeNps`, idêntico ao `ROUND` do PostgreSQL).
+- **RN05 — nota baixa.** `lowScore` = NPS de 0 a 6 ou alguma específica 1 ou 2 (`modules/dashboard/nps.ts`, que também traz `computeNps`, idêntico ao `ROUND` exato do SQL; desde a Etapa 3 os percentuais e o NPS do dashboard são calculados a partir das contagens do MySQL com essa mesma aritmética inteira).
 - **Token de manifestação.** `base64url(HMAC-SHA256(MANIFESTATION_TOKEN_SECRET, responseId))`, não armazenado; validade em `manifestation_token_expires_at` (60 minutos). O consumo (E03) é da ET07.
 
 ## CSV de escala (Seção 4.3)
@@ -66,7 +66,7 @@ UTF-8 (com ou sem BOM), separador `;`, até 1 MB e 2.000 linhas de dados. Erros 
 | TL09 | `/p/:slug?origem=qr\|link`                 | Público          | pergunta geral 0–10 (duas linhas no celular), etapas 1–5 opcionais, "Etapa X de Y", Voltar, Enviar, inatividade |
 | TL11 | `/p/:slug`                                 | Público          | agradecimento da versão e Concluir; volta ao início em 30 segundos                                              |
 
-A pesquisa pública fica num pedaço de JavaScript próprio, sem o cliente do Supabase. As respostas em andamento ficam na memória e em `sessionStorage` (`fhdod:pesquisa:<slug>`), apagadas ao concluir ou após 3 min + 60 s sem interação ("Você ainda está aí?"). A `Idempotency-Key` é criada no primeiro clique em Enviar e mantida até o sucesso (nova chave se a resposta mudar); há até 3 reenvios automáticos (1, 2 e 4 s) em falha de rede, 502, 503 ou 504. A confirmação só aparece depois do 201/200. O protocolo e a oferta de manifestação (TL10, RF40–RF43) pertencem à ET07.
+A pesquisa pública fica num pedaço de JavaScript próprio, sem o código da área administrativa. As respostas em andamento ficam na memória e em `sessionStorage` (`fhdod:pesquisa:<slug>`), apagadas ao concluir ou após 3 min + 60 s sem interação ("Você ainda está aí?"). A `Idempotency-Key` é criada no primeiro clique em Enviar e mantida até o sucesso (nova chave se a resposta mudar); há até 3 reenvios automáticos (1, 2 e 4 s) em falha de rede, 502, 503 ou 504. A confirmação só aparece depois do 201/200. O protocolo e a oferta de manifestação (TL10, RF40–RF43) pertencem à ET07.
 
 ## Testes
 

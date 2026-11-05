@@ -1,15 +1,14 @@
 /**
  * T26 — Configuração, versionamento e publicação (RF25–RF29, RF31, RF32) e parte de integração do
- * T02 (URLs exatas do link e do QR Code, RF30), com PostgreSQL real.
+ * T02 (URLs exatas do link e do QR Code, RF30), com MySQL real.
  * Procedimento da Seção 12: criar, publicar v1, responder, alterar, publicar v2, desativar →
  * versões distintas; 422 QUESTION_LOCKED; 409; 410.
  */
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import { DEFAULT_NPS_TEXT } from '../../src/modules/surveys/surveys.schemas.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -28,19 +27,18 @@ import {
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  const fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -262,7 +260,7 @@ describe('T26 — configuração, versionamento e publicação', () => {
 
     // RN06/RN15: a resposta antiga continua na versão exibida (v1).
     const { rows } = await db.query<{ survey_version_id: string }>(
-      'SELECT survey_version_id FROM responses WHERE id = $1',
+      'SELECT survey_version_id FROM responses WHERE id = ?',
       [responseId],
     );
     expect(rows[0]?.survey_version_id).toBe(v1.id);
@@ -314,7 +312,7 @@ describe('T26 — configuração, versionamento e publicação', () => {
     );
     expect([publishOff.status, errorOf(publishOff).code]).toEqual([422, 'SURVEY_INACTIVE']);
     // RN11: nada é apagado; a reativação volta à versão vigente.
-    expect(await countRows(db, 'SELECT 1 FROM responses WHERE id = $1', [responseId])).toBe(1);
+    expect(await countRows(db, 'SELECT 1 FROM responses WHERE id = ?', [responseId])).toBe(1);
     await call(app, scenario, 'as', 'patch', `/admin/surveys/${survey.id}`, { isActive: true });
     expect((await publicSurvey(slug)).status).toBe(200);
 

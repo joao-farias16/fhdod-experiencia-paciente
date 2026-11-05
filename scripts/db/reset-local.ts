@@ -1,40 +1,41 @@
 /**
- * Reinicializa o banco LOCAL: apaga o esquema public, reaplica todas as migrations e executa o
- * seed determinístico. Estratégia de repetição do seed (ET02) — nunca roda contra banco remoto.
- * Uso: `npm run db:reset` (na raiz do repositório).
+ * Reinicializa o banco LOCAL de desenvolvimento: apaga e recria DB_NAME, reaplica todas as
+ * migrations e executa o seed de demonstração. Nunca roda contra servidor remoto.
+ * Uso: `npm run db:reset` (na raiz do repositório). ATENÇÃO: apaga todos os dados de DB_NAME.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 
-import { assertLocalTargets, describeUrl } from './guard.js';
+import { loadDatabaseEnv } from '../../src/lib/env.js';
+import { connect, describeEnv, loadDotEnv, recreateLocalDatabase } from './connection.js';
+import { assertLocalTargets } from './guard.js';
+import { applyPendingMigrations } from './migrations.js';
 
-if (existsSync('.env')) {
-  process.loadEnvFile('.env');
-}
+loadDotEnv();
 
-function run(command: string, args: string[]): void {
-  const result = spawnSync(command, args, {
+async function main(): Promise<void> {
+  const env = loadDatabaseEnv();
+  // Verificação explícita do ambiente: somente servidor local.
+  assertLocalTargets({ DB_HOST: env.DB_HOST }, 'Reinicialização do banco');
+
+  console.info(`Reinicializando ${describeEnv(env)} (banco local)...`);
+  await recreateLocalDatabase(env);
+  const connection = await connect(env);
+  try {
+    await applyPendingMigrations(connection, (message) => {
+      console.info(`  ${message}`);
+    });
+  } finally {
+    await connection.end();
+  }
+  const seed = spawnSync('npx', ['tsx', 'scripts/db/seed.ts'], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
     env: process.env,
   });
-  if (result.status !== 0) {
-    throw new Error(`Falha ao executar: ${command} ${args.join(' ')}`);
-  }
+  if (seed.status !== 0) throw new Error('Falha ao executar o seed de demonstração.');
 }
 
-try {
-  const { DATABASE_URL, DIRECT_URL } = process.env;
-  if (DATABASE_URL === undefined || DATABASE_URL === '') {
-    throw new Error('DATABASE_URL não definida.');
-  }
-  // Verificação explícita do ambiente: as duas URLs precisam ser locais.
-  assertLocalTargets({ DATABASE_URL, DIRECT_URL }, 'Reinicialização do banco');
-
-  console.info(`Reinicializando ${describeUrl(DIRECT_URL ?? DATABASE_URL)} (banco local)...`);
-  run('npx', ['prisma', 'migrate', 'reset', '--force']);
-  run('npx', ['tsx', 'prisma/seed.ts']);
-} catch (error) {
+main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
-}
+});

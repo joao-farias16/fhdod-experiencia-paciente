@@ -1,5 +1,5 @@
-/** Erros da API (Tabela 18) e reconhecimento de violações de restrição do PostgreSQL. */
-import { Prisma } from '../lib/prisma.js';
+/** Erros da API (Tabela 18) e reconhecimento de violações de restrição do MySQL. */
+import { isMysqlError } from '../lib/database.js';
 
 /** Detalhe de validação por campo, conforme o padrão de erros da Seção 9. */
 export interface ErrorDetail {
@@ -27,7 +27,7 @@ export function unauthenticated(
   return new HttpError(401, 'UNAUTHENTICATED', message);
 }
 
-/** Banco ou Supabase Auth indisponível (503, Tabela 18). */
+/** Banco de dados indisponível (503, Tabela 18). */
 export function serviceUnavailable(): HttpError {
   return new HttpError(503, 'SERVICE_UNAVAILABLE', 'O serviço está temporariamente indisponível.');
 }
@@ -50,32 +50,35 @@ export class AuthorizationDeniedError extends HttpError {
 }
 
 /**
- * Reconhecimento de violações de restrição do PostgreSQL vindas do Prisma. As verificações dos
- * serviços acontecem antes da escrita; estas funções cobrem a corrida entre duas requisições, em
- * que só a restrição do banco decide (RNF18).
+ * Reconhecimento de violações de restrição do MySQL. As verificações dos serviços acontecem antes
+ * da escrita; estas funções cobrem a corrida entre duas requisições, em que só a restrição do
+ * banco decide (RNF18). O MySQL informa o nome da regra na mensagem:
+ * - 1062 ER_DUP_ENTRY: "Duplicate entry '...' for key 'tabela.nome_da_chave'";
+ * - 3819 ER_CHECK_CONSTRAINT_VIOLATED: "Check constraint 'nome' is violated.";
+ * - 1451/1452 (chave estrangeira): "... CONSTRAINT `nome` FOREIGN KEY ...";
+ * - 1644 (SIGNAL dos gatilhos de database/migrations/005): "[nome] mensagem".
  */
 
-/** Texto do erro e da causa do adaptador, onde o PostgreSQL informa o nome da restrição. */
+/** Texto do erro do MySQL, onde aparece o nome da restrição ou do gatilho. */
 function errorText(error: unknown): string {
-  if (!(error instanceof Error)) return '';
-  const meta =
-    error instanceof Prisma.PrismaClientKnownRequestError ? JSON.stringify(error.meta ?? {}) : '';
-  return `${error.message} ${meta}`;
+  if (!isMysqlError(error)) return '';
+  return `${error.sqlMessage ?? ''} ${error.message}`;
 }
 
-/** UNIQUE violada (P2002); com `constraint`, somente se a restrição citada for a informada. */
+/** UNIQUE violada (1062); com `constraint`, somente se a chave citada for a informada. */
 export function isUniqueViolation(error: unknown, constraint?: string): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
-    return false;
-  }
+  if (!isMysqlError(error) || error.errno !== 1062) return false;
   return constraint === undefined || errorText(error).includes(constraint);
 }
 
-/** Restrição, gatilho ou EXCLUDE com o nome informado rejeitou a operação. */
+const CONSTRAINT_ERRNOS = new Set([1062, 1451, 1452, 1644, 3819]);
+
+/** Restrição (CHECK, UNIQUE, chave estrangeira) ou gatilho com o nome informado rejeitou a operação. */
 export function isConstraintViolation(error: unknown, constraint: string): boolean {
   return (
-    (error instanceof Prisma.PrismaClientKnownRequestError ||
-      error instanceof Prisma.PrismaClientUnknownRequestError) &&
+    isMysqlError(error) &&
+    error.errno !== undefined &&
+    CONSTRAINT_ERRNOS.has(error.errno) &&
     errorText(error).includes(constraint)
   );
 }

@@ -1,11 +1,7 @@
 import { createApp } from '../../src/app.js';
+import type { Database } from '../../src/lib/database.js';
 import { createLogger } from '../../src/lib/logger.js';
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import {
-  type AuthAdmin,
-  AuthServiceUnavailableError,
-  type TokenVerifier,
-} from '../../src/modules/auth/auth.types.js';
+import type { AuthConfig } from '../../src/modules/auth/auth.types.js';
 import type { Clock } from '../../src/utils/dates.js';
 
 export const FIXED_NOW = new Date('2026-10-10T17:25:03.120Z');
@@ -13,48 +9,47 @@ export const ALLOWED_ORIGIN = 'http://localhost:5173';
 
 export const fixedClock: Clock = { now: () => FIXED_NOW };
 
-export type DatabaseStub = Pick<PrismaClient, '$queryRaw'>;
-
 /**
- * Dublê do cliente Prisma para os testes HTTP que não dependem do banco: `SELECT 1` responde
- * ('up'), falha ('down') ou nunca responde ('slow'). Os testes com PostgreSQL real ficam em tests/db.
+ * Configuração da autenticação nos testes: bcrypt com custo 4 (rápido) e validades longas, para
+ * que os relógios ajustáveis dos cenários (RN19, RN26, RF24) não expirem os tokens emitidos.
  */
-export function databaseStub(mode: 'up' | 'down' | 'slow' = 'up'): DatabaseStub {
-  const queryRaw = (): Promise<unknown> => {
-    if (mode === 'up') return Promise.resolve([{ ok: 1 }]);
-    if (mode === 'down') return Promise.reject(new Error('banco indisponível'));
-    return new Promise<never>(() => undefined);
-  };
-  return { $queryRaw: queryRaw } as unknown as DatabaseStub;
+export const TEST_AUTH_CONFIG: AuthConfig = {
+  jwtSecret: 'segredo-de-teste-dos-tokens-com-mais-de-32-caracteres',
+  accessTokenTtlSeconds: 10 * 365 * 86_400,
+  refreshTokenTtlDays: 3650,
+  bcryptRounds: 4,
+};
+
+function unavailable(): Promise<never> {
+  return Promise.reject(Object.assign(new Error('banco indisponível'), { code: 'ECONNREFUSED' }));
 }
 
-/** Verificador que recusa qualquer token (testes que não usam autenticação). */
-export const rejectingVerifier: TokenVerifier = {
-  verify: () => Promise.resolve({ status: 'invalid' }),
-};
+/**
+ * Dublê do banco para os testes HTTP que não dependem do MySQL: `SELECT 1` (ping) responde
+ * ('up'), falha ('down') ou nunca responde ('slow'); consultas comuns falham como banco
+ * indisponível. Os testes com MySQL real ficam em tests/db.
+ */
+export function databaseStub(mode: 'up' | 'down' | 'slow' = 'up'): Database {
+  return {
+    query: unavailable,
+    execute: unavailable,
+    transaction: unavailable,
+    ping: () => {
+      if (mode === 'up') return Promise.resolve();
+      if (mode === 'down') return unavailable();
+      return new Promise<never>(() => undefined);
+    },
+    close: () => Promise.resolve(),
+  };
+}
 
-/** Operações administrativas indisponíveis (testes que não chegam ao Supabase Auth). */
-export const unavailableAuthAdmin: AuthAdmin = {
-  createUser: () => Promise.reject(new AuthServiceUnavailableError('createUser')),
-  deleteUser: () => Promise.reject(new AuthServiceUnavailableError('deleteUser')),
-  updatePassword: () => Promise.reject(new AuthServiceUnavailableError('updatePassword')),
-  setBanned: () => Promise.reject(new AuthServiceUnavailableError('setBanned')),
-};
-
-export function buildTestApp(
-  prisma: DatabaseStub | PrismaClient = databaseStub(),
-  auth: { verifier: TokenVerifier; admin: AuthAdmin } = {
-    verifier: rejectingVerifier,
-    admin: unavailableAuthAdmin,
-  },
-) {
+export function buildTestApp(db: Database = databaseStub(), clock: Clock = fixedClock) {
   return createApp({
     env: { CORS_ORIGIN: [ALLOWED_ORIGIN], TRUST_PROXY: 0 },
     logger: createLogger({ LOG_LEVEL: 'silent', NODE_ENV: 'test' }),
-    // Os testes sem banco injetam um dublê só com $queryRaw (rotas autenticadas não são usadas).
-    prisma: prisma as PrismaClient,
-    auth,
-    clock: fixedClock,
+    db,
+    auth: TEST_AUTH_CONFIG,
+    clock,
   });
 }
 

@@ -1,13 +1,12 @@
 /**
- * T24 — Setores, equipes e turnos (RF12–RF21, E10–E19 e E16), integração com PostgreSQL real.
+ * T24 — Setores, equipes e turnos (RF12–RF21, E10–E19 e E16), integração com MySQL real.
  * Procedimento da Seção 12: criar, editar, desativar e reativar setores e equipes; turnos manuais,
  * noturno, sobreposto e cancelado → critérios de RF12 a RF21. Cada cenário percorre o fluxo
  * completo e confere o banco e a auditoria (RN11, RN16).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
+import type { Database } from '../../src/lib/database.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -27,19 +26,18 @@ import {
 import type { Db } from '../support/db.js';
 
 let db: Db;
-let prisma: PrismaClient;
+let database: Database;
 let scenario: AuthScenario;
 let app: App;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  const fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -389,7 +387,7 @@ describe('T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; 
     });
     expect([sectorOff.status, errorOf(sectorOff).code]).toEqual([422, 'SECTOR_INACTIVE']);
     expect(
-      await countRows(db, 'SELECT 1 FROM shifts WHERE team_id = ANY($1)', [[idle.id, tempTeam.id]]),
+      await countRows(db, 'SELECT 1 FROM shifts WHERE team_id IN (?)', [[idle.id, tempTeam.id]]),
     ).toBe(0);
   });
 
@@ -465,7 +463,7 @@ describe('T24 — turnos manuais, noturno, sobreposto e cancelado (RF19–RF21; 
     });
     expect(replacement.status).toBe(201);
     // RN11: o turno cancelado continua no banco.
-    expect(await countRows(db, 'SELECT 1 FROM shifts WHERE id = $1', [target.id])).toBe(1);
+    expect(await countRows(db, 'SELECT 1 FROM shifts WHERE id = ?', [target.id])).toBe(1);
     expect(await auditActionsOf(db, target.id)).toEqual(['SHIFT_CREATED', 'SHIFT_CANCELLED']);
   });
 

@@ -1,6 +1,6 @@
 import { type RequestHandler, Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import { ipRateLimit } from '../../middlewares/rate-limit.js';
 import type { Clock } from '../../utils/dates.js';
 import { parseIdempotencyKey } from '../../utils/idempotency.js';
@@ -47,23 +47,18 @@ export function publicManifestationRouter(deps: PublicManifestationDeps): Router
 }
 
 export interface OmbudsmanRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   ipSecret: string | undefined;
 }
 
 /** E35–E40 — Ouvidoria (somente OU, no escopo). Montado em /ouvidoria após a cadeia autenticada. */
-export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps): Router {
+export function ombudsmanRouter({ db, clock, ipSecret }: OmbudsmanRoutesDeps): Router {
   const router = Router();
 
   const list: RequestHandler = async (req, res) => {
     const query = parseInput(listManifestationsQuerySchema, req.query);
-    const { items, total, period } = await listManifestations(
-      prisma,
-      authOf(req),
-      query,
-      clock.now(),
-    );
+    const { items, total, period } = await listManifestations(db, authOf(req), query, clock.now());
     res.status(200).json({
       data: items,
       meta: { page: query.page, pageSize: query.pageSize, total, from: period.from, to: period.to },
@@ -72,7 +67,7 @@ export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps
 
   const show: RequestHandler = async (req, res) => {
     const { id } = parseInput(idParamsSchema, req.params);
-    const detail = await getManifestation(prisma, authOf(req), auditContextOf(req, ipSecret), id);
+    const detail = await getManifestation(db, authOf(req), auditContextOf(req, ipSecret), id);
     res.status(200).json({ data: detail });
   };
 
@@ -80,7 +75,7 @@ export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps
     const { id } = parseInput(idParamsSchema, req.params);
     const patch = parseInput(updateManifestationSchema, req.body);
     const detail = await updateManifestation(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),
@@ -94,7 +89,7 @@ export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps
     const { id } = parseInput(idParamsSchema, req.params);
     const { content } = parseInput(createNoteSchema, req.body);
     const created = await addNote(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),
@@ -106,7 +101,7 @@ export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps
 
   const contact: RequestHandler = async (req, res) => {
     const { id } = parseInput(idParamsSchema, req.params);
-    const data = await getContact(prisma, authOf(req), auditContextOf(req, ipSecret), id);
+    const data = await getContact(db, authOf(req), auditContextOf(req, ipSecret), id);
     // RF48: contato nunca armazenado em cache (a cadeia autenticada já envia no-store).
     res.set('Cache-Control', 'no-store').status(200).json({ data });
   };
@@ -114,7 +109,7 @@ export function ombudsmanRouter({ prisma, clock, ipSecret }: OmbudsmanRoutesDeps
   const removeContact: RequestHandler = async (req, res) => {
     const { id } = parseInput(idParamsSchema, req.params);
     const { reason } = parseInput(deleteContactSchema, req.body ?? {});
-    await deleteContact(prisma, clock, authOf(req), auditContextOf(req, ipSecret), id, reason);
+    await deleteContact(db, clock, authOf(req), auditContextOf(req, ipSecret), id, reason);
     res.status(204).end();
   };
 

@@ -1,5 +1,5 @@
 /**
- * T14 — Permissões por perfil (RF05–RF07), integração com PostgreSQL real.
+ * T14 — Permissões por perfil (RF05–RF07), integração com MySQL real.
  * 1. A matriz inteira da Seção 6 (Tabela 13 × Tabela 19), transcrita aqui de forma independente
  *    do código, é comparada com a política do backend em cada combinação perfil × endpoint.
  * 2. Os endpoints E04–E10, E41 e as consultas E13, E16, E17 e E22 são chamados diretamente pela API com
@@ -9,7 +9,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '../../src/lib/prisma.js';
+import type { Database } from '../../src/lib/database.js';
 import {
   ENDPOINTS,
   type EndpointId,
@@ -17,7 +17,6 @@ import {
   PERMISSIONS,
   permissionsFor,
 } from '../../src/modules/auth/permissions.js';
-import { FakeSupabase } from '../support/fake-supabase.js';
 import { errorOf } from '../support/app.js';
 import {
   type AuthScenario,
@@ -82,13 +81,17 @@ const MATRIX: Record<EndpointId, Role[] | 'public'> = {
   E41: SA, // Auditoria: SA C
   E42: 'public',
   E43: 'public',
+  // Etapa 3 (autenticação própria): login e renovação públicos; logout para qualquer perfil.
+  E44: 'public',
+  E45: 'public',
+  E46: ALL,
 };
 
 describe('T14 — matriz completa da Seção 6 × política do backend', () => {
-  it('cobre exatamente os endpoints E01–E43 da Tabela 19 (E34 por tipo de relatório)', () => {
+  it('cobre exatamente os endpoints E01–E43 da Tabela 19 (E34 por tipo) e E44–E46 da Etapa 3', () => {
     expect(Object.keys(ENDPOINTS).sort()).toEqual(Object.keys(MATRIX).sort());
     const numbers = new Set(Object.keys(ENDPOINTS).map((id) => id.slice(0, 3)));
-    expect(numbers.size).toBe(43);
+    expect(numbers.size).toBe(46);
   });
 
   const cases = (Object.keys(MATRIX) as EndpointId[]).flatMap((id) =>
@@ -141,20 +144,18 @@ describe('T14 — matriz completa da Seção 6 × política do backend', () => {
 // -------------------------------------------------------------------------------------------
 
 let db: Db;
-let prisma: PrismaClient;
-let fake: FakeSupabase;
+let database: Database;
 let scenario: AuthScenario;
 let app: ReturnType<typeof buildAuthApp>;
 
 beforeAll(async () => {
-  ({ db, prisma } = await openConnections());
-  fake = new FakeSupabase();
-  scenario = await createAuthScenario(db, fake);
-  app = buildAuthApp(prisma, fake);
+  ({ db, database } = await openConnections());
+  scenario = await createAuthScenario(db, database);
+  app = buildAuthApp(database);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await database.close();
   await db.end();
 });
 
@@ -196,7 +197,12 @@ const CALLS: Call[] = [
         .post('/api/v1/me/password')
         .set('Authorization', auth)
         .send({ newPassword: 'curta' }),
-    state: () => Promise.resolve(fake.calls.filter((c) => c.operation === 'updatePassword').length),
+    state: async () =>
+      (
+        await db.query('SELECT id, password_hash FROM profiles WHERE hospital_id = ? ORDER BY id', [
+          scenario.fx.hospitalId,
+        ])
+      ).rows,
   },
   {
     id: 'E06',
@@ -216,12 +222,13 @@ const CALLS: Call[] = [
         .send({ fullName: 'Pessoa Fictícia T14', email, role: 'viewer', allSectors: true });
     },
     state: async () =>
-      (
-        await db.query<{ n: number }>(
-          'SELECT count(*)::int AS n FROM profiles WHERE email = ANY($1)',
-          [createdEmails],
-        )
-      ).rows,
+      createdEmails.length === 0
+        ? []
+        : (
+            await db.query<{ n: number }>('SELECT COUNT(*) AS n FROM profiles WHERE email IN (?)', [
+              createdEmails,
+            ])
+          ).rows,
   },
   {
     id: 'E08',
@@ -234,7 +241,7 @@ const CALLS: Call[] = [
     state: async () =>
       (
         await db.query<{ full_name: string; updated_at: Date }>(
-          'SELECT full_name, updated_at FROM profiles WHERE id = $1',
+          'SELECT full_name, updated_at FROM profiles WHERE id = ?',
           [scenario.users.disabled.profileId],
         )
       ).rows,
@@ -246,14 +253,12 @@ const CALLS: Call[] = [
       request(app)
         .post(`/api/v1/admin/users/${scenario.users.asEmpty.profileId}/reset-password`)
         .set('Authorization', auth),
-    state: async () => ({
-      calls: fake.calls.filter((c) => c.operation === 'updatePassword').length,
-      rows: (
-        await db.query('SELECT must_change_password FROM profiles WHERE id = $1', [
+    state: async () =>
+      (
+        await db.query('SELECT must_change_password, password_hash FROM profiles WHERE id = ?', [
           scenario.users.asEmpty.profileId,
         ])
       ).rows,
-    }),
   },
   {
     id: 'E10',

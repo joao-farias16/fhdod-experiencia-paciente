@@ -125,21 +125,21 @@ ET03 foram removidas).
 
 ## Supabase e Figma
 
-- **Local:** Supabase CLI (`npm run db:start`), PostgreSQL 54322 com os bancos `postgres`
-  (desenvolvimento, seed) e `fhdod_test` (testes). As ET07–ET09 **não criaram migrations**: as
-  tabelas `manifestations`, `manifestation_contacts`, `manifestation_notes`, os gatilhos e a
-  sequência do protocolo já existiam desde a ET02.
-- **Remoto:** um único projeto (`mowxlbpwhcsurjpcrpra`, "FHDOD - Experiência do Paciente",
-  sa-east-1, PostgreSQL 17, plano gratuito). Em 28/10/2026 a consulta somente leitura mostrou
-  **0 tabelas no esquema `public` e 0 migrations**: o esquema nunca foi publicado. A causa é de
-  processo, não de código: a aplicação das migrations na nuvem pertence à ET12 (Tabela 27), o
-  `supabase/` local não está vinculado ao projeto (`supabase link` nunca foi executado) e as
-  variáveis locais apontam para `127.0.0.1`. Não há evidência que classifique o projeto como
-  desenvolvimento ou homologação — pela Tabela 26 ele é o banco **de publicação**. Por isso nada foi
-  alterado remotamente.
-- **Para publicar (ET12, com autorização):** `DATABASE_URL`/`DIRECT_URL` do pooler no ambiente do
-  Render, `npx prisma migrate deploy` (as 5 migrations), seed somente com `SEED_ALLOW_REMOTE` e dados
-  fictícios, Data API desligada e `MANIFESTATION_TOKEN_SECRET`/`AUDIT_IP_SECRET` com 32+ caracteres.
+> **Etapa 3:** o banco passou a ser **MySQL 8.4** e o Supabase deixou de ser usado. As tabelas
+> `manifestations`, `manifestation_contacts` e `manifestation_notes`, os gatilhos e o protocolo foram
+> recriados em `database/migrations/` (o protocolo agora usa a tabela
+> `manifestation_protocol_sequence` e um gatilho). Instalação e publicação: [`database/README.md`](../database/README.md).
+> O texto abaixo registra a situação das ET07–ET09.
+
+- **Local (ET07–ET09, histórico):** Supabase CLI com PostgreSQL; as ET07–ET09 não criaram
+  migrations, pois as tabelas da Ouvidoria e a sequência do protocolo já existiam desde a ET02.
+- **Remoto (histórico):** projeto Supabase `mowxlbpwhcsurjpcrpra` ("FHDOD - Experiência do
+  Paciente"). Em 28/10/2026 a consulta somente leitura mostrou **0 tabelas e 0 migrations**; em
+  05/11/2026 o projeto estava **pausado** e não foi reativado. Nenhum dado foi publicado nele.
+- **Para publicar (ET12, com autorização):** servidor MySQL 8.4 gerenciado, banco criado por
+  `database/create_database.sql` + `npm run db:migrate` (ou `schema.sql`), usuário de privilégio mínimo
+  (`database/seguranca/usuarios.sql`), `DB_SSL=true`, seed base + `npm run db:create-admin` e
+  `JWT_SECRET`/`MANIFESTATION_TOKEN_SECRET`/`AUDIT_IP_SECRET` com 32+ caracteres.
 - **Figma (28/10/2026):** arquivo `sistema-hospital`
   ([link](https://www.figma.com/design/kcRMvRhHs8IYRfsZkv1BLZ/sistema-hospital)). Todo o conteúdo fica
   na página **Page 1**, organizado em seções:

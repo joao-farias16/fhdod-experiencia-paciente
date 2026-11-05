@@ -1,6 +1,6 @@
 import { type RequestHandler, Router } from 'express';
 
-import type { PrismaClient } from '../../lib/prisma.js';
+import type { Database } from '../../lib/database.js';
 import type { Clock } from '../../utils/dates.js';
 import { idParamsSchema, parseInput } from '../../utils/validation.js';
 import { auditContextOf, authOf, requirePermission } from '../auth/auth.middleware.js';
@@ -12,23 +12,23 @@ import {
 import { createSector, listSectors, updateSector } from './sectors.service.js';
 
 export interface SectorsRoutesDeps {
-  prisma: PrismaClient;
+  db: Database;
   clock: Clock;
   ipSecret: string | undefined;
 }
 
 /** E10–E12 — setores (consulta no escopo; cadastro e alteração pelo SA). Montado em /admin. */
-export function sectorsRouter({ prisma, clock, ipSecret }: SectorsRoutesDeps): Router {
+export function sectorsRouter({ db, clock, ipSecret }: SectorsRoutesDeps): Router {
   const router = Router();
 
   const list: RequestHandler = async (req, res) => {
     const filters = parseInput(listSectorsQuerySchema, req.query);
-    res.status(200).json({ data: await listSectors(prisma, authOf(req), filters) });
+    res.status(200).json({ data: await listSectors(db, authOf(req), filters) });
   };
 
   const create: RequestHandler = async (req, res) => {
     const input = parseInput(createSectorSchema, req.body);
-    const sector = await createSector(prisma, authOf(req), auditContextOf(req, ipSecret), input);
+    const sector = await createSector(db, authOf(req), auditContextOf(req, ipSecret), input);
     res.status(201).json({ data: sector });
   };
 
@@ -36,7 +36,7 @@ export function sectorsRouter({ prisma, clock, ipSecret }: SectorsRoutesDeps): R
     const { id } = parseInput(idParamsSchema, req.params);
     const patch = parseInput(updateSectorSchema, req.body);
     const sector = await updateSector(
-      prisma,
+      db,
       clock,
       authOf(req),
       auditContextOf(req, ipSecret),
