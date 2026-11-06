@@ -138,7 +138,8 @@ ET03 foram removidas).
   05/11/2026 o projeto estava **pausado** e não foi reativado. Nenhum dado foi publicado nele.
 - **Para publicar (ET12, com autorização):** servidor MySQL 8.4 gerenciado, banco criado por
   `database/create_database.sql` + `npm run db:migrate` (ou `schema.sql`), usuário de privilégio mínimo
-  (`database/seguranca/usuarios.sql`), `DB_SSL=true`, seed base + `npm run db:create-admin` e
+  (`database/seguranca/usuarios.sql`), `DB_SSL=true` (com `DB_SSL_CA=certs/ca.pem` se o
+  provedor usar autoridade própria; ver o README, seção "Publicação e infraestrutura"), seed base + `npm run db:create-admin` e
   `JWT_SECRET`/`MANIFESTATION_TOKEN_SECRET`/`AUDIT_IP_SECRET` com 32+ caracteres.
 - **Figma (28/10/2026):** arquivo `sistema-hospital`
   ([link](https://www.figma.com/design/kcRMvRhHs8IYRfsZkv1BLZ/sistema-hospital)). Todo o conteúdo fica

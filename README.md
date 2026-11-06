@@ -28,7 +28,9 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 **ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: integradas em `develop`.
 **Etapa 1 do novo cronograma — Revisão e reorganização do projeto**: integrada em `develop` (issue #32), sem mudança de funcionalidades.
 **Etapa 2 do novo cronograma — Separação definitiva do backend e do frontend**: integrada em `develop` (PR #34). A API fica na raiz do repositório; o frontend é mantido em repositório próprio (veja [Organização do repositório](#organização-do-repositório)).
-**Etapa 3 do novo cronograma — Migração completa do banco para MySQL**: na branch `feat/migracao-mysql`. Prisma, Supabase (PostgreSQL e Auth) e PostgreSQL foram **substituídos por MySQL 8.4 LTS** com SQL parametrizado (driver `mysql2`, sem ORM) e **autenticação própria** (bcrypt + JWT + sessões no banco). Rotas, contratos JSON, códigos HTTP e permissões foram preservados; foram acrescentados os endpoints de login, renovação e logout (E44–E46), antes feitos pelo frontend direto no Supabase Auth. Detalhes: [`database/README.md`](database/README.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md).
+**Etapa 3 do novo cronograma — Migração completa do banco para MySQL**: integrada em `develop` e `main` (PR #35, 05/11/2026; CI aprovada em ambas as branches). Prisma, Supabase (PostgreSQL e Auth) e PostgreSQL foram **substituídos por MySQL 8.4 LTS** com SQL parametrizado (driver `mysql2`, sem ORM) e **autenticação própria** (bcrypt + JWT + sessões no banco). Rotas, contratos JSON, códigos HTTP e permissões foram preservados; foram acrescentados os endpoints de login, renovação e logout (E44–E46), antes feitos pelo frontend direto no Supabase Auth. Detalhes: [`database/README.md`](database/README.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md).
+
+Todas as etapas acima chegaram a `main` por Pull Request (#29 a #35). Situação conferida no GitHub em 05/11/2026: a CI do último commit (`a5ff57b`) passou em `main` e em `develop`; os PRs não têm revisão de aprovação registrada; `main` e `develop` **não têm proteção de branch** configurada (veja [`docs/padroes-git.md`](docs/padroes-git.md)).
 
 | Implementado (ET01 a ET09)                                                                      | Reservado para etapas futuras                            |
 | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -98,6 +100,8 @@ fhdod-experiencia-paciente/      repositório da API (backend na raiz)
 ├── scripts/                     db/ (migrations, seed, verificação, reset local, primeiro admin) e
 │                                e2e/ (dados fictícios da E2E executada pelo repositório do frontend)
 ├── tests/                       unit/, integration/, db/ (MySQL real) e support/
+├── certs/ca.pem                 certificado público da autoridade (CA) do MySQL na nuvem (usado
+│                                via DB_SSL_CA; não é segredo)
 ├── docs/                        documentação técnica e evidencias/ (por etapa)
 ├── .github/                     CI da API e modelo de Pull Request
 ├── package.json · package-lock.json   dependências e scripts da API
@@ -155,7 +159,7 @@ O `.env` fica na **raiz** do repositório (copiado de `.env.example`, que tem s�
 | `DB_USER`, `DB_PASSWORD`       | **`DB_USER` obrigatória**; senha obrigatória em produção (use o usuário de privilégio mínimo de `database/seguranca/usuarios.sql`)    |
 | `DB_NAME`                      | nome do banco (padrão `fhdod`)                                                                                                        |
 | `DB_CONNECTION_LIMIT`          | tamanho do pool de conexões (padrão `10`)                                                                                             |
-| `DB_SSL`, `DB_SSL_CA`          | TLS para o MySQL na nuvem (`true`) e certificado da autoridade (PEM), se o provedor exigir                                            |
+| `DB_SSL`, `DB_SSL_CA`          | TLS para o MySQL na nuvem (`true`) e **caminho** do certificado da autoridade (PEM), se o provedor exigir (ex.: `certs/ca.pem`)       |
 | `TEST_DB_NAME`, `TEST_DB_*`    | banco dos testes (padrão `fhdod_test`; recriado a cada `npm test`; somente servidor local e nunca igual a `DB_NAME`)                  |
 | `JWT_SECRET`                   | **obrigatória** (Etapa 3): assinatura HS256 dos tokens de acesso, 32+ caracteres, somente no backend                                  |
 | `JWT_ACCESS_TOKEN_TTL_SECONDS` | validade do token de acesso (padrão `3600`)                                                                                           |
@@ -251,6 +255,15 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em push e
 2. **API** — `npm ci` na raiz, serviço **MySQL 8.4**, conferência do `database/schema.sql`, `db:create` + `db:migrate` em banco vazio, importação do `schema.sql` num banco novo (mesmo fluxo do Workbench), seed com verificação das contagens, formatação, lint, typecheck, testes (inclusive com MySQL real), build e verificação de `GET /api/v1/health` e do login com o build, em Node 24;
 3. **Dependências** — `npm audit --audit-level=high` com o `package.json` e o `package-lock.json` da raiz (API).
 
+## Publicação e infraestrutura
+
+O repositório **não contém configuração de hospedagem da API** (nenhum `Dockerfile`, `render.yaml`, `Procfile` ou workflow de deploy); a publicação oficial está prevista para a ET12. O que existe hoje:
+
+- **Build e execução:** `npm ci`, `npm run build` e `npm start` (`node dist/server.js`), com Node.js 24 (`.nvmrc`; `engines` aceita 22.12+). A API escuta em `PORT` e expõe tudo sob `/api/v1`.
+- **Exigências de produção** (validadas na inicialização, `src/lib/env.ts`): `NODE_ENV=production`, `CORS_ORIGIN` e `PUBLIC_APP_URL` com `https://`, `DB_PASSWORD` preenchida, `AUDIT_IP_SECRET`, `MANIFESTATION_TOKEN_SECRET` e `JWT_SECRET` com 32+ caracteres e `BCRYPT_ROUNDS` ≥ 10. Atrás de proxy reverso, ajuste `TRUST_PROXY`.
+- **Banco na nuvem:** `DB_SSL=true` (TLS 1.2+ com verificação do certificado) e `DB_SSL_CA=certs/ca.pem` quando o provedor usa autoridade própria. O certificado foi adicionado em `a5ff57b` (e o `*.pem` saiu do `.gitignore`); o provedor e o servidor a que ele corresponde **não estão registrados no repositório**. Banco criado por `database/create_database.sql` + `npm run db:migrate` (ou `schema.sql`), usuário `fhdod_app` de `database/seguranca/usuarios.sql`, seed base e `npm run db:create-admin`.
+- **Frontend:** repositório próprio ([`fhdod-frontend`](https://github.com/joao-farias16/fhdod-frontend)), com `vercel.json` (fallback de SPA). Para a integração, o endereço público do frontend vai em `CORS_ORIGIN` e `PUBLIC_APP_URL` da API, e o da API em `VITE_API_URL` do frontend.
+
 ## ET01 — Repositório, ambiente e Kanban
 
 Critério de conclusão (Tabela 27): estrutura, CI, proteções e serviços sem cobrança; **um clone limpo passa no lint e no typecheck**.
@@ -260,10 +273,11 @@ Critério de conclusão (Tabela 27): estrutura, CI, proteções e serviços sem 
 - [x] `.gitignore`, `.env.example` e varredura de segredos sem achados
 - [x] Workflow de CI preparado
 - [x] Quadro Kanban configurado com os cards da ET01
-- [ ] Commit, push e Pull Request (feitos pelo responsável)
-- [ ] Primeira execução da CI no GitHub
-- [ ] Proteção de `main` e `develop` e inclusão do Felipe como colaborador
-- [ ] Revisão do Felipe
+- [x] Commit, push e Pull Request (PR #29)
+- [x] CI executada no GitHub (execuções aprovadas em `main` e `develop`)
+- [x] Felipe incluído como colaborador do repositório
+- [ ] Proteção de `main` e `develop` — **não configurada** (conferido em 05/11/2026)
+- [ ] Revisão do Felipe (nenhuma aprovação registrada nos PRs)
 
 Evidências: [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
@@ -278,8 +292,8 @@ Critério de conclusão (Tabela 27): migrations, seed; **contagens do seed e T32
 - [x] RLS sem políticas e privilégios de `anon`/`authenticated` revogados; Data API desligada no ambiente local
 - [x] 5 migrations reconstroem o banco vazio; `migrate diff` sem diferenças (Supabase local e PostgreSQL 17 puro)
 - [x] Seed determinístico com contagens verificadas no banco (1/6/18/4/6/2.400/180/72/6)
-- [x] T32 com os 6 cenários aprovados contra PostgreSQL real (e teste de mutação comprovando a detecção)
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável)
+- [x] T32 com os 6 cenários aprovados contra PostgreSQL real (e teste de mutação comprovando a detecção); repetido contra MySQL 8.4 na Etapa 3
+- [x] Commit, push e Pull Request (integrado em `main`)
 - [ ] Revisão do Felipe
 - ~~Data API do projeto Supabase remoto desligada no painel e migrations aplicadas na nuvem~~ (obsoleto desde a Etapa 3: o banco passou a ser MySQL)
 
@@ -296,8 +310,8 @@ Critério de conclusão (Tabela 27): **E04–E09, E41, TL01, TL02, TL16, TL17; T
 - [x] E41 (auditoria) e auditoria na mesma transação das operações; negativas de autorização auditadas
 - [x] Matriz da Seção 6 no backend; escopo por setor nas consultas (403/404)
 - [x] TL01, TL02, TL16 e TL17 integradas à API
-- [x] T12–T17 executados (integração com PostgreSQL real, Supabase Auth local, componentes e E2E)
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável)
+- [x] T12–T17 executados (integração com PostgreSQL real, Supabase Auth local, componentes e E2E); na Etapa 3, a parte da API foi repetida contra MySQL com a autenticação própria
+- [x] Commit, push e Pull Request (PR #30, integrado em `main`)
 - [ ] Revisão do Felipe e conferência das telas com o Figma
 
 Detalhes: [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md). Evidências: [`docs/evidencias/ET03/`](docs/evidencias/ET03/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
@@ -312,8 +326,9 @@ Critério de conclusão (Tabela 27): **E10–E21, TL05–TL07; T22–T25**.
 - [x] Atribuição das avaliações a turno e equipe (RF24) no registro da resposta (E02)
 - [x] TL05 (`/admin/setores`), TL06 (`/admin/turnos`) e TL07 (`/admin/escalas/importar`) integradas à API
 - [x] T22–T25 aprovados na integração com PostgreSQL real; componentes das telas aprovados
-- [x] E2E administrativo (`e2e/escalas-e-pesquisas.spec.ts`, hoje no repositório do frontend: TL05, TL07 com turno noturno, TL06) aprovado com Supabase local
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do João (responsável da etapa: Felipe)
+- [x] E2E administrativo (`e2e/escalas-e-pesquisas.spec.ts`, hoje no repositório do frontend: TL05, TL07 com turno noturno, TL06) aprovado com Supabase local (antes da Etapa 3)
+- [x] Commit, push e Pull Request (integrado em `main`)
+- [ ] Revisão do João (responsável da etapa: Felipe)
 
 ## ET05 — Pesquisas
 
@@ -326,7 +341,8 @@ Critério de conclusão (Tabela 27): **E16, E22–E27, TL08; T02, T26**.
 - [x] T26 aprovado na integração; URLs exatas do T02 verificadas na integração
 - [x] T02 no E2E: TL08 publicada; os arquivos PNG e SVG baixados decodificam (jsqr) para a URL exata com `origem=qr`, que abre a pesquisa e registra a resposta
 - [ ] Leitura do cartaz com a câmera de um celular (parte manual do T02) — **não executada**
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+- [x] Commit, push e Pull Request (integrado em `main`)
+- [ ] Revisão do Felipe
 
 ## ET06 — Pesquisa pública
 
@@ -337,7 +353,8 @@ Critério de conclusão (Tabela 27): **E01, E02, TL09, TL11; T01, T03–T06, T10
 - [x] Validação no frontend e no backend; envio idempotente (`Idempotency-Key`, `request_hash`, UNIQUE) e reenvios automáticos (1, 2 e 4 s)
 - [x] Confirmação somente após 201/200, com o agradecimento da versão; limpeza das chaves `fhdod:*` ao concluir e após 3 min + 60 s
 - [x] T01, T03, T04, T05, T06, T10, T27 e T28 aprovados (integração, componentes e E2E da pesquisa pública em 1440 e 360 px)
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do João (responsável da etapa: Felipe)
+- [x] Commit, push e Pull Request (integrado em `main`)
+- [ ] Revisão do João (responsável da etapa: Felipe)
 
 Detalhes das três etapas: [`docs/setores-escalas-e-pesquisas.md`](docs/setores-escalas-e-pesquisas.md). Evidências: [`docs/evidencias/ET04-ET06/`](docs/evidencias/ET04-ET06/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
@@ -349,7 +366,8 @@ Critério de conclusão (Tabela 27): **E03, E35–E40, TL10, TL12, TL13; T07–T
 - [x] E35–E40: lista com filtros e trecho, detalhe com linha do tempo (sem contato), transições da RN23, `updatedAt`, notas, contato auditado com `no-store` e eliminação com motivo
 - [x] TL10 (oferta após nota baixa ou ação secundária, formulário e protocolo), TL12 e TL13
 - [x] T07, T08, T09, T10 (E03), T18 e T19 aprovados (integração, componentes e E2E)
-- [ ] Conferência com o Figma; commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+- [x] Commit, push e Pull Request (PR #31, integrado em `main`)
+- [ ] Conferência com o Figma; revisão do Felipe
 
 ## ET08 — Dashboard
 
@@ -358,7 +376,8 @@ Critério de conclusão (Tabela 27): **E28–E33, TL03, TL04; T05, T11, T36, T37
 - [x] E28–E33 com filtros comuns, escopo, comparação, cobertura, série sem lacunas e supressão para o VI (RN21)
 - [x] TL03 (`/painel`) e TL04 (`/painel/setores/:sectorId`) com filtros na URL, n em todo indicador, tabela alternativa e atualização a cada 60 s
 - [x] T05, T11, T36 e T37 aprovados (integração, componentes e E2E); T15 repetido contra o E28 real
-- [ ] Conferência com o Figma; commit, push, Pull Request e CI remota; revisão do João (responsável da etapa: Felipe)
+- [x] Commit, push e Pull Request (PR #31, integrado em `main`)
+- [ ] Conferência com o Figma; revisão do João (responsável da etapa: Felipe)
 
 ## ET09 — Excel
 
@@ -368,7 +387,8 @@ Critério de conclusão (Tabela 27): **E34, TL14; T20, T21**.
 - [x] Células tipadas, datas `dd/mm/aaaa hh:mm`, cabeçalho congelado, nome padronizado, arquivo vazio válido; 50.000 linhas (422), 10 em 10 min (429) e auditoria
 - [x] TL14 (`/relatorios`) e exportação pelo painel (RF62)
 - [x] T20 e T21 aprovados (arquivos abertos com ExcelJS na integração; download no E2E)
-- [ ] Abertura manual no Excel e no LibreOffice (RF63) — **não executada**; commit, push, Pull Request e CI remota; revisão do Felipe
+- [x] Commit, push e Pull Request (PR #31, integrado em `main`)
+- [ ] Abertura manual no Excel e no LibreOffice (RF63) — **não executada**; revisão do Felipe
 
 Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07-ET09/`](docs/evidencias/ET07-ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
@@ -383,20 +403,24 @@ Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; aut
 - [x] Seed de demonstração no MySQL (e exportável para o Workbench) com verificação das contagens aprovada
 - [x] 731 testes aprovados contra MySQL 8.4 (unidade, integração e banco), lint, typecheck e build
 - [x] CI com serviço MySQL 8.4; Prisma, Supabase e PostgreSQL removidos de dependências, scripts e configurações
-- [ ] Ajuste do frontend (repositório próprio) para usar E44–E46 no lugar do Supabase Auth — **pendente, fora deste repositório**
-- [ ] Commit, push, Pull Request e CI remota (feitos pelo responsável); revisão do Felipe
+- [x] Frontend (repositório [`fhdod-frontend`](https://github.com/joao-farias16/fhdod-frontend)) usando E44–E46 no lugar do Supabase Auth (commit `1587f99` daquele repositório: `auth-client.ts` chama `/auth/login`, `/auth/refresh` e `/auth/logout`)
+- [ ] Nova execução da E2E do frontend contra a API em MySQL — **resultado não registrado neste repositório**
+- [x] Commit, push e Pull Request (PR #35); CI com MySQL 8.4 aprovada no GitHub Actions
+- [ ] Revisão do Felipe
 
 ## Limitações conhecidas e pendências
 
-- **Frontend:** o login, a renovação de sessão e o logout passaram para a API (E44–E46). O frontend, em repositório próprio, ainda chama o Supabase Auth e precisa ser adaptado (contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)). A E2E do frontend só volta a rodar depois desse ajuste.
-- **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#migração-de-dados-de-um-banco-postgresql-antigo).
+- **Frontend:** o login, a renovação de sessão e o logout ficam na API (E44–E46; contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)), e o repositório do frontend já os utiliza. Não há, neste repositório, registro de uma execução da E2E do frontend contra a API em MySQL.
+- **Publicação:** sem configuração de deploy da API no repositório e sem endereço público documentado (ET12). Veja [Publicação e infraestrutura](#publicação-e-infraestrutura).
+- **Governança do repositório:** proteção de `main`/`develop` e revisão obrigatória por PR ainda não configuradas.
+- **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026; pausado em 05/11/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#migração-de-dados-de-um-banco-postgresql-antigo).
 - **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais e as telas das etapas implementadas (ET01 a ET09). A TL15 (TV Wall, ET10) ainda não tem tela.
 - **`npm audit`:** avisos moderados já existentes antes da Etapa 3 (ExcelJS 4.4 → `uuid` 8, GHSA-w5hq-g745-h8pq, que só afeta `v3`/`v5`/`v6` com `buf`; e `minimatch` nas ferramentas de lint). A CI falha somente em alta ou crítica.
 - **OpenAPI/Swagger, axe e T35/T39** continuam previstos para etapas futuras.
 
 ## Branches e colaboração
 
-- `main`: versão publicada; `develop`: integração. Ambas protegidas (Pull Request, CI aprovada e aprovação do outro integrante).
+- `main`: versão publicada; `develop`: integração. O fluxo combinado é Pull Request, CI aprovada e aprovação do outro integrante; a proteção de branch que obrigaria isso no GitHub **ainda não está configurada**.
 - Trabalho em `feature/<id>-<descricao>`, `fix/<id>-<descricao>` ou `docs/<descricao>`, sempre a partir de `develop`.
 - Commits no padrão **Conventional Commits** em português (`feat`, `fix`, `docs`, `test`, `refactor`, `style`, `chore`, `ci`, `build`, `perf`), validados pelo commitlint.
 - No quadro, no máximo **2 itens "Em andamento" por pessoa**.

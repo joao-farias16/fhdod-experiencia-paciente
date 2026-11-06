@@ -70,6 +70,8 @@ A pesquisa pública fica num pedaço de JavaScript próprio, sem o código da á
 
 ## Testes
 
+Os arquivos `tests/...` ficam neste repositório. Os caminhos com prefixo `frontend/` são do frontend e hoje ficam na raiz do repositório [`fhdod-frontend`](https://github.com/joao-farias16/fhdod-frontend) (por exemplo, `frontend/e2e/pesquisa-publica.spec.ts` → `e2e/pesquisa-publica.spec.ts` naquele repositório).
+
 | Teste | Arquivos                                                                                                                                     |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | T22   | `tests/db/t22-t23-importacao-escala.test.ts`; `frontend/src/features/shifts/shifts.test.tsx`; `frontend/e2e/escalas-e-pesquisas.spec.ts`     |

@@ -2,6 +2,8 @@
 
 O plano completo (T01–T42) está na Seção 12 da especificação. Este documento registra somente execuções reais. Cada registro informa data, commit, ambiente, executor, resultado e evidência.
 
+> **Leitura:** as seções ET01 a Etapa 2 são registros históricos, feitos quando o projeto usava PostgreSQL, Prisma, Supabase e o frontend no mesmo repositório; os comandos citados nelas (`-w backend`, `test:supabase`, `db:diff` etc.) não existem mais. O estado atual da verificação está em [Etapa 3](#etapa-3-novo-cronograma--migração-completa-do-banco-para-mysql--execução-de-05112026) e na seção de CI que a segue.
+
 ## ET01 — Execução de 10/10/2026
 
 - **Executor:** Claude Code (agente), a pedido de João Vitor Farias da Silva.
@@ -363,6 +365,16 @@ Os testes de componentes passaram a ocupar 18 arquivos (eram 16): o teste de est
 
 ### Pendente
 
-- Ajustar o frontend (repositório próprio) para usar E44–E46 no lugar do Supabase Auth e repetir a E2E.
-- Instalar o MySQL 8.4 local (ou usar Docker), preencher `DB_USER`/`DB_PASSWORD` no `.env` e repetir `npm run check`.
-- Commit, push, Pull Request e primeira execução da CI com MySQL 8.4 no GitHub Actions (feitos pelo responsável).
+- ~~Ajustar o frontend para usar E44–E46 no lugar do Supabase Auth~~ — feito no repositório `fhdod-frontend` (commit `1587f99`). **Repetir a E2E** do frontend contra a API em MySQL: nenhum resultado dessa execução está registrado neste repositório.
+- Instalar o MySQL 8.4 local (ou usar Docker), preencher `DB_USER`/`DB_PASSWORD` no `.env` e repetir `npm run check` (situação do ambiente local do responsável não verificada).
+- ~~Commit, push, Pull Request e primeira execução da CI com MySQL 8.4~~ — feitos: PR #35 integrado em `main` em 05/11/2026.
+
+### CI no GitHub Actions após a integração (consulta de 05/11/2026)
+
+Resultados lidos no GitHub (`gh run list` e verificações do commit); nenhum teste foi executado localmente nesta revisão da documentação.
+
+| Execução                                                    | Branch / evento          | Resultado                                                                                      |
+| ----------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `refactor: migra backend para MySQL e autenticação própria` | `develop`, pull request  | aprovada                                                                                       |
+| Merge do PR #35                                             | `main`, push             | aprovada                                                                                       |
+| `chore: adiciona certificado CA do MySQL` (`a5ff57b`)       | `main` e `develop`, push | aprovada — jobs Segredos (gitleaks), API (MySQL 8.4, testes, build, saúde e login) e npm audit |

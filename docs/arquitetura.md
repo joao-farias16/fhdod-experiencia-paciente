@@ -7,9 +7,9 @@ Este documento descreve como os dois projetos (API e frontend) estão organizado
 Desde a Etapa 2 do novo cronograma, backend e frontend são **projetos separados**:
 
 - **API (backend)** — ocupa a **raiz** deste repositório: Express 5 + TypeScript + MySQL 8.4 (driver `mysql2`, SQL parametrizado, sem ORM), com um único `package.json`/`package-lock.json`, `tsconfig.json`, ESLint, Prettier, Vitest, commitlint/husky e o `.env` da API.
-- **Frontend** — fica temporariamente em `frontend/`, como projeto **independente**: React 19 + Vite, com `package.json`, `package-lock.json`, `tsconfig*.json`, `vite.config.ts`, `eslint.config.js`, `.prettierrc.json`, `.gitignore`, `.env.example`, `.nvmrc` e README próprios. Não usa nenhum arquivo fora da própria pasta e pode ser movido para outro repositório sem ajustes (verificado copiando a pasta para fora do repositório e executando instalação, typecheck, lint, testes e build).
+- **Frontend** — fica no repositório próprio [`fhdod-frontend`](https://github.com/joao-farias16/fhdod-frontend) (React 19 + Vite), com dependências, configurações, README e CI próprios. Ele deixou de fazer parte deste repositório na Etapa 2 (commit `2543879`, PR #34).
 
-Não há `package.json` que gerencie os dois projetos; o ESLint e o Prettier da raiz ignoram `frontend/`, e a CI tem um job para cada projeto. Os dois conversam **apenas por HTTP** (veja [Comunicação entre frontend e API](#comunicação-entre-frontend-e-api)).
+Este repositório não contém código do frontend; o ESLint, o Prettier e a CI daqui cobrem somente a API. Os dois conversam **apenas por HTTP** (veja [Comunicação entre frontend e API](#comunicação-entre-frontend-e-api)).
 
 Os dois lados seguem a mesma ideia: **organização por domínio** (um módulo/feature por assunto do sistema, com os mesmos nomes dos dois lados) e uma camada pequena de código compartilhado, que só recebe o que é usado por mais de um domínio.
 
@@ -110,10 +110,12 @@ requisição
 
 JSON estruturado (pino), com `service`, `req.id`, método, caminho (sem query string), status e tempo de resposta. Não registram corpo, IP, cabeçalhos nem dados pessoais; `authorization` e `cookie` são removidos. Em testes, o nível é `silent`.
 
-## Frontend
+## Frontend (repositório `fhdod-frontend`)
+
+> Resumo para referência cruzada; a documentação oficial do frontend fica no README daquele repositório. Conferido em 05/11/2026 pela árvore de arquivos do `fhdod-frontend`; os caminhos abaixo são relativos à raiz dele.
 
 ```text
-frontend/
+fhdod-frontend/
 ├── src/
 │   ├── main.tsx         ponto de entrada (cria o roteador e o cliente de consultas)
 │   ├── app/             composição: App (provedores), routes, AppLayout (público), AdminArea e
@@ -121,7 +123,7 @@ frontend/
 │   ├── components/ui/   componentes de interface reutilizáveis: Alert, Button, ConfirmDialog, Dialog,
 │   │                    Field, States (carregando, erro, vazio, paginação) e Tag
 │   ├── features/        uma pasta por domínio (tabela acima)
-│   ├── lib/             sem React: env, api-client (HTTP, query string, download), supabase,
+│   ├── lib/             sem React: env, api-client (HTTP, query string, download),
 │   │                    format (datas pt-BR), errors (falhas de formulário), route-state
 │   ├── styles/          Tailwind e tokens visuais
 │   └── test/            setup do Vitest e helpers.tsx (cliente falso, perfis, mock da API, renderApp)
@@ -136,7 +138,7 @@ Uma feature pode importar o `-api.ts` de outra quando usa dados daquele domínio
 
 ### Rotas, estado e formulários
 
-- `app/routes.tsx` define as rotas. A pesquisa pública (`/p/:slug`) e a área administrativa são carregadas sob demanda; o supabase-js e a sessão existem só na área administrativa (`app/AdminArea.tsx`, que aplica `RequireAuth`/`RequirePermission` de `features/auth/RouteGuards.tsx` a cada tela). A permissão exibida é só conveniência: a decisão é sempre do backend.
+- `app/routes.tsx` define as rotas. A pesquisa pública (`/p/:slug`) e a área administrativa são carregadas sob demanda; a sessão (tokens do E44, em memória e no `sessionStorage`, via `features/auth/auth-client.ts`) é usada pela área administrativa (`app/AdminArea.tsx`, que aplica `RequireAuth`/`RequirePermission` de `features/auth/RouteGuards.tsx` a cada tela). A permissão exibida é só conveniência: a decisão é sempre do backend.
 - Estado do servidor: TanStack Query (cache, invalidação após mutações com `useInvalidateAdmin`); estado de sessão: `AuthProvider`/`auth-context`; estado da pesquisa pública em andamento: `sessionStorage` (`survey-storage.ts`). Não há biblioteca de estado global.
 - Formulários: React Hook Form; erros da API vão para os campos com `applyApiError` e, fora dos campos, viram aviso com `failureOf` (`lib/errors.ts`).
 - Comunicação: `lib/api-client.ts` (`apiRequest`, `apiDownload`), com o token no cabeçalho `Authorization`, sem cookies; o endereço vem de `VITE_API_URL`, lido só em `lib/env.ts` (veja a seção seguinte).
@@ -146,10 +148,10 @@ Uma feature pode importar o `-api.ts` de outra quando usa dados daquele domínio
 - **Somente HTTP.** O frontend chama os endpoints `/api/v1` da API; não importa código da API, não acessa o banco. A E2E também respeita essa fronteira: aciona os comandos `npm run dev:no-watch` e `npm run e2e:fixture` da API (pasta definida por `FHDOD_API_DIR`), sem importar arquivos dela.
 - **Endereço da API:** `VITE_API_URL` (sem `/api/v1`; local `http://localhost:3333`). `lib/env.ts` valida a variável (http/https; https obrigatório em produção) e monta a base `VITE_API_URL + /api/v1`; `lib/api-client.ts` é o único lugar que faz `fetch` na API. Vazia, a base é `/api/v1` na mesma origem — em desenvolvimento, o proxy do Vite (`vite.config.ts`) encaminha `/api` para `http://localhost:3333`; o proxy é só um recurso de desenvolvimento e o build não depende dele.
 - **CORS:** a API aceita só as origens listadas em `CORS_ORIGIN` (separadas por vírgula; local `http://localhost:5173`), com métodos e cabeçalhos explícitos (`Authorization`, `Content-Type`, `Idempotency-Key`, `X-Request-Id`) e expõe `X-Request-Id`, `Retry-After`, `Idempotent-Replayed` e `Content-Disposition`. Origens desconhecidas não recebem `Access-Control-Allow-Origin`, e em produção todas as origens precisam usar HTTPS (validação do ambiente na inicialização).
-- **Autenticação (Etapa 3):** o frontend faz login em `POST /api/v1/auth/login`, renova em `POST /auth/refresh` e encerra em `POST /auth/logout`; envia o token de acesso em `Authorization: Bearer`. O `JWT_SECRET` existe só no backend. (O frontend, em repositório próprio, ainda precisa trocar o Supabase Auth por esses endpoints.)
+- **Autenticação (Etapa 3):** o frontend faz login em `POST /api/v1/auth/login`, renova em `POST /auth/refresh` e encerra em `POST /auth/logout`; envia o token de acesso em `Authorization: Bearer`. O `JWT_SECRET` existe só no backend. O `fhdod-frontend` já usa esses endpoints (`features/auth/auth-client.ts`); o Supabase Auth não é mais usado em nenhum dos dois projetos.
 - **Portas locais:** API `3333`, frontend `5173`; na E2E, API `3334` (banco de teste) e frontend `5174`.
 
-| Terminal     | Pasta               | Comando       | Endereço                |
-| ------------ | ------------------- | ------------- | ----------------------- |
-| 1 — API      | raiz do repositório | `npm run dev` | `http://localhost:3333` |
-| 2 — Frontend | `frontend/`         | `npm run dev` | `http://localhost:5173` |
+| Terminal     | Pasta                             | Comando       | Endereço                |
+| ------------ | --------------------------------- | ------------- | ----------------------- |
+| 1 — API      | raiz deste repositório            | `npm run dev` | `http://localhost:3333` |
+| 2 — Frontend | raiz do clone do `fhdod-frontend` | `npm run dev` | `http://localhost:5173` |

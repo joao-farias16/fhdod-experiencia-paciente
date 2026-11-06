@@ -35,7 +35,7 @@ Como o banco do FHDOD é criado, alterado, populado e testado desde a **Etapa 3*
 | `DB_USER`, `DB_PASSWORD`    | credenciais; em produção, o usuário de privilégio mínimo `fhdod_app`                                |
 | `DB_NAME`                   | banco (padrão `fhdod`)                                                                              |
 | `DB_CONNECTION_LIMIT`       | tamanho do pool (padrão 10)                                                                         |
-| `DB_SSL`, `DB_SSL_CA`       | TLS (obrigatório na nuvem; verificação do certificado ligada; CA opcional em PEM)                   |
+| `DB_SSL`, `DB_SSL_CA`       | TLS (obrigatório na nuvem; verificação ligada); `DB_SSL_CA` = caminho do PEM (ex.: `certs/ca.pem`)  |
 | `TEST_DB_NAME`, `TEST_DB_*` | banco dos testes (padrão `fhdod_test`; cada `TEST_DB_*` vazia usa a `DB_*`); somente servidor local |
 | `SEED_DEMO_PASSWORD`        | senha das contas de demonstração (RN28), gravada só como hash bcrypt                                |
 | `SEED_ALLOW_REMOTE`         | `false` por padrão; o seed recusa servidor remoto sem `true` explícito                              |
@@ -114,7 +114,7 @@ Arquivo: [`scripts/db/seed.ts`](../scripts/db/seed.ts). Somente dados fictícios
 - A API é o único cliente do banco; não há acesso direto pelo navegador.
 - Privilégio mínimo (`database/seguranca/usuarios.sql`): `fhdod_app` (SELECT, INSERT, UPDATE, DELETE) para a API e `fhdod_migracao` (DDL e gatilhos) para as migrations.
 - Senhas apenas como hash bcrypt (CHECK `profiles_password_hash_bcrypt`); tokens de renovação apenas como SHA-256; IPs apenas como HMAC.
-- Na nuvem, `DB_SSL=true` (TLS 1.2+ com verificação do certificado).
+- Na nuvem, `DB_SSL=true` (TLS 1.2+ com verificação do certificado). O repositório versiona o certificado **público** da autoridade em `certs/ca.pem` (commit `a5ff57b`), lido do caminho informado em `DB_SSL_CA`; não é segredo, mas o provedor a que corresponde não está documentado no repositório.
 
 ## Erros do banco para a API
 
