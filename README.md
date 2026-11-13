@@ -28,13 +28,17 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 **ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: integradas em `develop`.
 **Etapa 1 do novo cronograma — Revisão e reorganização do projeto**: integrada em `develop` (issue #32), sem mudança de funcionalidades.
 **Etapa 2 do novo cronograma — Separação definitiva do backend e do frontend**: integrada em `develop` (PR #34). A API fica na raiz do repositório; o frontend é mantido em repositório próprio (veja [Organização do repositório](#organização-do-repositório)).
+**ET10 — TV Wall**: E42 (esta API) e TL15 `/tv` (repositório do frontend) implementados e testados em 12/11/2026 — T29–T31 aprovados na API, nos componentes e ponta a ponta; ainda **sem commit** (alterações locais em `develop` nos dois repositórios, prontas para revisão). Pendentes: leitura física a 3 m e tela no Figma. Detalhes: [`docs/tv-wall.md`](docs/tv-wall.md).
+**ET11 — Testes e correções**: execuções de 12/11/2026 em [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md#et10-e-et11--2ª-rodada-de-12112026-tl15-e2e-e-integração-frontend--api) — API 771, frontend 135 e E2E 70 testes aprovados, nenhum reprovado; a etapa **não está concluída**: T35 bloqueado (sem OpenAPI) e partes manuais ou dependentes da publicação não executadas.
 **Etapa 3 do novo cronograma — Migração completa do banco para MySQL**: integrada em `develop` e `main` (PR #35, 05/11/2026; CI aprovada em ambas as branches). Prisma, Supabase (PostgreSQL e Auth) e PostgreSQL foram **substituídos por MySQL 8.4 LTS** com SQL parametrizado (driver `mysql2`, sem ORM) e **autenticação própria** (bcrypt + JWT + sessões no banco). Rotas, contratos JSON, códigos HTTP e permissões foram preservados; foram acrescentados os endpoints de login, renovação e logout (E44–E46), antes feitos pelo frontend direto no Supabase Auth. Detalhes: [`database/README.md`](database/README.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md).
 
 Todas as etapas acima chegaram a `main` por Pull Request (#29 a #35). Situação conferida no GitHub em 05/11/2026: a CI do último commit (`a5ff57b`) passou em `main` e em `develop`; os PRs não têm revisão de aprovação registrada; `main` e `develop` **não têm proteção de branch** configurada (veja [`docs/padroes-git.md`](docs/padroes-git.md)).
 
 | Implementado (ET01 a ET09)                                                                      | Reservado para etapas futuras                            |
 | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                          | TV Wall (E42, TL15, ET10)                                |
+| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                          | TL15 no Figma; leitura da TV a 3 m (verificação física)  |
+| **ET10:** TV Wall pública E42 com supressão < 5, até 8 setores, tendência e cache de 60 s       |                                                          |
+| **ET10:** TL15 `/tv` no frontend (atualização a cada 60 s, últimos dados em falha, 1920 × 1080) |                                                          |
 | **ET03:** autenticação, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                    | Conferência das telas com o Figma (revisão)              |
 | **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)         |                                                          |
 | **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)      | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12) |
@@ -50,6 +54,7 @@ Todas as etapas acima chegaram a `main` por Pull Request (#29 a #35). Situação
 | ESLint, Prettier, TypeScript strict, Vitest, commitlint                                         |                                                          |
 | CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)             |                                                          |
 | Testes E2E com Playwright (no repositório do frontend; dados preparados por `e2e:fixture`)      |                                                          |
+| **ET11:** E2E em Chrome, Firefox e WebKit, axe em todas as telas (T39) e desempenho (T40)       |                                                          |
 | `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas     |                                                          |
 
 Desde a Etapa 3, a API conecta-se ao **MySQL** por um pool do `mysql2` (SQL puro e parametrizado, sem ORM); a rota de saúde responde 503 se o banco não responder em 2 s. Até a Etapa 2 o projeto usava Prisma + PostgreSQL (Supabase) e Supabase Auth — esse histórico está nos documentos das etapas e em `docs/evidencias/`.
@@ -169,6 +174,7 @@ O `.env` fica na **raiz** do repositório (copiado de `.env.example`, que tem s�
 | `AUDIT_IP_SECRET`              | HMAC do IP na auditoria e nas sessões (opcional local; obrigatória em produção, 32+)                                                  |
 | `PUBLIC_APP_URL`               | endereço do frontend: base dos links e do QR Code `/p/<slug>` (padrão local `http://localhost:5173`; HTTPS e obrigatória em produção) |
 | `MANIFESTATION_TOKEN_SECRET`   | HMAC do token devolvido por E02 (opcional local; obrigatória em produção, 32+)                                                        |
+| `TV_WALL_HOSPITAL_SHORT_NAME`  | hospital exibido no E42 (TV Wall); vazia = o único hospital cadastrado; nenhum ou vários sem valor → 503                              |
 
 Sem `MANIFESTATION_TOKEN_SECRET` local, a API usa um segredo aleatório válido enquanto estiver rodando. A API valida as variáveis na inicialização e não sobe se alguma for inválida (as mensagens nunca mostram os valores). As antigas `DATABASE_URL`, `DIRECT_URL`, `TEST_DATABASE_URL` e `SUPABASE_*` não são mais lidas.
 
@@ -222,6 +228,7 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 | Ouvidoria                     | E35–E38 `/ouvidoria/manifestations[/:id[/notes]]`, E39–E40 `/ouvidoria/manifestations/:id/contact`       | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
 | Dashboard                     | E28–E33 `/dashboard/summary`, `/sectors`, `/shifts`, `/teams`, `/trends`, `/questions`                   | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
 | Relatórios Excel              | E34 `GET /reports/export?type=` `responses`, `indicators` ou `manifestations`                            | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
+| TV Wall (sem login)           | E42 `GET /tv-wall/summary?period=7d\|30d\|90d` (cache público de 60 s; 30/min por IP)                    | [`docs/tv-wall.md`](docs/tv-wall.md)                                                       |
 
 A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para uma etapa futura).
 
@@ -235,13 +242,13 @@ Comandos executados na **raiz** do repositório.
 | `npm run format:check`  | verifica a formatação (Prettier); `npm run format` corrige                                                                                                                        |
 | `npm run lint`          | ESLint sem avisos tolerados (inclui as regras de camadas e de SQL parametrizado); `npm run lint:fix` corrige                                                                      |
 | `npm run typecheck`     | TypeScript (`src`, `tests`, `scripts`)                                                                                                                                            |
-| `npm test`              | projetos `unidade-e-integracao` e `banco`: unidade, integração e MySQL real (T32, T12–T26, T07–T11, T18–T21, T36, T37)                                                            |
+| `npm test`              | projetos `unidade-e-integracao` e `banco`: unidade, integração e MySQL real (T32, T12–T26, T07–T11, T18–T21, T29–T31 de API, T36–T38)                                             |
 | `npm run test:db`       | somente o projeto `banco` (MySQL, banco `TEST_DB_NAME` recriado e migrado automaticamente)                                                                                        |
 | `npm run test:coverage` | cobertura da API                                                                                                                                                                  |
 | `npm run build`         | build da API em `dist/` (`npm start` executa o build)                                                                                                                             |
 | `npm run db:*`          | banco: `create`, `migrate`, `migrate:status`, `migration:new`, `schema`, `schema:check`, `seed`, `seed:export`, `seed:verify`, `reset`, `create-admin` (ver `database/README.md`) |
 | `npm run dev:no-watch`  | API sem recarga automática (usado pela E2E do frontend, em repositório próprio; no dia a dia, prefira `npm run dev`)                                                              |
-| `npm run e2e:fixture`   | cria/encerra os dados fictícios da E2E do frontend no banco de teste (acionado pela E2E do frontend)                                                                              |
+| `npm run e2e:fixture`   | cria/encerra os dados fictícios da E2E do frontend no banco de teste (acionado pela E2E do frontend), inclusive o hospital exclusivo da TV Wall `E2E-TV-<E2E_RUN_ID>`             |
 
 Regras de lint relevantes para segurança: `any` explícito proibido (RNF20); em `src/`, SQL montado por interpolação de template literal em `query`/`execute` é proibido — use o template `sql` parametrizado (RNF11); rotas não importam a camada de banco (RNF21).
 
@@ -392,6 +399,37 @@ Critério de conclusão (Tabela 27): **E34, TL14; T20, T21**.
 
 Detalhes das três etapas: [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md). Evidências: [`docs/evidencias/ET07-ET09/`](docs/evidencias/ET07-ET09/) e [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md).
 
+## ET10 — TV Wall
+
+Critério de conclusão (Tabela 27): **E42, TL15; T29–T31**.
+
+- [x] E42 `GET /tv-wall/summary` público: NPS geral, n, % de promotores e detratores, tendência (dia ou semana) e até 8 setores (RF68)
+- [x] Supressão no backend (RF71, RN21): setor com menos de 5 respostas ausente; total e pontos com 1 a 4 respostas nulos e `suppressed: true`
+- [x] Lista explícita de campos validada antes do envio; sem texto, contato, protocolo, equipe, turno, usuário, id ou link (RF72, RN09)
+- [x] Cache público de 60 s no 200 e `no-store` nos erros; 30 requisições/min por IP (Seção 9 e 10)
+- [x] T29, T30 e T31 **na parte de API** aprovados contra MySQL real; T38 do E42 aprovado
+- [x] TL15 (`/tv`) no frontend: pública, sem menu nem links, só o E42; NPS, n, % de promotores e detratores, tendência, até 8 setores e convite; estados de carregamento, vazio, suprimido, falha e recuperação
+- [x] RF69: consulta a cada 60 s, últimos dados mantidos com aviso em falha, recarga a cada 6 h (adiada com a API fora)
+- [x] RF70 medido no DOM em 1920 × 1080: 160/64/32 px, mínimo 24 px, contraste ≥ 7:1, sem rolagem
+- [x] T29, T30 e T31 nos componentes (16 testes) e ponta a ponta contra esta API (hospital exclusivo da TV no `e2e:fixture`)
+- [ ] Leitura a 3 m (verificação física) — **não executada**
+- [ ] Tela TL15 no Figma; commit, push, Pull Request e revisão do João
+
+## ET11 — Testes e correções
+
+Critério de conclusão (Tabela 27): **última execução dos testes da Seção 12 aprovada, sem defeito grave**.
+
+- [x] Testes automatizados da API (unidade, integração e MySQL real): 30 arquivos, 771 testes, todos aprovados (12/11/2026)
+- [x] Lacuna do T38 corrigida: 429 de E02, E03 e do limite de 300/min por perfil passaram a ser testados
+- [x] Fluxo da CI em banco vazio (create, migrate, seed e verificação) e API compilada exercitada
+- [x] E2E do frontend contra esta API em MySQL: 70 aprovados, 0 reprovados (Chrome 1440/360/1920, Firefox 1440, WebKit 390), inclusive T01, T07–T12, T18–T20, T27–T31, T39 (axe: 0 violações em 22 telas), T40 e T41
+- [x] Defeitos corrigidos: fixture da E2E no Windows, acessibilidade do gráfico do painel (axe sério), aviso de console do React Router, texto da página inicial, isolamento dos dados da E2E da TV
+- [x] T34 parcial: nenhum segredo no bundle do frontend; `.env` ignorado nos dois repositórios
+- [ ] T35 (OpenAPI × rotas) — **bloqueado**: a OpenAPI/Swagger ainda não existe
+- [ ] Manuais e publicação (T02 câmera, T20 Excel/LibreOffice, T31 a 3 m, T39 leitor de tela, T33 no Render, T34 gitleaks, T40/T42 publicados) — **não executados**
+
+Matriz completa com a situação de cada caso: [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md#et10-e-et11--2ª-rodada-de-12112026-tl15-e2e-e-integração-frontend--api).
+
 ## Etapa 3 — Migração para MySQL
 
 Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; autenticação própria; tabelas, relacionamentos e restrições recriados; SQL importável no MySQL Workbench; funcionalidades preservadas; testes, CI e documentação atualizados.
@@ -410,13 +448,14 @@ Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; aut
 
 ## Limitações conhecidas e pendências
 
-- **Frontend:** o login, a renovação de sessão e o logout ficam na API (E44–E46; contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)), e o repositório do frontend já os utiliza. Não há, neste repositório, registro de uma execução da E2E do frontend contra a API em MySQL.
+- **Frontend:** o login, a renovação de sessão e o logout ficam na API (E44–E46; contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)), e o repositório do frontend já os utiliza. A E2E do frontend contra esta API em MySQL foi executada em 12/11/2026 (evidências em [`docs/evidencias/ET10-ET11/`](docs/evidencias/ET10-ET11/)). A suíte completa faz cerca de 40 logins e a API aceita 30 a cada 15 min por IP: por isso o frontend a roda em duas invocações (`test:e2e:chrome` e `test:e2e:navegadores`).
 - **Publicação:** sem configuração de deploy da API no repositório e sem endereço público documentado (ET12). Veja [Publicação e infraestrutura](#publicação-e-infraestrutura).
 - **Governança do repositório:** proteção de `main`/`develop` e revisão obrigatória por PR ainda não configuradas.
 - **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026; pausado em 05/11/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#migração-de-dados-de-um-banco-postgresql-antigo).
 - **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais e as telas das etapas implementadas (ET01 a ET09). A TL15 (TV Wall, ET10) ainda não tem tela.
+- **TV Wall:** E42 e TL15 prontos ([`docs/tv-wall.md`](docs/tv-wall.md)); falta a leitura física a 3 m. A supressão não é complementar (o total menos os setores exibidos pode revelar o `n` de um setor ocultado) — a especificação não exige isso; registrado para decisão do hospital.
 - **`npm audit`:** avisos moderados já existentes antes da Etapa 3 (ExcelJS 4.4 → `uuid` 8, GHSA-w5hq-g745-h8pq, que só afeta `v3`/`v5`/`v6` com `buf`; e `minimatch` nas ferramentas de lint). A CI falha somente em alta ou crítica.
-- **OpenAPI/Swagger, axe e T35/T39** continuam previstos para etapas futuras.
+- **OpenAPI/Swagger e T35** continuam previstos para etapas futuras (ET12); por isso, e pelas partes manuais e de publicação, a ET11 não pode ser dada como concluída. O T39 (axe) foi executado na ET11.
 
 ## Branches e colaboração
 

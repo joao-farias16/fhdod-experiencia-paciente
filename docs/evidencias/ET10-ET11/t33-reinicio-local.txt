@@ -1,0 +1,4 @@
+﻿E02 -> 201 064aee4f-595f-4abe-a963-e89596e835c2
+API encerrada
+API reiniciada
+resposta presente após reinício: true | E42 n antes/depois: 119 119

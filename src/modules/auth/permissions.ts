@@ -273,7 +273,7 @@ export const ENDPOINTS = {
     implemented: true,
   },
   E41: { method: 'GET', path: '/admin/audit-logs', access: 'audit_logs:read', implemented: true },
-  E42: { method: 'GET', path: '/tv-wall/summary', access: 'public', implemented: false },
+  E42: { method: 'GET', path: '/tv-wall/summary', access: 'public', implemented: true },
   E43: { method: 'GET', path: '/health', access: 'public', implemented: true },
   // Etapa 3: autenticação própria, que substitui o login feito no Supabase Auth pelo frontend.
   // Não alteram a matriz de perfis: login e renovação são públicos (limitados por IP) e o logout

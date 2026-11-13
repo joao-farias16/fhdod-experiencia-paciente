@@ -1,0 +1,66 @@
+﻿
+> fhdod-experiencia-paciente@0.1.0 e2e:fixture
+> tsx scripts/e2e/fixture.ts setup C:\Users\felipe lorini\Documents\GitHub\fhdod-frontend\playwright\.cache\e2e-fixture.json
+
+Dados E2E criados (hospitais E2E-6371f7 e E2E-TV-6371f7, da TV Wall).
+
+Running 50 tests using 1 worker
+
+  ✓   1 [computador-1440] › e2e\acessibilidade.spec.ts:96:1 › T39 — telas públicas: início, 404, login (TL01), pesquisa (TL09–TL11) e TV (TL15) (10.3s)
+  ✓   2 [computador-1440] › e2e\acessibilidade.spec.ts:130:1 › T39 — Superadministrador: TL16, TL17, TL05, TL06, TL07, TL08 e TL02 (13.8s)
+  ✓   3 [computador-1440] › e2e\acessibilidade.spec.ts:153:1 › T39 — Gestão: TL03, TL04 e TL14 (7.0s)
+  ✓   4 [computador-1440] › e2e\acessibilidade.spec.ts:164:1 › T39 — Ouvidoria: TL12 e TL13 (4.8s)
+  ✓   5 [computador-1440] › e2e\acessibilidade.spec.ts:176:1 › T39 — teclado: pular para o conteúdo, foco de 2 px, login sem mouse e Esc no diálogo (1.9s)
+  ✓   6 [computador-1440] › e2e\administracao.spec.ts:20:1 › cadastro, troca obrigatória, desativação, redefinição e auditoria (12.4s)
+  ✓   7 [computador-1440] › e2e\escalas-e-pesquisas.spec.ts:28:1 › equipe, importação de escala, pesquisa publicada e QR Code decodificado (14.0s)
+  ✓   8 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:43:1 › T07/T08 — nota baixa pelo QR Code: oferta, manifestação anônima e protocolo (1.4s)
+  ✓   9 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:69:1 › T07 — nota 10: sem oferta em destaque, só a ação secundária (1.1s)
+  ✓  10 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:78:1 › T09 — contato só com e-mail e aceite; formulário sem rolagem horizontal em 360 px (1.5s)
+  ✓  11 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:103:1 › T41 — manifestação com <script> e aspas SQL é aceita pela pesquisa pública (1.3s)
+  ✓  12 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:121:1 › T18/T19 — Ouvidoria: status, nota, contato auditado e eliminação (2.6s)
+  ✓  13 [computador-1440] › e2e\manifestacoes-painel-relatorios.spec.ts:172:1 › T11 e T20 — painel atualiza com nova resposta e exporta .xlsx (3.7s)
+  ✓  14 [computador-1440] › e2e\pesquisa-publica.spec.ts:38:1 › T01 — abre por link sem login nem cookies; 404 e 410 com mensagem (1.8s)
+  ✓  15 [computador-1440] › e2e\pesquisa-publica.spec.ts:53:1 › T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas (2.1s)
+  ✓  16 [computador-1440] › e2e\pesquisa-publica.spec.ts:101:1 › T28 — concluir apaga os dados; Voltar não mostra respostas (1.6s)
+  ✓  17 [computador-1440] › e2e\pesquisa-publica.spec.ts:134:1 › T28 — 3 min + 60 s sem uso apagam as respostas (2.4s)
+  ✓  18 [computador-1440] › e2e\t12-autenticacao.spec.ts:20:1 › credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login (2.7s)
+  ✓  19 [computador-1440] › e2e\t12-autenticacao.spec.ts:34:1 › sem sessão, a rota administrativa redireciona a /login (936ms)
+  ✓  20 [computador-1440] › e2e\t12-autenticacao.spec.ts:40:1 › SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados (2.9s)
+  ✓  21 [computador-1440] › e2e\t12-autenticacao.spec.ts:89:1 › VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API (1.9s)
+  ✓  22 [computador-1440] › e2e\t40-desempenho.spec.ts:36:1 › T40 — 20 envios da pesquisa em até 2 s (19 de 20) (1.0m)
+  ✓  23 [computador-1440] › e2e\t40-desempenho.spec.ts:57:1 › T40 — 20 carregamentos do painel em até 3 s (19 de 20) (13.7s)
+  -  24 [computador-1440] › e2e\tv-wall.spec.ts:172:1 › T30 — sem respostas; total e setor com 4 suprimidos; com 5, presentes (relógio + 60 s)
+  ✓  25 [computador-1440] › e2e\tv-wall.spec.ts:246:1 › T29 — /tv pública: só agregados do E42, sem links nem dados pessoais (1.1s)
+  -  26 [computador-1440] › e2e\tv-wall.spec.ts:293:1 › T31 — nova resposta em 60 s; API fora: aviso com os últimos dados; volta; recarga de 6 h
+  -  27 [computador-1440] › e2e\tv-wall.spec.ts:350:1 › T31 — legibilidade em 1920 × 1080: tamanhos, contraste 7:1 e sem rolagem
+  ✓  28 [celular-360] › e2e\acessibilidade.spec.ts:96:1 › T39 — telas públicas: início, 404, login (TL01), pesquisa (TL09–TL11) e TV (TL15) (10.0s)
+  ✓  29 [celular-360] › e2e\acessibilidade.spec.ts:130:1 › T39 — Superadministrador: TL16, TL17, TL05, TL06, TL07, TL08 e TL02 (14.2s)
+  ✓  30 [celular-360] › e2e\acessibilidade.spec.ts:153:1 › T39 — Gestão: TL03, TL04 e TL14 (6.9s)
+  ✓  31 [celular-360] › e2e\acessibilidade.spec.ts:164:1 › T39 — Ouvidoria: TL12 e TL13 (4.8s)
+  ✓  32 [celular-360] › e2e\acessibilidade.spec.ts:176:1 › T39 — teclado: pular para o conteúdo, foco de 2 px, login sem mouse e Esc no diálogo (2.0s)
+  ✓  33 [celular-360] › e2e\pesquisa-publica.spec.ts:38:1 › T01 — abre por link sem login nem cookies; 404 e 410 com mensagem (1.7s)
+  ✓  34 [celular-360] › e2e\pesquisa-publica.spec.ts:53:1 › T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas (2.0s)
+  ✓  35 [celular-360] › e2e\pesquisa-publica.spec.ts:101:1 › T28 — concluir apaga os dados; Voltar não mostra respostas (1.6s)
+  ✓  36 [celular-360] › e2e\pesquisa-publica.spec.ts:134:1 › T28 — 3 min + 60 s sem uso apagam as respostas (2.3s)
+  ✓  37 [celular-360] › e2e\t12-autenticacao.spec.ts:20:1 › credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login (2.7s)
+  ✓  38 [celular-360] › e2e\t12-autenticacao.spec.ts:34:1 › sem sessão, a rota administrativa redireciona a /login (915ms)
+  ✓  39 [celular-360] › e2e\t12-autenticacao.spec.ts:40:1 › SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados (2.8s)
+  ✓  40 [celular-360] › e2e\t12-autenticacao.spec.ts:89:1 › VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API (1.9s)
+  -  41 [celular-360] › e2e\t40-desempenho.spec.ts:36:1 › T40 — 20 envios da pesquisa em até 2 s (19 de 20)
+  -  42 [celular-360] › e2e\t40-desempenho.spec.ts:57:1 › T40 — 20 carregamentos do painel em até 3 s (19 de 20)
+  -  43 [celular-360] › e2e\tv-wall.spec.ts:172:1 › T30 — sem respostas; total e setor com 4 suprimidos; com 5, presentes (relógio + 60 s)
+  ✓  44 [celular-360] › e2e\tv-wall.spec.ts:246:1 › T29 — /tv pública: só agregados do E42, sem links nem dados pessoais (1.1s)
+  -  45 [celular-360] › e2e\tv-wall.spec.ts:293:1 › T31 — nova resposta em 60 s; API fora: aviso com os últimos dados; volta; recarga de 6 h
+  -  46 [celular-360] › e2e\tv-wall.spec.ts:350:1 › T31 — legibilidade em 1920 × 1080: tamanhos, contraste 7:1 e sem rolagem
+  ✓  47 [tv-1920] › e2e\tv-wall.spec.ts:172:1 › T30 — sem respostas; total e setor com 4 suprimidos; com 5, presentes (relógio + 60 s) (1.8s)
+  ✓  48 [tv-1920] › e2e\tv-wall.spec.ts:246:1 › T29 — /tv pública: só agregados do E42, sem links nem dados pessoais (1.1s)
+  ✓  49 [tv-1920] › e2e\tv-wall.spec.ts:293:1 › T31 — nova resposta em 60 s; API fora: aviso com os últimos dados; volta; recarga de 6 h (1.8s)
+  ✓  50 [tv-1920] › e2e\tv-wall.spec.ts:350:1 › T31 — legibilidade em 1920 × 1080: tamanhos, contraste 7:1 e sem rolagem (955ms)
+
+> fhdod-experiencia-paciente@0.1.0 e2e:fixture
+> tsx scripts/e2e/fixture.ts teardown C:\Users\felipe lorini\Documents\GitHub\fhdod-frontend\playwright\.cache\e2e-fixture.json
+
+Sessões E2E encerradas: 13.
+
+  8 skipped
+  42 passed (4.1m)

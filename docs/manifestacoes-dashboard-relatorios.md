@@ -164,6 +164,7 @@ ET03 foram removidas).
     campos, botões e ícones editáveis e somente dados fictícios. O QR Code das telas da TL08 é um
     desenho ilustrativo, não um código válido. Diálogos (novo usuário, senha temporária e
     confirmações) não têm frames próprios.
-  - **Etapas futuras:** a TL15 TV Wall (ET10) ainda não foi implementada no frontend e não tem tela
-    no Figma.
+  - **TV Wall (ET10):** a API do E42 (contrato em [`tv-wall.md`](tv-wall.md)) e a TL15 (`/tv`) no
+    frontend foram implementadas; a TL15 **ainda não tem tela no Figma** (frame 1920 × 1080 da
+    Seção 11 pendente).
   - **Pendente:** revisão cruzada das telas no Figma, feita na revisão de cada etapa (Tabela 27).

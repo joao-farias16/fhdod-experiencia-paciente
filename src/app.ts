@@ -20,11 +20,14 @@ export const JSON_BODY_LIMIT = '32kb';
 /**
  * Dependências externas da aplicação: configuração, logger, relógio, banco MySQL (pool do
  * mysql2) e a configuração da autenticação própria (Etapa 3). PUBLIC_APP_URL (links e QR Code) e
- * MANIFESTATION_TOKEN_SECRET (token devolvido por E02) entram nas ET05 e ET06.
+ * MANIFESTATION_TOKEN_SECRET (token devolvido por E02) entram nas ET05 e ET06;
+ * TV_WALL_HOSPITAL_SHORT_NAME (hospital exibido no E42), na ET10.
  */
 export interface AppDeps {
   env: Pick<Env, 'CORS_ORIGIN' | 'TRUST_PROXY' | 'AUDIT_IP_SECRET'> &
-    Partial<Pick<Env, 'PUBLIC_APP_URL' | 'MANIFESTATION_TOKEN_SECRET'>>;
+    Partial<
+      Pick<Env, 'PUBLIC_APP_URL' | 'MANIFESTATION_TOKEN_SECRET' | 'TV_WALL_HOSPITAL_SHORT_NAME'>
+    >;
   logger: Logger;
   db: Database;
   auth: AuthConfig;
@@ -62,6 +65,7 @@ export function createApp({ env, logger, db, auth, clock = systemClock }: AppDep
       // Fora de produção, sem segredo configurado, o token vale só enquanto o processo rodar
       // (loadEnv exige MANIFESTATION_TOKEN_SECRET em produção).
       manifestationTokenSecret: env.MANIFESTATION_TOKEN_SECRET ?? randomBytes(32).toString('hex'),
+      tvWallHospitalShortName: env.TV_WALL_HOSPITAL_SHORT_NAME,
     }),
   );
 
