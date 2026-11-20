@@ -230,7 +230,9 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 | Relatórios Excel              | E34 `GET /reports/export?type=` `responses`, `indicators` ou `manifestations`                            | [`docs/manifestacoes-dashboard-relatorios.md`](docs/manifestacoes-dashboard-relatorios.md) |
 | TV Wall (sem login)           | E42 `GET /tv-wall/summary?period=7d\|30d\|90d` (cache público de 60 s; 30/min por IP)                    | [`docs/tv-wall.md`](docs/tv-wall.md)                                                       |
 
-A especificação OpenAPI/Swagger (`/api/docs`) ainda não existe (prevista para uma etapa futura).
+### Documentação da API (Swagger)
+
+Com a API em execução, a documentação interativa (OpenAPI 3.1 + Swagger UI) fica em **`GET /api-docs`** — no ambiente local, `http://localhost:3333/api-docs` — e o documento OpenAPI em JSON, em `GET /api-docs/openapi.json`. Os caminhos são relativos ao servidor `/api/v1`. Para testar rotas protegidas, obtenha o `accessToken` em `POST /auth/login` e informe-o no botão **Authorize** (token Bearer). Corpos e query strings são gerados dos mesmos esquemas Zod que a API valida; os testes `tests/unit/openapi.test.ts` e `tests/integration/api-docs.test.ts` conferem a documentação com as rotas reais e com os tipos das respostas.
 
 ## Qualidade: lint, typecheck, testes e build (API)
 

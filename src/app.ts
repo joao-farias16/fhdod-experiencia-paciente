@@ -11,6 +11,7 @@ import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { requestLogger } from './middlewares/request-logger.js';
 import { auditAuthorizationDenials } from './modules/auth/auth.middleware.js';
 import type { AuthConfig } from './modules/auth/auth.types.js';
+import { apiDocsRouter } from './openapi/api-docs.routes.js';
 import { v1Router } from './routes.js';
 import { type Clock, systemClock } from './utils/dates.js';
 
@@ -68,6 +69,9 @@ export function createApp({ env, logger, db, auth, clock = systemClock }: AppDep
       tvWallHospitalShortName: env.TV_WALL_HOSPITAL_SHORT_NAME,
     }),
   );
+
+  // Documentação OpenAPI 3.1: Swagger UI em /api-docs e o documento em /api-docs/openapi.json.
+  app.use(apiDocsRouter());
 
   app.use(notFoundHandler);
   app.use(auditAuthorizationDenials({ db, ipSecret: env.AUDIT_IP_SECRET }));
