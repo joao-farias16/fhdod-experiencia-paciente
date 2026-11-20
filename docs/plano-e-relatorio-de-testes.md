@@ -538,6 +538,40 @@ Os testes de componentes passaram a ocupar 18 arquivos (eram 16): o teste de est
 - **Publicação (ET12):** T33 no Render, T40 e T42 com HTTPS, T34 com gitleaks e bundle publicado.
 - TL15 no Figma (frame 1920 × 1080); repetir com MySQL 8.4 (CI); commit, Pull Request e revisão.
 
+## ET10 e ET11 — Auditoria do backend de 20/11/2026 (branch `develop`)
+
+- **Escopo:** auditoria do E42 (RF68–RF72, RN09, RN21) contra a especificação e execução das verificações do backend. Ambiente: Windows 11, Node, MySQL local (`fhdod_test`, recriado pelo global-setup; guarda de servidor local e de banco diferente de `DB_NAME`). Executor: Claude Code, a pedido do responsável. Sem commit.
+- **Frontend, E2E, gitleaks e leitura a 3 m não foram executados nesta auditoria** (somente o repositório da API).
+
+| Verificação                                | Resultado                                                                                                                                                                                                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test` (unidade + integração + MySQL)  | 31 arquivos, **781 aprovados, 0 reprovados** (antes da auditoria: 771; +10 testes novos)                                                                                                                                                                                   |
+| lint, typecheck, `format:check`, build     | aprovados                                                                                                                                                                                                                                                                  |
+| `db:schema:check`                          | `schema.sql` confere com as migrations                                                                                                                                                                                                                                     |
+| Segredos (varredura dos valores do `.env`) | nenhum valor de `DB_PASSWORD`, `JWT_SECRET`, `AUDIT_IP_SECRET`, `SEED_DEMO_PASSWORD`, `ADMIN_PASSWORD` em arquivo versionado nem em `dist/`; `.env` não versionado. `MANIFESTATION_TOKEN_SECRET` (valor curto) não verificável por este método. gitleaks **não instalado** |
+| `npm audit`                                | 11 moderadas (2 em produção: `exceljs` → `uuid < 11.1.1`; as demais em ferramentas de desenvolvimento). Não corrigidas: `audit fix --force` é incompatível                                                                                                                 |
+| T35 (OpenAPI × rotas)                      | **bloqueado** — a OpenAPI/Swagger não existe                                                                                                                                                                                                                               |
+
+### Auditoria do E42
+
+Código lido por inteiro (`src/modules/tv-wall/*`, filtros e cálculos do dashboard): dados reais do banco,
+nenhum valor fixo; NPS e percentuais por aritmética inteira (mesma regra do SQL); `HAVING COUNT(*) >= 5`
+e `LIMIT` de 8 aplicados; total com 1–4 respostas anulado (0 respostas não é suprimido); saída validada
+por esquema estrito (lista explícita de campos); consultas parametrizadas; `period` restrito a 7d/30d/90d
+(limita o custo); 30 req/min por IP; erros com `no-store`. Nenhum defeito de cálculo ou vazamento encontrado.
+
+### Defeitos encontrados e corrigidos
+
+| Defeito                                                                                                                                                                         | Correção                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `mysql2` lança `Pool is closed.` sem `code`; o `POOL_CLOSED` de `UNAVAILABLE_CODES` nunca casava e o E42 (e qualquer rota) respondia **500** em vez de 503 com o pool encerrado | `isDatabaseUnavailable` reconhece a mensagem; teste em `tests/db/t30-tv-wall-limites.test.ts` |
+
+### Lacunas de teste preenchidas (`tests/db/t30-tv-wall-limites.test.ts`, 10 testes, MySQL real)
+
+Banco sem respostas; setor com 1, 4, 5 e 6 respostas; total com 1, 4, 5 e 6; fronteiras de período no fuso
+America/Sao_Paulo (00:00:00 e 23:59:59 locais incluídos, 1 s fora excluído); isolamento entre hospitais;
+`ECONNREFUSED` real e pool encerrado → 503 sem dados nem detalhes internos.
+
 ### CI no GitHub Actions após a integração (consulta de 05/11/2026)
 
 Resultados lidos no GitHub (`gh run list` e verificações do commit); nenhum teste foi executado localmente nesta revisão da documentação.
