@@ -147,6 +147,35 @@ describe('GET /api-docs (Swagger UI)', () => {
 
     expect(response.status).toBe(404);
   });
+
+  it('é somente leitura: métodos diferentes de GET/HEAD recebem 404 ROUTE_NOT_FOUND', async () => {
+    const app = buildTestApp();
+
+    for (const path of ['/api-docs/', '/api-docs/openapi.json']) {
+      for (const method of ['post', 'patch', 'delete'] as const) {
+        const response = await request(app)[method](path).send({});
+        expect(response.status, `${method} ${path}`).toBe(404);
+        expect(ErrorResponse.parse(response.body).error.code).toBe('ROUTE_NOT_FOUND');
+      }
+    }
+  });
+
+  it('subcaminhos desconhecidos respondem 404 ROUTE_NOT_FOUND, não a página com 200', async () => {
+    const app = buildTestApp();
+
+    for (const path of ['/api-docs/nao-existe', '/api-docs/openapi.json/extra']) {
+      const response = await request(app).get(path);
+      expect(response.status, path).toBe(404);
+      expect(ErrorResponse.parse(response.body).error.code).toBe('ROUTE_NOT_FOUND');
+    }
+  });
+
+  it('atende HEAD na página e no documento', async () => {
+    const app = buildTestApp();
+
+    expect((await request(app).head('/api-docs/')).status).toBe(200);
+    expect((await request(app).head('/api-docs/openapi.json')).status).toBe(200);
+  });
 });
 
 describe('GET /api-docs/openapi.json', () => {

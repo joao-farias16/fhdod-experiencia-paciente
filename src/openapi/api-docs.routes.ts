@@ -51,12 +51,27 @@ export function apiDocsRouter(): Router {
     res.status(200).json(document);
   };
 
+  // A documentação é somente leitura: outros métodos saem do roteador e caem no 404
+  // ROUTE_NOT_FOUND padrão da API (sem isso, o Swagger UI responderia 200 a qualquer método).
+  const readOnly: RequestHandler = (req, _res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') next();
+    else next('router');
+  };
+  // A página só existe em /api-docs/; um subcaminho desconhecido segue para o 404 padrão em vez
+  // de devolver a página com 200. Os arquivos estáticos já foram atendidos por `serveFiles`.
+  const setupUi = swaggerUi.setup(document, UI_OPTIONS);
+  const servePage: RequestHandler = (req, res, next) => {
+    if (req.path === '/') setupUi(req, res, next);
+    else next();
+  };
+
+  router.use(API_DOCS_PATH, readOnly);
   router.get(OPENAPI_JSON_PATH, sendDocument);
   router.use(
     API_DOCS_PATH,
     docsContentSecurityPolicy,
     swaggerUi.serveFiles(document, UI_OPTIONS),
-    swaggerUi.setup(document, UI_OPTIONS),
+    servePage,
   );
   return router;
 }
