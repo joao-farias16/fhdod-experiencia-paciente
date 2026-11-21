@@ -25,6 +25,7 @@ Os dois lados seguem a mesma ideia: **organização por domínio** (um módulo/f
 | Ouvidoria                       | `manifestations`         | `manifestations`           |
 | Dashboard                       | `dashboard`              | `dashboard`                |
 | Relatórios Excel                | `reports`                | `reports`                  |
+| TV Wall (E42, ET10)             | `tv-wall`                | `tv-wall` (TL15, `/tv`)    |
 | Saúde da API / página inicial   | `health`                 | `home`                     |
 
 ## Backend
@@ -64,6 +65,7 @@ Pontos específicos:
 - **`shifts`** inclui a importação de escala (E20, E21), que gera turnos com as mesmas regras do cadastro manual.
 - **`dashboard.filters.ts`** é a parte comum ao dashboard e aos relatórios: resolução dos filtros contra o escopo e as condições SQL parametrizadas (template `sql`).
 - Um módulo pode importar a regra de outro domínio quando ela pertence àquele domínio (por exemplo, `reports` usa os indicadores de `dashboard`, `public-survey` usa `nps.ts`); o que é genérico fica em `utils/`.
+- **`tv-wall`** (ET10) atende o E42 público: `tv-wall.repository.ts` lê só `responses`, `sectors` e `survey_versions`; `tv-wall.service.ts` reaproveita `computeNps`, `percentOf`, os filtros e a tendência (`getTrends`) do `dashboard`, sempre com supressão (RN21); `tv-wall.schemas.ts` tem a query (`period`) e a **lista explícita de campos da resposta**, validada antes do envio (RF72). Contrato e decisões: [`tv-wall.md`](tv-wall.md).
 
 ### Código compartilhado
 
@@ -82,7 +84,8 @@ requisição
   → requestLogger (pino-http: X-Request-Id, log sem corpo/IP)
   → helmet (HSTS, nosniff, Referrer-Policy, CSP) → cors (somente CORS_ORIGIN) → express.json (32 KB)
   → /api/v1 (routes.ts → routers dos módulos)
-      rotas públicas: limite por IP → requirePermission(E01/E02/E03, público) → serviço
+      rotas públicas: limite por IP → requirePermission(E01/E02/E03/E42, público) → serviço
+        (E42: Cache-Control no-store até o sucesso; 200 com public, max-age=60)
       rotas autenticadas: authenticate → limite 300/min por perfil
         → requirePasswordChanged (exceto E04, E05 e E46) → requirePermission(Exx)
         → controlador → serviço (escopo de req.auth) → repositório (SQL parametrizado; transação + auditoria)
@@ -105,6 +108,7 @@ requisição
 - Autenticação e usuários: `VALIDATION_ERROR` (400, com `details` por campo e sem ecoar valores), `UNAUTHENTICATED`, `INVALID_CREDENTIALS` (401), `ACCOUNT_DISABLED`, `PASSWORD_CHANGE_REQUIRED`, `FORBIDDEN`, `SECTOR_OUT_OF_SCOPE` (403), `NOT_FOUND` (404), `CONFLICT` (409), `SELF_MODIFICATION_FORBIDDEN`, `LAST_SUPERADMIN`, `USER_INACTIVE`, `INVALID_SCOPE`, `SECTOR_INACTIVE` (422).
 - Estrutura, pesquisas e respostas: `EMPTY_FILE`, `TOO_MANY_ROWS`, `ENCODING_INVALID`, `IDEMPOTENCY_KEY_INVALID` (400), `SHIFT_OVERLAP`, `SHIFT_ALREADY_CANCELLED`, `IMPORT_ALREADY_COMMITTED`, `IMPORT_EXPIRED`, `IMPORT_REJECTED`, `NO_CHANGES_TO_PUBLISH`, `SURVEY_NOT_PUBLISHED`, `IDEMPOTENCY_KEY_REUSED`, `SURVEY_VERSION_OUTDATED` (409), `SURVEY_UNAVAILABLE` (410), `FILE_TOO_LARGE` (413), `UNSUPPORTED_FILE_TYPE` (415), `TEAM_INACTIVE`, `DATE_OUT_OF_RANGE`, `FIELD_LOCKED_AFTER_PUBLICATION`, `QUESTION_LOCKED`, `QUESTION_LIMIT_REACHED`, `NPS_QUESTION_REQUIRED`, `SURVEY_INACTIVE` (422). Manifestações e relatórios: ver o documento do tema.
 - JSON em camelCase; instantes em ISO 8601 UTC. `GET /api/v1/health` (E43) executa `SELECT 1` com limite de 2 s (RNF27).
+- Cache: rotas autenticadas e erros com `Cache-Control: no-store`; E01 e E42 com `public, max-age=60` (Seção 9) somente na resposta 200.
 
 ### Logs
 

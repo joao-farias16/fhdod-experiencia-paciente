@@ -163,6 +163,8 @@ const UNAVAILABLE_CODES = new Set([
 
 /** Indica falha de disponibilidade do banco (não de regra de negócio). */
 export function isDatabaseUnavailable(error: unknown): boolean {
+  // O mysql2 lança "Pool is closed." sem `code` quando o pool já foi encerrado (desligamento).
+  if (error instanceof Error && error.message === 'Pool is closed.') return true;
   if (!isMysqlError(error)) return false;
   return UNAVAILABLE_CODES.has(error.code) || error.fatal === true;
 }

@@ -1,0 +1,45 @@
+﻿
+ RUN  v5.0.3 C:/Users/felipe lorini/Documents/GitHub/fhdod-experiencia-paciente
+
+ ✓ |unidade-e-integracao| tests/unit/env.test.ts (15 tests) 33ms
+ ✓ |unidade-e-integracao| tests/unit/tokens.test.ts (6 tests) 43ms
+ ✓ |unidade-e-integracao| tests/unit/regras-escala-pesquisa.test.ts (10 tests) 62ms
+ ✓ |unidade-e-integracao| tests/unit/auth-regras.test.ts (40 tests) 259ms
+ ✓ |unidade-e-integracao| tests/unit/error-handler.test.ts (3 tests) 69ms
+ ✓ |unidade-e-integracao| tests/unit/health.test.ts (1 test) 118ms
+ ✓ |unidade-e-integracao| tests/unit/auth-middlewares.test.ts (11 tests) 118ms
+ ✓ |unidade-e-integracao| tests/unit/tv-wall.test.ts (23 tests) 216ms
+ ✓ |unidade-e-integracao| tests/integration/app.test.ts (13 tests) 429ms
+ ✓ |banco| tests/db/t20-t21-exportacao.test.ts (13 tests) 13328ms
+   ✓ T21 — bloqueio de exportação não autorizada (7)
+     ✓ mais de 50.000 linhas (1)
+       ✓ → 422 EXPORT_TOO_LARGE e nenhuma auditoria de exportação 730ms
+ ✓ |banco| tests/db/t13-senha.test.ts (23 tests) 1353ms
+ ✓ |banco| tests/db/t38-limitacao-requisicoes.test.ts (3 tests) 1675ms
+   ✓ T38 — limite por perfil das rotas autenticadas (300/min) (1)
+     ✓ a 301ª requisição do mesmo perfil → 429; outro perfil continua atendido 1337ms
+ ✓ |banco| tests/db/t18-t19-ouvidoria.test.ts (16 tests) 970ms
+ ✓ |banco| tests/db/t16-bloqueio-conta.test.ts (9 tests) 713ms
+ ✓ |banco| tests/db/t14-permissoes.test.ts (353 tests) 1141ms
+ ✓ |banco| tests/db/t29-t31-tv-wall.test.ts (14 tests) 816ms
+ ✓ |banco| tests/db/modelo-de-dados.test.ts (46 tests) 679ms
+ ✓ |banco| tests/db/t07-t10-manifestacao-publica.test.ts (21 tests) 694ms
+ ✓ |banco| tests/db/t24-setores-equipes-turnos.test.ts (8 tests) 569ms
+ ✓ |banco| tests/db/t22-t23-importacao-escala.test.ts (6 tests) 714ms
+ ✓ |banco| tests/db/t17-auditoria.test.ts (28 tests) 522ms
+ ✓ |banco| tests/db/t36-t37-dashboard.test.ts (16 tests) 534ms
+ ✓ |banco| tests/db/t15-escopo-setor.test.ts (23 tests) 538ms
+ ✓ |banco| tests/db/publica-e01-e02.test.ts (12 tests) 580ms
+ ✓ |banco| tests/db/t26-pesquisas.test.ts (6 tests) 522ms
+ ✓ |banco| tests/db/usuarios.test.ts (16 tests) 432ms
+ ✓ |banco| tests/db/t12-autenticacao.test.ts (21 tests) 421ms
+ ✓ |banco| tests/db/t25-atribuicao.test.ts (1 test) 277ms
+ ✓ |banco| tests/db/t32-integridade-referencial.test.ts (6 tests) 178ms
+ ✓ |banco| tests/db/health-mysql.test.ts (8 tests) 157ms
+
+ Test Files  30 passed (30)
+      Tests  771 passed (771)
+   Start at  21:03:50
+   Duration  81.25s (import 63%, tests 33%, transform 4%)
+
+JUNIT report written to C:/Users/felipe lorini/Documents/GitHub/fhdod-experiencia-paciente/docs/evidencias/ET10-ET11/backend-testes-junit.xml

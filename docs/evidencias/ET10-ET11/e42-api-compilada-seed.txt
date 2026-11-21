@@ -1,0 +1,193 @@
+﻿{
+  "data": {
+    "period": {
+      "key": "7d",
+      "from": "2026-11-05",
+      "to": "2026-11-11"
+    },
+    "generatedAt": "2026-11-12T01:04:59.033Z",
+    "suppressionThreshold": 5,
+    "overall": {
+      "n": 118,
+      "nps": 37.3,
+      "promotersPercent": 57.6,
+      "detractorsPercent": 20.3,
+      "suppressed": false
+    },
+    "trend": {
+      "granularity": "day",
+      "points": [
+        {
+          "start": "2026-11-05",
+          "end": "2026-11-05",
+          "n": 21,
+          "nps": 23.8,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-06",
+          "end": "2026-11-06",
+          "n": 25,
+          "nps": 60,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-07",
+          "end": "2026-11-07",
+          "n": 23,
+          "nps": 39.1,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-08",
+          "end": "2026-11-08",
+          "n": 18,
+          "nps": 44.4,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-09",
+          "end": "2026-11-09",
+          "n": 19,
+          "nps": 10.5,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-10",
+          "end": "2026-11-10",
+          "n": 12,
+          "nps": 41.7,
+          "suppressed": false
+        },
+        {
+          "start": "2026-11-11",
+          "end": "2026-11-11",
+          "n": 0,
+          "nps": null,
+          "suppressed": false
+        }
+      ]
+    },
+    "sectors": [
+      {
+        "name": "Internação Clínica",
+        "n": 20,
+        "nps": 70,
+        "promotersPercent": 70,
+        "detractorsPercent": 0
+      },
+      {
+        "name": "Maternidade",
+        "n": 18,
+        "nps": 61.1,
+        "promotersPercent": 66.7,
+        "detractorsPercent": 5.6
+      },
+      {
+        "name": "Unidade de Terapia Intensiva",
+        "n": 15,
+        "nps": 53.3,
+        "promotersPercent": 73.3,
+        "detractorsPercent": 20
+      },
+      {
+        "name": "Ambulatório de Especialidades",
+        "n": 27,
+        "nps": 44.4,
+        "promotersPercent": 59.3,
+        "detractorsPercent": 14.8
+      },
+      {
+        "name": "Diagnóstico por Imagem",
+        "n": 10,
+        "nps": 10,
+        "promotersPercent": 40,
+        "detractorsPercent": 30
+      },
+      {
+        "name": "Pronto Atendimento",
+        "n": 28,
+        "nps": -7.1,
+        "promotersPercent": 39.3,
+        "detractorsPercent": 46.4
+      }
+    ]
+  }
+}
+[
+  {
+    "period": "7d",
+    "status": 200,
+    "ms": 47,
+    "cacheControl": "public, max-age=60",
+    "acao": "http://localhost:5173",
+    "setCookie": null,
+    "overall": {
+      "n": 118,
+      "nps": 37.3,
+      "promotersPercent": 57.6,
+      "detractorsPercent": 20.3,
+      "suppressed": false
+    },
+    "sectors": [
+      "Internação Clínica n=20 nps=70",
+      "Maternidade n=18 nps=61.1",
+      "Unidade de Terapia Intensiva n=15 nps=53.3",
+      "Ambulatório de Especialidades n=27 nps=44.4",
+      "Diagnóstico por Imagem n=10 nps=10",
+      "Pronto Atendimento n=28 nps=-7.1"
+    ],
+    "trend": "day x7"
+  },
+  {
+    "period": "30d",
+    "status": 200,
+    "ms": 66,
+    "cacheControl": "public, max-age=60",
+    "acao": "http://localhost:5173",
+    "setCookie": null,
+    "overall": {
+      "n": 560,
+      "nps": 45,
+      "promotersPercent": 59.8,
+      "detractorsPercent": 14.8,
+      "suppressed": false
+    },
+    "sectors": [
+      "Maternidade n=82 nps=69.5",
+      "Internação Clínica n=106 nps=63.2",
+      "Unidade de Terapia Intensiva n=59 nps=55.9",
+      "Ambulatório de Especialidades n=128 nps=48.4",
+      "Diagnóstico por Imagem n=64 nps=46.9",
+      "Pronto Atendimento n=121 nps=2.5"
+    ],
+    "trend": "day x30"
+  },
+  {
+    "period": "90d",
+    "status": 200,
+    "ms": 169,
+    "cacheControl": "public, max-age=60",
+    "acao": "http://localhost:5173",
+    "setCookie": null,
+    "overall": {
+      "n": 1763,
+      "nps": 43.3,
+      "promotersPercent": 59.8,
+      "detractorsPercent": 16.4,
+      "suppressed": false
+    },
+    "sectors": [
+      "Unidade de Terapia Intensiva n=175 nps=70.3",
+      "Maternidade n=264 nps=67.8",
+      "Internação Clínica n=371 nps=45.8",
+      "Ambulatório de Especialidades n=364 nps=44.5",
+      "Diagnóstico por Imagem n=176 nps=44.3",
+      "Pronto Atendimento n=413 nps=12.6"
+    ],
+    "trend": "week x13"
+  }
+]
+20 chamadas 30d (ms): 57, 59, 61, 59, 97, 61, 61, 60, 61, 59, 58, 58, 60, 60, 59, 59, 59, 57, 60, 60 | máx 97
+period=1y -> 400 no-store {"error":{"code":"VALIDATION_ERROR","message":"Os dados enviados são inválidos.","details":[{"field":"period","message":"Use period=7d, 30d ou 90d."}],"requestId":"b6520d88-6b16-4e25-8ca9-6ecea6743d61"}}
+após >30 req -> 429 Retry-After 59

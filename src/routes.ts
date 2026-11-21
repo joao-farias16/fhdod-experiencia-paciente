@@ -18,6 +18,7 @@ import { sectorsRouter } from './modules/sectors/sectors.routes.js';
 import { shiftsRouter } from './modules/shifts/shifts.routes.js';
 import { surveysRouter } from './modules/surveys/surveys.routes.js';
 import { teamsRouter } from './modules/teams/teams.routes.js';
+import { tvWallRouter } from './modules/tv-wall/tv-wall.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import type { Clock } from './utils/dates.js';
 
@@ -28,6 +29,8 @@ export interface V1Deps {
   ipSecret: string | undefined;
   publicAppUrl: string;
   manifestationTokenSecret: string;
+  /** Hospital exibido na TV Wall (E42); sem valor, o único hospital cadastrado. */
+  tvWallHospitalShortName: string | undefined;
 }
 
 /**
@@ -42,6 +45,7 @@ export function v1Router({
   ipSecret,
   publicAppUrl,
   manifestationTokenSecret,
+  tvWallHospitalShortName,
 }: V1Deps): Router {
   const router = Router();
   const authChain: RequestHandler[] = [
@@ -53,6 +57,8 @@ export function v1Router({
   // Pesquisa pública (E01, E02) e manifestação (E03): sem autenticação e sem cookies.
   router.use(publicSurveyRouter({ db, clock, manifestationTokenSecret }));
   router.use(publicManifestationRouter({ db, clock, manifestationTokenSecret }));
+  // TV Wall (E42, ET10): pública, somente agregados com supressão (RN09, RN21).
+  router.use(tvWallRouter({ db, clock, hospitalShortName: tvWallHospitalShortName }));
   // Autenticação própria (E44–E46) e perfil (E04, E05).
   router.use(authRouter({ db, config: authConfig, clock, authChain, ipSecret }));
 

@@ -1,0 +1,182 @@
+<testsuites id="" name="" tests="34" failures="0" skipped="6" errors="0" time="309.480006">
+<testsuite name="acessibilidade.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="firefox-1440" tests="5" failures="0" skipped="0" time="53.581" errors="0">
+<testcase name="T39 — telas públicas: início, 404, login (TL01), pesquisa (TL09–TL11) e TV (TL15)" classname="acessibilidade.spec.ts" time="16.525">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Superadministrador: TL16, TL17, TL05, TL06, TL07, TL08 e TL02" classname="acessibilidade.spec.ts" time="19.096">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Gestão: TL03, TL04 e TL14" classname="acessibilidade.spec.ts" time="9.469">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Ouvidoria: TL12 e TL13" classname="acessibilidade.spec.ts" time="6.171">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — teclado: pular para o conteúdo, foco de 2 px, login sem mouse e Esc no diálogo" classname="acessibilidade.spec.ts" time="2.32">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+</testsuite>
+<testsuite name="pesquisa-publica.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="firefox-1440" tests="4" failures="0" skipped="0" time="8.827" errors="0">
+<testcase name="T01 — abre por link sem login nem cookies; 404 e 410 com mensagem" classname="pesquisa-publica.spec.ts" time="2.52">
+</testcase>
+<testcase name="T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas" classname="pesquisa-publica.spec.ts" time="2.334">
+</testcase>
+<testcase name="T28 — concluir apaga os dados; Voltar não mostra respostas" classname="pesquisa-publica.spec.ts" time="1.543">
+</testcase>
+<testcase name="T28 — 3 min + 60 s sem uso apagam as respostas" classname="pesquisa-publica.spec.ts" time="2.43">
+</testcase>
+</testsuite>
+<testsuite name="t12-autenticacao.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="firefox-1440" tests="4" failures="0" skipped="0" time="11.965" errors="0">
+<testcase name="credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login" classname="t12-autenticacao.spec.ts" time="4.926">
+</testcase>
+<testcase name="sem sessão, a rota administrativa redireciona a /login" classname="t12-autenticacao.spec.ts" time="1.092">
+</testcase>
+<testcase name="SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados" classname="t12-autenticacao.spec.ts" time="3.692">
+</testcase>
+<testcase name="VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API" classname="t12-autenticacao.spec.ts" time="2.255">
+</testcase>
+</testsuite>
+<testsuite name="tv-wall.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="firefox-1440" tests="4" failures="0" skipped="3" time="2.174" errors="0">
+<testcase name="T30 — sem respostas; total e setor com 4 suprimidos; com 5, presentes (relógio + 60 s)" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="T29 — /tv pública: só agregados do E42, sem links nem dados pessoais" classname="tv-wall.spec.ts" time="1.053">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T31 — nova resposta em 60 s; API fora: aviso com os últimos dados; volta; recarga de 6 h" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="T31 — legibilidade em 1920 × 1080: tamanhos, contraste 7:1 e sem rolagem" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="acessibilidade.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="webkit-390" tests="5" failures="0" skipped="0" time="118.141" errors="0">
+<testcase name="T39 — telas públicas: início, 404, login (TL01), pesquisa (TL09–TL11) e TV (TL15)" classname="acessibilidade.spec.ts" time="13.671">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Superadministrador: TL16, TL17, TL05, TL06, TL07, TL08 e TL02" classname="acessibilidade.spec.ts" time="40.149">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Gestão: TL03, TL04 e TL14" classname="acessibilidade.spec.ts" time="25.217">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — Ouvidoria: TL12 e TL13" classname="acessibilidade.spec.ts" time="19.898">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T39 — teclado: pular para o conteúdo, foco de 2 px, login sem mouse e Esc no diálogo" classname="acessibilidade.spec.ts" time="19.206">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+</testsuite>
+<testsuite name="pesquisa-publica.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="webkit-390" tests="4" failures="0" skipped="0" time="85.919" errors="0">
+<testcase name="T01 — abre por link sem login nem cookies; 404 e 410 com mensagem" classname="pesquisa-publica.spec.ts" time="6.094">
+</testcase>
+<testcase name="T03 e T27 — sem nota não avança; 360/390/820/1440 px sem rolagem; Voltar e recarga mantêm as respostas" classname="pesquisa-publica.spec.ts" time="48.148">
+</testcase>
+<testcase name="T28 — concluir apaga os dados; Voltar não mostra respostas" classname="pesquisa-publica.spec.ts" time="29.022">
+</testcase>
+<testcase name="T28 — 3 min + 60 s sem uso apagam as respostas" classname="pesquisa-publica.spec.ts" time="2.655">
+</testcase>
+</testsuite>
+<testsuite name="t12-autenticacao.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="webkit-390" tests="4" failures="0" skipped="0" time="10.381" errors="0">
+<testcase name="credenciais inválidas e e-mail inexistente: mesma mensagem genérica, permanece em /login" classname="t12-autenticacao.spec.ts" time="3.244">
+</testcase>
+<testcase name="sem sessão, a rota administrativa redireciona a /login" classname="t12-autenticacao.spec.ts" time="1.067">
+</testcase>
+<testcase name="SA entra; Sair revoga a sessão, limpa o armazenamento e Voltar não mostra dados" classname="t12-autenticacao.spec.ts" time="4.015">
+</testcase>
+<testcase name="VI vai para o painel; menu sem Usuários/Auditoria; acesso direto negado na tela e na API" classname="t12-autenticacao.spec.ts" time="2.055">
+</testcase>
+</testsuite>
+<testsuite name="tv-wall.spec.ts" timestamp="2026-11-12T23:52:57.922Z" hostname="webkit-390" tests="4" failures="0" skipped="3" time="1.69" errors="0">
+<testcase name="T30 — sem respostas; total e setor com 4 suprimidos; com 5, presentes (relógio + 60 s)" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="T29 — /tv pública: só agregados do E42, sem links nem dados pessoais" classname="tv-wall.spec.ts" time="1.083">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="T31 — nova resposta em 60 s; API fora: aviso com os últimos dados; volta; recarga de 6 h" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="T31 — legibilidade em 1920 × 1080: tamanhos, contraste 7:1 e sem rolagem" classname="tv-wall.spec.ts">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="skip" value="Grava respostas: roda uma vez, na TV.">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

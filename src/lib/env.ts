@@ -75,6 +75,13 @@ export const envSchema = z.object({
   MANIFESTATION_TOKEN_SECRET: secret('Use ao menos 32 caracteres.')
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  // TV Wall (E42, ET10): short_name do hospital exibido; vazia = o único hospital cadastrado.
+  TV_WALL_HOSPITAL_SHORT_NAME: z
+    .string()
+    .trim()
+    .max(30, 'Use no máximo 30 caracteres (hospitals.short_name).')
+    .optional()
+    .transform((value) => (value === '' ? undefined : value)),
 });
 
 export type Env = z.infer<typeof envSchema>;

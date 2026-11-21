@@ -1,0 +1,116 @@
+{
+  "browser": "chromium",
+  "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"],
+  "results": [
+    {
+      "screen": "Início",
+      "url": "/",
+      "violations": []
+    },
+    {
+      "screen": "404",
+      "url": "/pagina-que-nao-existe",
+      "violations": []
+    },
+    {
+      "screen": "TL01 Login",
+      "url": "/login",
+      "violations": []
+    },
+    {
+      "screen": "TL09 Pesquisa — nota",
+      "url": "/p/e2e-pa-6371f7",
+      "violations": []
+    },
+    {
+      "screen": "TL09 Pesquisa — etapa",
+      "url": "/p/e2e-pa-6371f7",
+      "violations": []
+    },
+    {
+      "screen": "TL11 Confirmação com oferta",
+      "url": "/p/e2e-pa-6371f7",
+      "violations": []
+    },
+    {
+      "screen": "TL10 Manifestação",
+      "url": "/p/e2e-pa-6371f7",
+      "violations": []
+    },
+    {
+      "screen": "TL11 Confirmação com protocolo",
+      "url": "/p/e2e-pa-6371f7",
+      "violations": []
+    },
+    {
+      "screen": "TL15 TV Wall",
+      "url": "/tv",
+      "violations": []
+    },
+    {
+      "screen": "TL16 Usuários",
+      "url": "/admin/usuarios",
+      "violations": []
+    },
+    {
+      "screen": "TL17 Auditoria",
+      "url": "/admin/auditoria",
+      "violations": []
+    },
+    {
+      "screen": "TL05 Setores e equipes",
+      "url": "/admin/setores",
+      "violations": []
+    },
+    {
+      "screen": "TL06 Escala e turnos",
+      "url": "/admin/turnos",
+      "violations": []
+    },
+    {
+      "screen": "TL07 Importação de escalas",
+      "url": "/admin/escalas/importar",
+      "violations": []
+    },
+    {
+      "screen": "TL08 Pesquisas — lista",
+      "url": "/admin/pesquisas",
+      "violations": []
+    },
+    {
+      "screen": "TL08 Pesquisas — edição",
+      "url": "/admin/pesquisas/77847854-446c-46ea-b5c2-0dc78c17adda",
+      "violations": []
+    },
+    {
+      "screen": "TL02 Troca de senha",
+      "url": "/trocar-senha",
+      "violations": []
+    },
+    {
+      "screen": "TL03 Painel",
+      "url": "/painel",
+      "violations": []
+    },
+    {
+      "screen": "TL04 Painel por setor",
+      "url": "/painel/setores/4f8c4b24-c9ca-40b2-a4c9-0fe875ac3043",
+      "violations": []
+    },
+    {
+      "screen": "TL14 Relatórios",
+      "url": "/relatorios",
+      "violations": []
+    },
+    {
+      "screen": "TL12 Manifestações",
+      "url": "/ouvidoria/manifestacoes",
+      "violations": []
+    },
+    {
+      "screen": "TL13 Detalhe da manifestação",
+      "url": "/ouvidoria/manifestacoes/fd941a78-2049-430c-b506-37e9b225d606",
+      "violations": []
+    }
+  ]
+}
