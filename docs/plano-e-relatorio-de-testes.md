@@ -534,7 +534,7 @@ Os testes de componentes passaram a ocupar 18 arquivos (eram 16): o teste de est
 ### Pendente
 
 - **Manual/físico:** leitura da TV a 3 m (T31), QR Code com câmera (T02), abertura do `.xlsx` no Excel/LibreOffice (T20), leitor de tela (T39).
-- **T35:** OpenAPI 3.1 + Swagger (`/api/docs`) e teste de contrato — bloqueado até a implementação.
+- **T35:** OpenAPI 3.1 + Swagger (`/api/docs`) e teste de contrato — bloqueado até a implementação. _(Atualização: a OpenAPI foi implementada depois, em `/api-docs`; veja a seção de 21/11/2026.)_
 - **Publicação (ET12):** T33 no Render, T40 e T42 com HTTPS, T34 com gitleaks e bundle publicado.
 - TL15 no Figma (frame 1920 × 1080); repetir com MySQL 8.4 (CI); commit, Pull Request e revisão.
 
@@ -581,3 +581,22 @@ Resultados lidos no GitHub (`gh run list` e verificações do commit); nenhum te
 | `refactor: migra backend para MySQL e autenticação própria` | `develop`, pull request  | aprovada                                                                                       |
 | Merge do PR #35                                             | `main`, push             | aprovada                                                                                       |
 | `chore: adiciona certificado CA do MySQL` (`a5ff57b`)       | `main` e `develop`, push | aprovada — jobs Segredos (gitleaks), API (MySQL 8.4, testes, build, saúde e login) e npm audit |
+
+## Swagger/OpenAPI e revisão da documentação — Execução de 21/11/2026 (branch `develop`)
+
+- **Escopo:** execução da suíte da API após a implementação da OpenAPI (`8e286e8`, `e412b0b`) e revisão da documentação contra o código. Ambiente: Windows 11, Node 22.22.3, MySQL local (banco `fhdod_test`, recriado pelo `global-setup`). Executor: Claude Code, a pedido do responsável. Sem commit.
+- **Não executados nesta revisão:** lint, typecheck, `format:check`, build, `db:schema:check`, CI no GitHub, frontend, E2E e gitleaks.
+
+| Verificação                                      | Resultado                                                                                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `vitest run --project unidade-e-integracao`      | **11 arquivos, 148 testes aprovados**                                                                           |
+| `vitest run --project banco` (MySQL real)        | **22 arquivos, 659 testes aprovados**                                                                           |
+| Total da API                                     | **33 arquivos, 807 testes aprovados, 0 reprovados** (antes: 31 arquivos e 781 em 20/11)                         |
+| T35 (OpenAPI × rotas)                            | cobertura automatizada: `tests/integration/api-docs.test.ts` e `tests/unit/openapi.test.ts` (aprovados acima)   |
+| Operações no documento OpenAPI (lidas do código) | 46, uma por endpoint E01–E46, agrupadas em 15 tags; servidor `/api/v1`; esquema de segurança `bearerAuth` (JWT) |
+
+Observações:
+
+- O T35 deixou de estar bloqueado: o documento existe e é conferido contra as rotas do Express (método, caminho e exigência de autenticação) e contra os tipos das respostas. O caminho real da documentação é **`/api-docs`** (e `/api-docs/openapi.json`), não `/api/docs`, como as seções anteriores registravam. A matriz da Seção 12 acima, por ser histórica, não foi reescrita.
+- Os 22 arquivos do projeto `banco` e os 11 de `unidade-e-integracao` somam os 33 arquivos de teste do repositório.
+- A CI dos commits posteriores a `a5ff57b` não foi consultada.
