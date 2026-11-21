@@ -17,7 +17,7 @@
 
 - [ ] `npm run check` passa localmente na raiz (API)
 - [ ] Testes adicionados ou atualizados para o comportamento alterado
-- [ ] Documentação atualizada (README, `docs/`, OpenAPI quando houver)
+- [ ] Documentação atualizada (README, `docs/`, OpenAPI em `src/openapi/` quando o contrato mudar)
 - [ ] Migration revisada (quando houver)
 - [ ] Nenhum segredo, `.env` ou dado real incluído
 - [ ] Nada de etapas futuras foi antecipado

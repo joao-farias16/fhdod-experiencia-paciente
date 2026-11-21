@@ -37,6 +37,7 @@ Os dois lados seguem a mesma ideia: **organização por domínio** (um módulo/f
 │   ├── app.ts           createApp(deps): middlewares globais, /api/v1, 404 e tratamento de erros
 │   ├── routes.ts        agregador de /api/v1: cadeias pública, autenticada e /admin
 │   ├── lib/             infraestrutura: env (Zod), logger (pino), database (pool mysql2), sql (template parametrizado), domain-types
+│   ├── openapi/         documentação OpenAPI 3.1: document.ts (operações), schemas.ts (respostas) e api-docs.routes.ts (/api-docs)
 │   ├── middlewares/     transversais da aplicação: request-logger, rate-limit, error-handler (+404)
 │   ├── modules/         um módulo por domínio (tabela acima)
 │   └── utils/           funções puras sem estado: errors, validation, dates, idempotency
@@ -65,6 +66,7 @@ Pontos específicos:
 - **`shifts`** inclui a importação de escala (E20, E21), que gera turnos com as mesmas regras do cadastro manual.
 - **`dashboard.filters.ts`** é a parte comum ao dashboard e aos relatórios: resolução dos filtros contra o escopo e as condições SQL parametrizadas (template `sql`).
 - Um módulo pode importar a regra de outro domínio quando ela pertence àquele domínio (por exemplo, `reports` usa os indicadores de `dashboard`, `public-survey` usa `nps.ts`); o que é genérico fica em `utils/`.
+- **`openapi/`** (fora de `modules/`, pois não é um domínio) monta o documento OpenAPI 3.1 e o serve em `GET /api-docs` (Swagger UI, via `swagger-ui-express`, arquivos servidos pela própria API) e `GET /api-docs/openapi.json`. As entradas (corpo, query e parâmetros) vêm dos **mesmos esquemas Zod** das rotas (`z.toJSONSchema`); as respostas, de `openapi/schemas.ts`; as permissões, do catálogo `ENDPOINTS` e da matriz `ROLE_PERMISSIONS`. É montado em `app.ts`, **fora de `/api/v1`**, depois das rotas e antes do 404, com CSP própria (sem `upgrade-insecure-requests`) só nessas páginas, e aceita somente GET/HEAD. `tests/integration/api-docs.test.ts` e `tests/unit/openapi.test.ts` conferem o documento contra as rotas e os tipos.
 - **`tv-wall`** (ET10) atende o E42 público: `tv-wall.repository.ts` lê só `responses`, `sectors` e `survey_versions`; `tv-wall.service.ts` reaproveita `computeNps`, `percentOf`, os filtros e a tendência (`getTrends`) do `dashboard`, sempre com supressão (RN21); `tv-wall.schemas.ts` tem a query (`period`) e a **lista explícita de campos da resposta**, validada antes do envio (RF72). Contrato e decisões: [`tv-wall.md`](tv-wall.md).
 
 ### Código compartilhado
@@ -89,6 +91,7 @@ requisição
       rotas autenticadas: authenticate → limite 300/min por perfil
         → requirePasswordChanged (exceto E04, E05 e E46) → requirePermission(Exx)
         → controlador → serviço (escopo de req.auth) → repositório (SQL parametrizado; transação + auditoria)
+  → /api-docs e /api-docs/openapi.json (documentação OpenAPI; somente GET/HEAD)
   → notFoundHandler (404 ROUTE_NOT_FOUND)
   → auditAuthorizationDenials (um AUTHORIZATION_DENIED por 403 FORBIDDEN/SECTOR_OUT_OF_SCOPE)
   → errorHandler (envelope de erro, sem stack trace)

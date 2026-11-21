@@ -17,7 +17,7 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 
 - Quadro Kanban oficial: [GitHub Projects — FHDOD](https://github.com/users/joao-farias16/projects/1)
 - Figma (telas das etapas implementadas, na página Page 1): [sistema-hospital](https://www.figma.com/design/kcRMvRhHs8IYRfsZkv1BLZ/sistema-hospital)
-- Links da aplicação publicada e da documentação da API (Swagger) serão adicionados quando existirem (ET12 e ET13).
+- Documentação interativa da API (Swagger UI): `/api-docs` na própria API (veja [Documentação da API (Swagger)](#documentação-da-api-swagger)). Os links da aplicação publicada e da API publicada serão adicionados quando existirem (ET12 e ET13).
 
 ## Estado atual
 
@@ -28,34 +28,35 @@ O desenvolvimento é dividido em 14 etapas (ET01–ET14), cada uma executada int
 **ET07, ET08 e ET09 — Manifestações e Ouvidoria, dashboard e relatórios Excel**: integradas em `develop`.
 **Etapa 1 do novo cronograma — Revisão e reorganização do projeto**: integrada em `develop` (issue #32), sem mudança de funcionalidades.
 **Etapa 2 do novo cronograma — Separação definitiva do backend e do frontend**: integrada em `develop` (PR #34). A API fica na raiz do repositório; o frontend é mantido em repositório próprio (veja [Organização do repositório](#organização-do-repositório)).
-**ET10 — TV Wall**: E42 (esta API) e TL15 `/tv` (repositório do frontend) implementados e testados em 12/11/2026 — T29–T31 aprovados na API, nos componentes e ponta a ponta; ainda **sem commit** (alterações locais em `develop` nos dois repositórios, prontas para revisão). Pendentes: leitura física a 3 m e tela no Figma. Detalhes: [`docs/tv-wall.md`](docs/tv-wall.md).
-**ET11 — Testes e correções**: execuções de 12/11/2026 em [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md#et10-e-et11--2ª-rodada-de-12112026-tl15-e2e-e-integração-frontend--api) — API 781 (auditoria de 20/11/2026; 771 em 12/11), frontend 135 e E2E 70 testes aprovados, nenhum reprovado; a etapa **não está concluída**: T35 bloqueado (sem OpenAPI) e partes manuais ou dependentes da publicação não executadas.
+**ET10 — TV Wall**: E42 (esta API) integrado em `develop` e `main` (commits `01e5289` e `3377649`, PR #36). TL15 `/tv` fica no repositório do frontend; os testes de 12/11/2026 (T29–T31 na API, nos componentes e ponta a ponta) constam em [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md). Pendentes: leitura física a 3 m, tela no Figma e revisão do João. Detalhes: [`docs/tv-wall.md`](docs/tv-wall.md).
+**ET11 — Testes e correções**: execuções de 12/11/2026 em [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md#et10-e-et11--2ª-rodada-de-12112026-tl15-e2e-e-integração-frontend--api) — frontend 135 e E2E 70 testes aprovados (12/11), nenhum reprovado. Na API, **807 testes em 33 arquivos** aprovados em 21/11/2026 (781 na auditoria de 20/11; 771 em 12/11). A OpenAPI/Swagger foi implementada depois (`8e286e8`, `e412b0b`) e é conferida contra as rotas por testes automatizados (T35). A etapa **não está concluída**: partes manuais e dependentes da publicação não foram executadas.
 **Etapa 3 do novo cronograma — Migração completa do banco para MySQL**: integrada em `develop` e `main` (PR #35, 05/11/2026; CI aprovada em ambas as branches). Prisma, Supabase (PostgreSQL e Auth) e PostgreSQL foram **substituídos por MySQL 8.4 LTS** com SQL parametrizado (driver `mysql2`, sem ORM) e **autenticação própria** (bcrypt + JWT + sessões no banco). Rotas, contratos JSON, códigos HTTP e permissões foram preservados; foram acrescentados os endpoints de login, renovação e logout (E44–E46), antes feitos pelo frontend direto no Supabase Auth. Detalhes: [`database/README.md`](database/README.md), [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md) e [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md).
 
-Todas as etapas acima chegaram a `main` por Pull Request (#29 a #35). Situação conferida no GitHub em 05/11/2026: a CI do último commit (`a5ff57b`) passou em `main` e em `develop`; os PRs não têm revisão de aprovação registrada; `main` e `develop` **não têm proteção de branch** configurada (veja [`docs/padroes-git.md`](docs/padroes-git.md)).
+Todas as etapas acima chegaram a `main` por Pull Request (#29 a #36; o #36 trouxe TV Wall e Swagger). Em 21/11/2026, o `main` remoto está no merge do PR #36 e `develop` coincide com `origin/develop`. Situação conferida no GitHub em 05/11/2026 (não reverificada): a CI do commit `a5ff57b` passou em `main` e em `develop`; os PRs não têm revisão de aprovação registrada; `main` e `develop` **não têm proteção de branch** configurada (veja [`docs/padroes-git.md`](docs/padroes-git.md)). A CI dos commits posteriores (`01e5289` a `e412b0b`) **não foi consultada** nesta revisão.
 
-| Implementado (ET01 a ET09)                                                                      | Reservado para etapas futuras                            |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                          | TL15 no Figma; leitura da TV a 3 m (verificação física)  |
-| **ET10:** TV Wall pública E42 com supressão < 5, até 8 setores, tendência e cache de 60 s       |                                                          |
-| **ET10:** TL15 `/tv` no frontend (atualização a cada 60 s, últimos dados em falha, 1920 × 1080) |                                                          |
-| **ET03:** autenticação, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                    | Conferência das telas com o Figma (revisão)              |
-| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)         |                                                          |
-| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)      | Backup e retenção (scripts), OpenAPI/Swagger (ET11–ET12) |
-| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                      | E2E com axe em todas as telas (ET11)                     |
-| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08)  | Publicação na nuvem (ET12)                               |
-| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)        |                                                          |
-| **ET07:** manifestação após a avaliação, anonimato, contato e protocolo (E03; TL10)             |                                                          |
-| **ET07:** Ouvidoria: lista, detalhe, status, notas e contato auditado (E35–E40; TL12, TL13)     |                                                          |
-| **ET08:** painel geral e por setor com filtros, supressão e comparação (E28–E33; TL03, TL04)    |                                                          |
-| **ET09:** relatórios Excel de respostas, indicadores e manifestações (E34; TL14)                |                                                          |
-| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros                |                                                          |
-| **Etapa 3:** MySQL 8.4, 21 tabelas, 5 migrations SQL, CHECK, gatilhos, seed, T32 e auth própria |                                                          |
-| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                         |                                                          |
-| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)             |                                                          |
-| Testes E2E com Playwright (no repositório do frontend; dados preparados por `e2e:fixture`)      |                                                          |
-| **ET11:** E2E em Chrome, Firefox e WebKit, axe em todas as telas (T39) e desempenho (T40)       |                                                          |
-| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas     |                                                          |
+| Implementado (ET01 a ET11, parcial)                                                             | Reservado para etapas futuras                           |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| API na raiz; frontend em repositório próprio (comunicação só por HTTP)                          | TL15 no Figma; leitura da TV a 3 m (verificação física) |
+| **ET10:** TV Wall pública E42 com supressão < 5, até 8 setores, tendência e cache de 60 s       |                                                         |
+| **ET10:** TL15 `/tv` no frontend (atualização a cada 60 s, últimos dados em falha, 1920 × 1080) |                                                         |
+| **ET03:** autenticação, E04–E10 e E41, matriz da Seção 6, escopo e auditoria                    | Conferência das telas com o Figma (revisão)             |
+| **ET03:** telas de login, troca de senha, usuários e auditoria (TL01, TL02, TL16, TL17)         |                                                         |
+| **ET04:** setores, equipes, etapas, turnos e importação de escala CSV (E10–E21; TL05–TL07)      | Backup e retenção (scripts)                             |
+| **ET04:** atribuição de avaliações a turno e equipe (RF24)                                      | E2E com axe em todas as telas (ET11)                    |
+| **ET05:** pesquisas, perguntas, versões imutáveis, link, QR Code e cartaz (E16, E22–E27; TL08)  | Publicação na nuvem (ET12)                              |
+| **ET06:** pesquisa pública por link/QR Code com envio idempotente (E01, E02; TL09, TL11)        |                                                         |
+| **ET07:** manifestação após a avaliação, anonimato, contato e protocolo (E03; TL10)             |                                                         |
+| **ET07:** Ouvidoria: lista, detalhe, status, notas e contato auditado (E35–E40; TL12, TL13)     |                                                         |
+| **ET08:** painel geral e por setor com filtros, supressão e comparação (E28–E33; TL03, TL04)    |                                                         |
+| **ET09:** relatórios Excel de respostas, indicadores e manifestações (E34; TL14)                |                                                         |
+| API Express 5 com `GET /api/v1/health` (com `SELECT 1`), segurança, logs e erros                |                                                         |
+| **Swagger:** OpenAPI 3.1 dos 46 endpoints (E01–E46) em `/api-docs`, conferida por testes        |                                                         |
+| **Etapa 3:** MySQL 8.4, 21 tabelas, 5 migrations SQL, CHECK, gatilhos, seed, T32 e auth própria |                                                         |
+| ESLint, Prettier, TypeScript strict, Vitest, commitlint                                         |                                                         |
+| CI no GitHub Actions (gitleaks, lint, typecheck, testes, build, saúde, `npm audit`)             |                                                         |
+| Testes E2E com Playwright (no repositório do frontend; dados preparados por `e2e:fixture`)      |                                                         |
+| **ET11:** E2E em Chrome, Firefox e WebKit, axe em todas as telas (T39) e desempenho (T40)       |                                                         |
+| `.gitignore`, `.env.example` fictícios e varredura de segredos; quadro Kanban com as etapas     |                                                         |
 
 Desde a Etapa 3, a API conecta-se ao **MySQL** por um pool do `mysql2` (SQL puro e parametrizado, sem ORM); a rota de saúde responde 503 se o banco não responder em 2 s. Até a Etapa 2 o projeto usava Prisma + PostgreSQL (Supabase) e Supabase Auth — esse histórico está nos documentos das etapas e em `docs/evidencias/`.
 
@@ -65,11 +66,9 @@ Desde a Etapa 3, a API conecta-se ao **MySQL** por um pool do `mysql2` (SQL puro
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backend   | Node.js 24 LTS (alvo), Express 5.3, TypeScript 5.9, Zod 4, bcryptjs 3 (hash de senhas), JWT HS256 (node:crypto), helmet, cors, express-rate-limit, pino / pino-http, multer 2 e csv-parse 7 (escala CSV), ExcelJS 4.4 (relatórios .xlsx) |
 | Banco     | **MySQL 8.4 LTS** (administrável pelo MySQL Workbench), driver `mysql2` 3 (pool, SQL parametrizado, sem ORM), migrations SQL versionadas em `database/`, `@faker-js/faker` 10 no seed de demonstração                                    |
+| Docs API  | OpenAPI 3.1 gerada no código (`src/openapi/`), Swagger UI via `swagger-ui-express` 5; esquemas de entrada reaproveitados do Zod (`z.toJSONSchema`)                                                                                       |
 | Qualidade | ESLint 10 + typescript-eslint (strictTypeChecked), Prettier 3, Vitest 5, Supertest, commitlint + husky                                                                                                                                   |
 | CI        | GitHub Actions, gitleaks 8.30.1, `npm audit`                                                                                                                                                                                             |
-| Previstas | Recharts, OpenAPI 3.1 + Swagger UI, axe                                                                                                                                                                                                  |
-
-As bibliotecas da linha "Previstas" fazem parte da especificação, mas só serão instaladas na etapa que as utilizar, para não manter dependências sem uso.
 
 ## Pré-requisitos
 
@@ -86,7 +85,7 @@ A API e o frontend se comunicam **somente por HTTP**: o frontend chama os endpoi
 
 ## Estrutura de pastas
 
-O backend é organizado **por domínio** (`auth`, `users`, `audit`, `sectors`, `shifts`, `surveys`, `public-survey`, `manifestations`, `dashboard`, `reports`), com uma camada pequena de código compartilhado. Detalhes e convenções: [`docs/arquitetura.md`](docs/arquitetura.md).
+O backend é organizado **por domínio** (`auth`, `users`, `audit`, `sectors`, `teams`, `shifts`, `surveys`, `public-survey`, `manifestations`, `dashboard`, `reports`, `tv-wall`, `health`), com uma camada pequena de código compartilhado. Detalhes e convenções: [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ```text
 fhdod-experiencia-paciente/      repositório da API (backend na raiz)
@@ -96,6 +95,7 @@ fhdod-experiencia-paciente/      repositório da API (backend na raiz)
 │   ├── routes.ts                agregador de /api/v1 (cadeias pública, autenticada e /admin)
 │   ├── lib/                     infraestrutura: env, logger, database (pool mysql2), sql (template
 │   │                            parametrizado) e domain-types (ENUMs do modelo)
+│   ├── openapi/                 documento OpenAPI 3.1 (document.ts, schemas.ts) e rotas /api-docs
 │   ├── middlewares/             request-logger, rate-limit e error-handler (inclui o 404)
 │   ├── modules/<domínio>/       *.routes.ts (rotas e controladores), *.schemas.ts (Zod),
 │   │                            *.service.ts (regras e transações), *.repository.ts (SQL)
@@ -232,7 +232,7 @@ Erros seguem o padrão `{ "error": { "code", "message", "details", "requestId" }
 
 ### Documentação da API (Swagger)
 
-Com a API em execução, a documentação interativa (OpenAPI 3.1 + Swagger UI) fica em **`GET /api-docs`** — no ambiente local, `http://localhost:3333/api-docs` — e o documento OpenAPI em JSON, em `GET /api-docs/openapi.json`. Os caminhos são relativos ao servidor `/api/v1`. Para testar rotas protegidas, obtenha o `accessToken` em `POST /auth/login` e informe-o no botão **Authorize** (token Bearer). Corpos e query strings são gerados dos mesmos esquemas Zod que a API valida; os testes `tests/unit/openapi.test.ts` e `tests/integration/api-docs.test.ts` conferem a documentação com as rotas reais e com os tipos das respostas.
+Com a API em execução, a documentação interativa (OpenAPI 3.1 + Swagger UI) fica em **`GET /api-docs`** — no ambiente local, `http://localhost:3333/api-docs` — e o documento OpenAPI em JSON, em `GET /api-docs/openapi.json`. Ela cobre os 46 endpoints (E01–E46, agrupados por tags), é pública e somente leitura (métodos diferentes de GET/HEAD em `/api-docs` caem no 404 `ROUTE_NOT_FOUND`), e os arquivos do Swagger UI são servidos pela própria API, sem CDN. Os caminhos são relativos ao servidor `/api/v1`. Para testar rotas protegidas, obtenha o `accessToken` em `POST /auth/login` e informe-o no botão **Authorize** (token Bearer). Corpos e query strings são gerados dos mesmos esquemas Zod que a API valida; os testes `tests/unit/openapi.test.ts` e `tests/integration/api-docs.test.ts` conferem a documentação com as rotas reais e com os tipos das respostas.
 
 ## Qualidade: lint, typecheck, testes e build (API)
 
@@ -421,13 +421,13 @@ Critério de conclusão (Tabela 27): **E42, TL15; T29–T31**.
 
 Critério de conclusão (Tabela 27): **última execução dos testes da Seção 12 aprovada, sem defeito grave**.
 
-- [x] Testes automatizados da API (unidade, integração e MySQL real): 31 arquivos, 781 testes, todos aprovados (20/11/2026, auditoria da ET10/ET11; 12/11: 771)
+- [x] Testes automatizados da API (unidade, integração e MySQL real): 33 arquivos, 807 testes, todos aprovados (21/11/2026: 148 em `unidade-e-integracao` e 659 em `banco`; 20/11: 31 arquivos e 781; 12/11: 771)
 - [x] Lacuna do T38 corrigida: 429 de E02, E03 e do limite de 300/min por perfil passaram a ser testados
 - [x] Fluxo da CI em banco vazio (create, migrate, seed e verificação) e API compilada exercitada
 - [x] E2E do frontend contra esta API em MySQL: 70 aprovados, 0 reprovados (Chrome 1440/360/1920, Firefox 1440, WebKit 390), inclusive T01, T07–T12, T18–T20, T27–T31, T39 (axe: 0 violações em 22 telas), T40 e T41
 - [x] Defeitos corrigidos: fixture da E2E no Windows, acessibilidade do gráfico do painel (axe sério), aviso de console do React Router, texto da página inicial, isolamento dos dados da E2E da TV
 - [x] T34 parcial: nenhum segredo no bundle do frontend; `.env` ignorado nos dois repositórios
-- [ ] T35 (OpenAPI × rotas) — **bloqueado**: a OpenAPI/Swagger ainda não existe
+- [x] T35 (OpenAPI × rotas): OpenAPI 3.1 implementada em `/api-docs`; `tests/integration/api-docs.test.ts` confere método, caminho e autenticação de cada operação contra as rotas reais, e `tests/unit/openapi.test.ts`, os esquemas de resposta contra os tipos. A marcação formal do T35 na matriz do plano de testes não foi refeita
 - [ ] Manuais e publicação (T02 câmera, T20 Excel/LibreOffice, T31 a 3 m, T39 leitor de tela, T33 no Render, T34 gitleaks, T40/T42 publicados) — **não executados**
 
 Matriz completa com a situação de cada caso: [`docs/plano-e-relatorio-de-testes.md`](docs/plano-e-relatorio-de-testes.md#et10-e-et11--2ª-rodada-de-12112026-tl15-e2e-e-integração-frontend--api).
@@ -457,7 +457,7 @@ Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; aut
 - **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais e as telas das etapas implementadas (ET01 a ET09). A TL15 (TV Wall, ET10) ainda não tem tela.
 - **TV Wall:** E42 e TL15 prontos ([`docs/tv-wall.md`](docs/tv-wall.md)); falta a leitura física a 3 m. A supressão não é complementar (o total menos os setores exibidos pode revelar o `n` de um setor ocultado) — a especificação não exige isso; registrado para decisão do hospital.
 - **`npm audit`:** avisos moderados já existentes antes da Etapa 3 (ExcelJS 4.4 → `uuid` 8, GHSA-w5hq-g745-h8pq, que só afeta `v3`/`v5`/`v6` com `buf`; e `minimatch` nas ferramentas de lint). A CI falha somente em alta ou crítica.
-- **OpenAPI/Swagger e T35** continuam previstos para etapas futuras (ET12); por isso, e pelas partes manuais e de publicação, a ET11 não pode ser dada como concluída. O T39 (axe) foi executado na ET11.
+- **ET11:** a OpenAPI/Swagger já existe (`/api-docs`), mas a ET11 continua não concluída pelas partes manuais e de publicação (ver checklist acima). O T39 (axe) foi executado na ET11. O Swagger publicado (endereço público) depende da ET12.
 
 ## Branches e colaboração
 
