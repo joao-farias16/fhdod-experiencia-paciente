@@ -410,7 +410,7 @@ Critério de conclusão (Tabela 27): **E42, TL15; T29–T31**.
 - [x] Lista explícita de campos validada antes do envio; sem texto, contato, protocolo, equipe, turno, usuário, id ou link (RF72, RN09)
 - [x] Cache público de 60 s no 200 e `no-store` nos erros; 30 requisições/min por IP (Seção 9 e 10)
 - [x] T29, T30 e T31 **na parte de API** aprovados contra MySQL real; T38 do E42 aprovado
-- [x] TL15 (`/tv`) no frontend: pública, sem menu nem links, só o E42; NPS, n, % de promotores e detratores, tendência, até 8 setores e convite; estados de carregamento, vazio, suprimido, falha e recuperação
+- [x] TL15 (`/tv`) no frontend: pública, sem menu, só o E42 e um único link ("Voltar à página principal" → `/painel`); NPS, n, % de promotores e detratores, tendência, até 8 setores e convite; estados de carregamento, vazio, suprimido, falha e recuperação
 - [x] RF69: consulta a cada 60 s, últimos dados mantidos com aviso em falha, recarga a cada 6 h (adiada com a API fora)
 - [x] RF70 medido no DOM em 1920 × 1080: 160/64/32 px, mínimo 24 px, contraste ≥ 7:1, sem rolagem
 - [x] T29, T30 e T31 nos componentes (16 testes) e ponta a ponta contra esta API (hospital exclusivo da TV no `e2e:fixture`)
@@ -453,7 +453,7 @@ Critério de conclusão: backend somente com MySQL, sem Prisma nem Supabase; aut
 - **Frontend:** o login, a renovação de sessão e o logout ficam na API (E44–E46; contratos em [`docs/autenticacao-e-permissoes.md`](docs/autenticacao-e-permissoes.md)), e o repositório do frontend já os utiliza. A E2E do frontend contra esta API em MySQL foi executada em 12/11/2026 (evidências em [`docs/evidencias/ET10-ET11/`](docs/evidencias/ET10-ET11/)). A suíte completa faz cerca de 40 logins e a API aceita 30 a cada 15 min por IP: por isso o frontend a roda em duas invocações (`test:e2e:chrome` e `test:e2e:navegadores`).
 - **Publicação:** sem configuração de deploy da API no repositório e sem endereço público documentado (ET12). Veja [Publicação e infraestrutura](#publicação-e-infraestrutura).
 - **Governança do repositório:** proteção de `main`/`develop` e revisão obrigatória por PR ainda não configuradas.
-- **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026; pausado em 05/11/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#migração-de-dados-de-um-banco-postgresql-antigo).
+- **Dados antigos:** o banco Supabase remoto estava vazio (0 tabelas em 28/10/2026; pausado em 05/11/2026) e o PostgreSQL local só tinha dados fictícios do seed, que o MySQL recria. Caso surjam dados reais em PostgreSQL, o procedimento de exportação e importação está em [`database/README.md`](database/README.md#6-migração-de-dados-de-um-banco-postgresql-antigo).
 - **Figma (28/10/2026):** o arquivo `sistema-hospital` reúne, na página Page 1, os componentes visuais e as telas das etapas implementadas (ET01 a ET09). A TL15 (TV Wall, ET10) ainda não tem tela.
 - **TV Wall:** E42 e TL15 prontos ([`docs/tv-wall.md`](docs/tv-wall.md)); falta a leitura física a 3 m. A supressão não é complementar (o total menos os setores exibidos pode revelar o `n` de um setor ocultado) — a especificação não exige isso; registrado para decisão do hospital.
 - **`npm audit`:** avisos moderados já existentes antes da Etapa 3 (ExcelJS 4.4 → `uuid` 8, GHSA-w5hq-g745-h8pq, que só afeta `v3`/`v5`/`v6` com `buf`; e `minimatch` nas ferramentas de lint). A CI falha somente em alta ou crítica.

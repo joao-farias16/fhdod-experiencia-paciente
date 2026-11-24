@@ -600,3 +600,9 @@ Observações:
 - O T35 deixou de estar bloqueado: o documento existe e é conferido contra as rotas do Express (método, caminho e exigência de autenticação) e contra os tipos das respostas. O caminho real da documentação é **`/api-docs`** (e `/api-docs/openapi.json`), não `/api/docs`, como as seções anteriores registravam. A matriz da Seção 12 acima, por ser histórica, não foi reescrita.
 - Os 22 arquivos do projeto `banco` e os 11 de `unidade-e-integracao` somam os 33 arquivos de teste do repositório.
 - A CI dos commits posteriores a `a5ff57b` não foi consultada.
+
+## Revisão documental final do backend — 24/11/2026 (branch `develop`)
+
+- **Escopo:** conferência da documentação contra o código atual. Nenhum arquivo de código, teste, migration ou configuração foi alterado e nenhum teste de banco foi reexecutado nesta revisão. Reexecutado: `vitest run --project unidade-e-integracao` (11 arquivos, 148 testes aprovados); os 659 testes do projeto `banco` seguem os da execução de 21/11/2026.
+- **TV Wall (T29):** a página `/tv` do frontend tem **um único link**, "Voltar à página principal", com destino `/painel` (`TvWallPage.tsx`; o `e2e/tv-wall.spec.ts` do frontend confere um único elemento navegável, com esse texto e `href`). Onde as seções anteriores falam em "sem links" na tela, leia "sem links além do retorno a `/painel`". A resposta do E42 continua sem nenhum link (verificado em `tests/db/t29-t31-tv-wall.test.ts`). O E2E do frontend com essa regra não foi reexecutado e registrado neste repositório; as alterações correspondentes estavam sem commit no repositório do frontend na data desta revisão.
+- **T35:** as linhas "bloqueado — não existe OpenAPI" das seções anteriores são históricas e foram superadas pela execução de 21/11/2026 (acima).

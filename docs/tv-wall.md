@@ -103,8 +103,11 @@ O que a especificação define para a TL15 e como o frontend (`fhdod-frontend`) 
   para que uma falha nunca substitua o último 200;
 - com `overall.suppressed` mostra "Menos de 5 respostas"; com `nps: null` e `n: 0`, "Sem respostas
   no período" — nunca NPS 0; setores e pontos ausentes ou nulos não são reconstruídos;
-- rota sem menu e sem nenhum link, fora dos layouts do sistema, sem sessão e sem chamar endpoints
-  autenticados (RF72); só os campos desta lista são copiados para a tela;
+- rota sem menu, botões, formulários ou campos, fora dos layouts do sistema, sem sessão e sem
+  chamar endpoints autenticados (RF72); o **único link** da tela é "Voltar à página principal",
+  com destino `/painel` (`src/features/tv-wall/TvWallPage.tsx` do frontend; o E2E confere que há
+  exatamente um elemento navegável no `<body>`, com esse texto e esse `href`). O link é fixo,
+  não vem da API e não leva dado algum; só os campos desta lista são copiados para a tela;
 - 1920 × 1080 sem rolagem: NPS com 160 px, números 64 px, rótulos 32 px, mínimo 24 px e todo texto
   com contraste de 7:1 ou mais (RF70, RNF06), medidos no DOM pela E2E.
 
@@ -192,8 +195,8 @@ aprovados para a TV Wall").
 | Limiares e bordas (T30/T31) | `tests/db/t30-tv-wall-limites.test.ts` | banco sem respostas (n = 0, sem supressão); setor com 1, 4, 5 e 6 respostas; total 1, 4, 5 e 6; 00:00:00 e 23:59:59 locais incluídos e 1 s fora excluído; outro hospital nunca entra; ECONNREFUSED real e pool encerrado → 503 `no-store` sem detalhes |
 
 **Parte de interface (repositório do frontend):** T29, T30 e T31 ponta a ponta em
-`e2e/tv-wall.spec.ts`, contra esta API e o MySQL de teste — tráfego só para o E42, sem links nem
-dados pessoais, 0/4/5 respostas com a supressão aplicada, relógio + 60 s, API indisponível com os
+`e2e/tv-wall.spec.ts`, contra esta API e o MySQL de teste — tráfego só para o E42, nenhum link
+além do retorno a `/painel` e nenhum dado pessoal, 0/4/5 respostas com a supressão aplicada, relógio + 60 s, API indisponível com os
 últimos dados, recuperação, recarga de 6 h e medidas no DOM em 1920 × 1080. Resultados em
 [`plano-e-relatorio-de-testes.md`](plano-e-relatorio-de-testes.md).
 
